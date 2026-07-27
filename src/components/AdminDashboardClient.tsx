@@ -1,0 +1,6577 @@
+'use client';
+
+import React, { useState, useTransition, useEffect } from 'react';
+import { useLanguage } from '@/lib/LanguageContext';
+import { 
+  ServiceSchedule, 
+  HaitiMission, 
+  LocalOutreach, 
+  EventRecord, 
+  Registration,
+  Sermon,
+  KnowledgeBaseItem,
+  Lead,
+  DailyDevotional,
+  AdminRecord,
+  PrayerRequest,
+  ContactSubmission,
+  BlogPost,
+  Ministry
+} from '@/lib/db';
+import { 
+  logoutAdmin, 
+  updateGlobalSettings, 
+  saveServiceSchedule, 
+  deleteServiceSchedule,
+  saveHaitiMission,
+  deleteHaitiMission,
+  saveLocalOutreach,
+  deleteLocalOutreach,
+  saveEvent,
+  deleteEvent,
+  deleteRegistration,
+  saveSermon,
+  deleteSermon,
+  backupWebsite,
+  syncSermonsFromYoutube,
+  addKnowledgeBaseItem,
+  deleteKnowledgeBaseItem,
+  automateWebsiteContentFromPdf,
+  deleteLead,
+  saveDailyDevotional,
+  approveDailyDevotional,
+  deleteDailyDevotional,
+  generateDevotionalAction,
+  getAdmins,
+  addAdminEmail,
+  deleteAdminEmail,
+  getContactSubmissions,
+  deleteContactSubmission,
+  getPrayerRequests,
+  deletePrayerRequest,
+  getBlogPosts,
+  saveBlogPost,
+  deleteBlogPost,
+  saveMinistry,
+  translateBlogContentAction
+} from '@/lib/actions';
+import { useRouter } from 'next/navigation';
+import { getYouTubeThumbnailUrl } from '@/lib/youtube';
+import { 
+  Church, 
+  Globe2, 
+  LogOut, 
+  Settings, 
+  Clock, 
+  Heart, 
+  Users, 
+  Calendar, 
+  BookOpen, 
+  Trash2, 
+  Plus, 
+  Edit, 
+  Check, 
+  Save, 
+  Phone, 
+  Mail, 
+  MapPin, 
+  Lock,
+  UserCheck,
+  Video,
+  UploadCloud,
+  Palette,
+  Database,
+  FileText,
+  FileSpreadsheet,
+  Link2,
+  RefreshCw,
+  Eye,
+  EyeOff,
+  Wand2,
+  Layers,
+  ArrowUp,
+  ArrowDown,
+  AlertTriangle
+} from 'lucide-react';
+
+interface AdminDashboardProps {
+  schedules: ServiceSchedule[];
+  missions: HaitiMission[];
+  outreaches: LocalOutreach[];
+  events: EventRecord[];
+  registrations: Registration[];
+  settings: Record<string, string>;
+  sermons: Sermon[];
+  knowledgeBaseItems?: KnowledgeBaseItem[];
+  leads?: Lead[];
+  initialDevotionals?: DailyDevotional[];
+  isSuperAdmin?: boolean;
+  initialMinistries?: Ministry[];
+}
+
+type TabType = 'settings' | 'hometabs' | 'schedules' | 'missions' | 'outreach' | 'events' | 'registrations' | 'sermons' | 'subscribers' | 'devotional' | 'admins' | 'contact' | 'prayers' | 'blog' | 'ministries';
+
+interface TeamMember {
+  name: string;
+  role_en: string;
+  role_ht: string;
+  bio_en: string;
+  bio_ht: string;
+  image_url: string;
+  email: string;
+}
+
+
+export default function AdminDashboardClient({ 
+  schedules, 
+  missions, 
+  outreaches, 
+  events, 
+  registrations, 
+  settings,
+  sermons,
+  knowledgeBaseItems = [],
+  leads = [],
+  initialDevotionals = [],
+  isSuperAdmin = false,
+  initialMinistries = []
+}: AdminDashboardProps) {
+  const { language, setLanguage, t } = useLanguage();
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  // Active Management Tab State
+  const [activeTab, setActiveTab] = useState<TabType>('settings');
+
+  // Parousia Baptist Ministries new state variables
+  const [devotionalTheme, setDevotionalTheme] = useState(settings.devotional_theme || 'none');
+  const [adminList, setAdminList] = useState<AdminRecord[]>([]);
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [contactLogs, setContactLogs] = useState<ContactSubmission[]>([]);
+  const [moderationPrayers, setModerationPrayers] = useState<PrayerRequest[]>([]);
+  const [blogPostsList, setBlogPostsList] = useState<BlogPost[]>([]);
+  const [editingBlogPostId, setEditingBlogPostId] = useState<number | null>(null);
+  const [blogForm, setBlogForm] = useState({
+    title_english: '',
+    title_kreyol: '',
+    content_english: '',
+    content_kreyol: '',
+    date: ''
+  });
+  const [isTranslating, setIsTranslating] = useState(false);
+
+  // Ministry edit states
+  const [ministriesList, setMinistriesList] = useState<Ministry[]>(initialMinistries);
+  const [selectedMinistrySlug, setSelectedMinistrySlug] = useState<string>('women');
+  const [minForm, setMinForm] = useState({
+    title_english: '',
+    title_kreyol: '',
+    description_english: '',
+    description_kreyol: '',
+    image_url: '',
+    bullets_english: '',
+    bullets_kreyol: ''
+  });
+
+  useEffect(() => {
+    setMinistriesList(initialMinistries);
+  }, [initialMinistries]);
+
+  useEffect(() => {
+    const current = ministriesList.find(m => m.slug === selectedMinistrySlug);
+    if (current) {
+      setMinForm({
+        title_english: current.title_english || '',
+        title_kreyol: current.title_kreyol || '',
+        description_english: current.description_english || '',
+        description_kreyol: current.description_kreyol || '',
+        image_url: current.image_url || '',
+        bullets_english: current.bullets_english || '',
+        bullets_kreyol: current.bullets_kreyol || ''
+      });
+    }
+  }, [selectedMinistrySlug, ministriesList]);
+
+  
+  // Flash alert message
+  const [alertMsg, setAlertMsg] = useState('');
+  const [alertType, setAlertType] = useState<'success' | 'error'>('success');
+
+  const triggerAlert = (msg: string, type: 'success' | 'error' = 'success') => {
+    setAlertMsg(msg);
+    setAlertType(type);
+    setTimeout(() => {
+      setAlertMsg('');
+    }, 4000);
+  };
+
+  const clientUploadAsset = async (fileName: string, dataOrFile: string | File): Promise<{ success: boolean; url?: string; error?: string }> => {
+    try {
+      let file: File;
+      if (dataOrFile instanceof File) {
+        file = dataOrFile;
+      } else {
+        const response = await fetch(dataOrFile);
+        const blob = await response.blob();
+        file = new File([blob], fileName, { type: blob.type });
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        return { success: false, error: errData.error || `Server responded with ${res.status}` };
+      }
+
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error occurred' };
+    }
+  };
+
+  // Sign out
+  const handleSignOut = async () => {
+    await logoutAdmin();
+    router.push('/admin');
+    router.refresh();
+  };
+
+  // 1. GLOBAL SETTINGS FORM STATE
+  const [pastorName, setPastorName] = useState(settings.pastor_name || 'Pasteur Jean-Claude');
+  const [pMsgHt, setPMsgHt] = useState(settings.pastor_message_kreyol || '');
+  const [pMsgEn, setPMsgEn] = useState(settings.pastor_message_english || '');
+  const [chPhone, setChPhone] = useState(settings.church_phone || '');
+  const [chEmail, setChEmail] = useState(settings.church_email || '');
+  const [chAddr, setChAddress] = useState(settings.church_address || '');
+  const [adminPass, setAdminPass] = useState(settings.admin_password || '');
+  const [bgUrl, setBgUrl] = useState(settings.home_background_url || '');
+  const [liveActive, setLiveActive] = useState(settings.live_stream_active || 'false');
+  const [liveUrl, setLiveUrl] = useState(settings.live_stream_url || '');
+  const [ytChannelUrl, setYtChannelUrl] = useState(settings.youtube_channel_url || '');
+  const [liveStreamEventId, setLiveStreamEventId] = useState(settings.live_stream_event_id || 'default');
+  const [customLiveEventThumbnailUrl, setCustomLiveEventThumbnailUrl] = useState(settings.custom_live_event_thumbnail_url || '');
+  const [isDraggingCustomThumbnail, setIsDraggingCustomThumbnail] = useState(false);
+  const [hideStripe, setHideStripe] = useState(settings.hide_stripe || 'false');
+  const [cashappId, setCashappId] = useState(settings.cashapp_id || '');
+  const [venmoId, setVenmoId] = useState(settings.venmo_id || '');
+  const [applePayPhone, setApplePayPhone] = useState(settings.apple_pay_phone || '');
+  const [zellePhone, setZellePhone] = useState(settings.zelle_phone || '929 599 8809');
+  const [zelleName, setZelleName] = useState(settings.zelle_name || 'Eglise Baptiste de la Parousie');
+  const [showCashapp, setShowCashapp] = useState(settings.show_cashapp || 'true');
+  const [showVenmo, setShowVenmo] = useState(settings.show_venmo || 'true');
+  const [showApplePay, setShowApplePay] = useState(settings.show_apple_pay || 'true');
+  const [showCheck, setShowCheck] = useState(settings.show_check || 'true');
+  const [checkPayableTo, setCheckPayableTo] = useState(settings.check_payable_to || '');
+  const [checkMailingAddress, setCheckMailingAddress] = useState(
+    settings.check_mailing_address === '789 Community Blvd, Fort Lauderdale, FL 33311'
+      ? (settings.church_address || '789 Community Blvd, Fort Lauderdale, FL 33311')
+      : (settings.check_mailing_address || settings.church_address || '')
+  );
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [showAdminPass, setShowAdminPass] = useState(false);
+
+  // Knowledge Base States
+  const [kbList, setKbList] = useState<KnowledgeBaseItem[]>(knowledgeBaseItems);
+  const [isDraggingKb, setIsDraggingKb] = useState(false);
+  const [kbManualTitle, setKbManualTitle] = useState('');
+  const [kbManualUrl, setKbManualUrl] = useState('');
+  const [kbManualType, setKbManualType] = useState('link'); // 'pdf' | 'google_doc' | 'google_sheet' | 'link'
+  const [kbIsUploading, setKbIsUploading] = useState(false);
+  const [automateWithDoc, setAutomateWithDoc] = useState(false);
+
+  useEffect(() => {
+    setKbList(knowledgeBaseItems);
+  }, [knowledgeBaseItems]);
+
+  // Custom logo and color scheme states
+  const [logoUrl, setLogoUrl] = useState(settings.logo_url || '/logo.png');
+  const [themePrimary, setThemePrimary] = useState(settings.theme_primary || '#f59e0b');
+  const [themeHover, setThemeHover] = useState(settings.theme_hover || '#d97706');
+  const [themeAccent, setThemeAccent] = useState(settings.theme_accent || '#3b82f6');
+  const [themeMode, setThemeMode] = useState(settings.theme_mode || 'dark');
+  const [heroBgOpacityLight, setHeroBgOpacityLight] = useState(settings.hero_bg_opacity_light || '15');
+  const [heroBgOpacityDark, setHeroBgOpacityDark] = useState(settings.hero_bg_opacity_dark || '25');
+  const [softenHeroTextBg, setSoftenHeroTextBg] = useState(settings.soften_hero_text_bg || 'true');
+
+  // Subscribers List State
+  const [subscriberList, setSubscriberList] = useState<Lead[]>(leads);
+  const [subSearch, setSubSearch] = useState('');
+  useEffect(() => {
+    setSubscriberList(leads);
+  }, [leads]);
+
+  // Daily Devotionals State
+  const [devotionalList, setDevotionalList] = useState<DailyDevotional[]>(initialDevotionals);
+  const [devotionalAutoPublish, setDevotionalAutoPublish] = useState(settings.devotional_auto_publish || 'false');
+  const [editingDevotionalId, setEditingDevotionalId] = useState<number | null>(null);
+  const [devotionalSearch, setDevotionalSearch] = useState('');
+  const [editDevotionalForm, setEditDevotionalForm] = useState({
+    verse_ref_english: '',
+    verse_ref_kreyol: '',
+    verse_text_english: '',
+    verse_text_kreyol: '',
+    lesson_english: '',
+    lesson_kreyol: '',
+    status: 'pending' as 'pending' | 'approved'
+  });
+
+  useEffect(() => {
+    setDevotionalList(initialDevotionals);
+  }, [initialDevotionals]);
+
+  // Fetch lists based on active tab
+  useEffect(() => {
+    async function loadTabSpecificData() {
+      try {
+        if (activeTab === 'admins') {
+          const res = await getAdmins();
+          setAdminList(res);
+        } else if (activeTab === 'contact') {
+          const res = await getContactSubmissions();
+          setContactLogs(res);
+        } else if (activeTab === 'prayers') {
+          const res = await getPrayerRequests();
+          setModerationPrayers(res);
+        } else if (activeTab === 'blog') {
+          const res = await getBlogPosts();
+          setBlogPostsList(res);
+        }
+      } catch (err: any) {
+        console.error('Error loading tab data:', err);
+      }
+    }
+    loadTabSpecificData();
+  }, [activeTab]);
+
+  // NEW HANDLERS FOR PAROUSIA BAPTIST MINISTRIES
+  const handleAddAdminEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAdminEmail.trim()) return;
+    try {
+      const res = await addAdminEmail(newAdminEmail.trim());
+      if (res.success) {
+        triggerAlert(language === 'fr_ht' ? 'Admin otorize avèk siksè!' : 'Admin authorized successfully!', 'success');
+        setNewAdminEmail('');
+        const list = await getAdmins();
+        setAdminList(list);
+      } else {
+        triggerAlert(res.error || 'Failed to add admin', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error occurred', 'error');
+    }
+  };
+
+  const handleDeleteAdminEmail = async (id: number) => {
+    if (!confirm(language === 'fr_ht' ? 'Èske ou sèten ou vle siprime admin sa a?' : 'Are you sure you want to revoke this admin?')) return;
+    try {
+      const res = await deleteAdminEmail(id);
+      if (res.success) {
+        triggerAlert(language === 'fr_ht' ? 'Admin siprime avèk siksè!' : 'Admin revoked successfully!', 'success');
+        const list = await getAdmins();
+        setAdminList(list);
+      } else {
+        triggerAlert(res.error || 'Failed to delete admin', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error occurred', 'error');
+    }
+  };
+
+  const handleSaveMinistry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      let finalImgUrl = minForm.image_url;
+      if (minForm.image_url && minForm.image_url.startsWith('data:')) {
+        triggerAlert(language === 'en' ? 'Uploading ministry image...' : 'Y ap chaje imaj ministè a...', 'success');
+        const uploadRes = await clientUploadAsset(`ministry_${selectedMinistrySlug}_bg.jpg`, minForm.image_url);
+        if (uploadRes.success && uploadRes.url) {
+          finalImgUrl = uploadRes.url;
+          // Update the state so the form reflects the uploaded path
+          setMinForm(prev => ({ ...prev, image_url: uploadRes.url! }));
+        } else {
+          triggerAlert(uploadRes.error || 'Failed to upload ministry image', 'error');
+          return;
+        }
+      }
+
+      const formToSave = { ...minForm, image_url: finalImgUrl };
+      const res = await saveMinistry(selectedMinistrySlug, formToSave);
+      if (res.success) {
+        setMinistriesList(prev => prev.map(m => m.slug === selectedMinistrySlug ? { ...m, ...formToSave } : m));
+        triggerAlert(language === 'en' ? 'Ministry saved successfully!' : 'Ministè sove avèk siksè!', 'success');
+      } else {
+        triggerAlert(res.error || 'Failed to save ministry', 'error');
+      }
+    } catch (err: any) {
+      console.error(err);
+      triggerAlert(err.message || 'Error occurred while saving ministry', 'error');
+    }
+  };
+
+  const handleDeleteContactLog = async (id: number) => {
+    if (!confirm(language === 'fr_ht' ? 'Siprime mesaj sa a?' : 'Delete this message?')) return;
+    try {
+      const res = await deleteContactSubmission(id);
+      if (res.success) {
+        triggerAlert(language === 'fr_ht' ? 'Mesaj siprime!' : 'Message deleted successfully!', 'success');
+        const list = await getContactSubmissions();
+        setContactLogs(list);
+      } else {
+        triggerAlert(res.error || 'Failed to delete message', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error occurred', 'error');
+    }
+  };
+
+  const handleDeletePrayer = async (id: number) => {
+    if (!confirm(language === 'fr_ht' ? 'Èske ou vle siprime demann sa a sou miray la?' : 'Delete this prayer request from the wall?')) return;
+    try {
+      const res = await deletePrayerRequest(id);
+      if (res.success) {
+        triggerAlert(language === 'fr_ht' ? 'Demann siprime avèk siksè!' : 'Prayer request deleted successfully!', 'success');
+        const list = await getPrayerRequests();
+        setModerationPrayers(list);
+      } else {
+        triggerAlert(res.error || 'Failed to delete prayer request', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error occurred', 'error');
+    }
+  };
+
+  const handleStartCreateBlog = () => {
+    setEditingBlogPostId(0);
+    setBlogForm({
+      title_english: '',
+      title_kreyol: '',
+      content_english: '',
+      content_kreyol: '',
+      date: new Date().toISOString().split('T')[0]
+    });
+  };
+
+  const handleStartEditBlog = (post: BlogPost) => {
+    setEditingBlogPostId(post.id);
+    setBlogForm({
+      title_english: post.title_english,
+      title_kreyol: post.title_kreyol,
+      content_english: post.content_english,
+      content_kreyol: post.content_kreyol,
+      date: post.date
+    });
+  };
+
+  const handleSaveBlog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await saveBlogPost(
+        editingBlogPostId === 0 ? null : editingBlogPostId,
+        blogForm.title_kreyol,
+        blogForm.title_english,
+        blogForm.content_kreyol,
+        blogForm.content_english,
+        blogForm.date
+      );
+      if (res.success) {
+        triggerAlert(language === 'fr_ht' ? 'Atik blòg sove avèk siksè!' : 'Blog post saved successfully!', 'success');
+        setEditingBlogPostId(null);
+        const list = await getBlogPosts();
+        setBlogPostsList(list);
+      } else {
+        triggerAlert(res.error || 'Failed to save blog post', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error occurred', 'error');
+    }
+  };
+
+  const handleDeleteBlog = async (id: number) => {
+    if (!confirm(language === 'fr_ht' ? 'Siprime atik sa a?' : 'Are you sure you want to delete this blog post?')) return;
+    try {
+      const res = await deleteBlogPost(id);
+      if (res.success) {
+        triggerAlert(language === 'fr_ht' ? 'Atik la siprime!' : 'Blog post deleted successfully!', 'success');
+        const list = await getBlogPosts();
+        setBlogPostsList(list);
+      } else {
+        triggerAlert(res.error || 'Failed to delete blog post', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error occurred', 'error');
+    }
+  };
+
+
+  // Free Giveaway Customizable E-Book / Devotional settings
+  const [giftTitleHt, setGiftTitleHt] = useState(settings.free_gift_title_kreyol || 'Devosyonèl Parousie 2026');
+  const [giftTitleEn, setGiftTitleEn] = useState(settings.free_gift_title_english || 'Parousie Devotional 2026');
+  const [giftDescHt, setGiftDescHt] = useState(settings.free_gift_desc_kreyol || 'Mete non ou, imel, ak telefòn ou pou w ka telechaje bèl liv Devosyonèl nou an ki gen meditasyon ak vèsè pou ede w grandi chak jou nan Pawòl la.');
+  const [giftDescEn, setGiftDescEn] = useState(settings.free_gift_desc_english || 'Enter your name, email, and phone to receive our beautiful Daily Devotional booklet containing scripture plans and prayers designed to help you grow daily in Christ.');
+  const [giftFileUrl, setGiftFileUrl] = useState(settings.free_gift_file_url || '/devotional_parousie_2026.txt');
+  const [giftAdminNotes, setGiftAdminNotes] = useState(settings.free_gift_admin_notes || '');
+  const [isDraggingGift, setIsDraggingGift] = useState(false);
+  const [giftIsUploading, setGiftIsUploading] = useState(false);
+
+  // Drag visual feedback states
+  const [isDraggingLogo, setIsDraggingLogo] = useState(false);
+  const [isDraggingHero, setIsDraggingHero] = useState(false);
+  const [isDraggingSched, setIsDraggingSched] = useState(false);
+  const [isDraggingMin, setIsDraggingMin] = useState(false);
+  const [isDraggingMiss, setIsDraggingMiss] = useState(false);
+
+  // 12. HOME SUB-TABS EDITING STATE
+  const [aboutUsTitleEn, setAboutUsTitleEn] = useState(settings.about_us_title_en || 'About Us');
+  const [aboutUsTitleHt, setAboutUsTitleHt] = useState(settings.about_us_title_ht || 'Ki Moun Nou Ye');
+  const [aboutUsP1En, setAboutUsP1En] = useState(settings.about_us_p1_en || 'Parousia Baptist Ministries is a vibrant community of believers devoted to worshiping God and anticipating the second coming (Parousia) of our Lord Jesus Christ. Our mission is to preach the true Gospel, foster deep discipleship, and serve our local and diaspora community.');
+  const [aboutUsP1Ht, setAboutUsP1Ht] = useState(settings.about_us_p1_ht || 'Parousia Baptist Ministries se yon kominote dore pèp Bondye k ap tann retou Jezi-Kri. Nou gen yon vizyon klè pou gaye mesaj Levanjil la, fè disip, epi sèvi diaspora nou an atravè divès kalite pwojè kominotè ak edikasyon espirityèl.');
+  const [aboutUsP2En, setAboutUsP2En] = useState(settings.about_us_p2_en || 'From our inception, we have focused on authentic biblical living, establishing direct educational and healthcare mission support in Haiti, and cultivating a welcoming space where everyone can experience genuine spiritual family.');
+  const [aboutUsP2Ht, setAboutUsP2Ht] = useState(settings.about_us_p2_ht || 'Depi nou te kòmanse, nou konsantre sou bati yon lafwa solid ak transparan, sipòte pwojè lekòl ak swen sante an Ayiti, epi ofri yon kote kote chak frè ak sè kapab jwenn yon vrè fanmi espirityèl.');
+  const [aboutUsImageUrl, setAboutUsImageUrl] = useState(settings.about_us_image_url || 'https://images.unsplash.com/photo-1438032005730-c779502df39b?q=80&w=800&auto=format&fit=crop');
+
+  const [beliefsTitleEn, setBeliefsTitleEn] = useState(settings.beliefs_title_en || 'Our Beliefs');
+  const [beliefsTitleHt, setBeliefsTitleHt] = useState(settings.beliefs_title_ht || 'Kwayans Nou Yo');
+  
+  const [belief1TitleEn, setBelief1TitleEn] = useState(settings.belief_1_title_en || 'Infallible Scripture');
+  const [belief1TitleHt, setBelief1TitleHt] = useState(settings.belief_1_title_ht || 'Labib kòm Verite Absoli');
+  const [belief1DescEn, setBelief1DescEn] = useState(settings.belief_1_desc_en || 'We believe the Bible is the inspired, infallible, and inerrant Word of God, serving as our final authority in all matters of faith, doctrine, and conduct.');
+  const [belief1DescHt, setBelief1DescHt] = useState(settings.belief_1_desc_ht || 'Nou kwè tout Bib la se Pawòl enspire Bondye ye. Se sèl otorite siprèm pou lafwa nou ak jan n ap mennen lavi nou chak jou.');
+
+  const [belief2TitleEn, setBelief2TitleEn] = useState(settings.belief_2_title_en || 'Holy Trinity');
+  const [belief2TitleHt, setBelief2TitleHt] = useState(settings.belief_2_title_ht || 'Trinite Sen An');
+  const [belief2DescEn, setBelief2DescEn] = useState(settings.belief_2_desc_en || 'We believe in one God, eternally existing in three co-equal persons: God the Father, God the Son (Jesus Christ), and God the Holy Spirit.');
+  const [belief2DescHt, setBelief2DescHt] = useState(settings.belief_2_desc_ht || 'Nou kwè nan yon sèl Bondye ki egziste nan twa pèsòn: Papa a, Pitit la (Jezi-Kri), ak Sentespri a, ki gen menm pouvwa ak glwa.');
+
+  const [belief3TitleEn, setBelief3TitleEn] = useState(settings.belief_3_title_en || 'Salvation by Grace');
+  const [belief3TitleHt, setBelief3TitleHt] = useState(settings.belief_3_title_ht || 'Sali pa la Gras sèlman');
+  const [belief3DescEn, setBelief3DescEn] = useState(settings.belief_3_desc_en || "Salvation is a gift of God received through repentance and faith in Christ's substitutionary sacrifice on the cross. It is entirely by grace alone, not works.");
+  const [belief3DescHt, setBelief3DescHt] = useState(settings.belief_3_desc_ht || 'Sali a se yon kado Bondye fè moun pa mwayen lafwa nan Jezikri. Se pa pa mwayen bon zèv, men se pa gras sèlman nou sove.');
+
+  const [belief4TitleEn, setBelief4TitleEn] = useState(settings.belief_4_title_en || 'The Blessed Hope (Parousia)');
+  const [belief4TitleHt, setBelief4TitleHt] = useState(settings.belief_4_title_ht || 'Retou Seyè a (Parousia)');
+  const [belief4DescEn, setBelief4DescEn] = useState(settings.belief_4_desc_en || 'We eagerly anticipate the personal, visible, and glorious return of Jesus Christ to gather His Church and establish His righteous kingdom.');
+  const [belief4DescHt, setBelief4DescHt] = useState(settings.belief_4_desc_ht || 'Nou gen gwo espwa nan retou vizib ak gloriye Jezikri pou rache legliz la epi jije mond lan daprè jistis li.');
+
+  const [teamTitleEn, setTeamTitleEn] = useState(settings.team_title_en || 'Our Team');
+  const [teamTitleHt, setTeamTitleHt] = useState(settings.team_title_ht || 'Ekip Nou An');
+
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => {
+    try {
+      if (settings.team_members_json) {
+        const parsed = JSON.parse(settings.team_members_json);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing team_members_json:', e);
+    }
+    return [
+      {
+        name: settings.team_p1_name || 'Pastor Maxon Francois',
+        role_en: settings.team_p1_role_en || 'Senior Pastor',
+        role_ht: settings.team_p1_role_ht || 'Pastè Prensipal',
+        bio_en: settings.team_p1_bio_en || "Pastor Maxon Francois has served in pastoral ministry for over 15 years, with a deep passion for preaching expository biblical truth and preparing the church for Christ's return.",
+        bio_ht: settings.team_p1_bio_ht || 'Pastè Maxon Francois gen plis pase 15 ane ap preche Pawòl Bondye a ak yon vizyon klè pou anseye verite biblik la san chanjman epi prepare kominote a pou retou Seyè a.',
+        image_url: settings.team_p1_image_url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=300&auto=format&fit=crop',
+        email: settings.team_p1_email || 'pastor@parousiabaptist.org'
+      },
+      {
+        name: settings.team_p2_name || 'Pastor Jean-Pierre Louis',
+        role_en: settings.team_p2_role_en || 'Assistant Pastor',
+        role_ht: settings.team_p2_role_ht || 'Asistan Pastè',
+        bio_en: settings.team_p2_bio_en || "Pastor Jean-Pierre coordinates youth discipleship, counseling, and direct operations of our missionary schools and medical outposts in Okay, Haiti.",
+        bio_ht: settings.team_p2_bio_ht || 'Pastè Jean-Pierre konsantre sou devlopman jèn yo, vizit fraternel yo, ak sipò dirèk nan lekòl ak klinik misyon nou yo an Ayiti.',
+        image_url: settings.team_p2_image_url || 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=300&auto=format&fit=crop',
+        email: settings.team_p2_email || 'it@parousiabaptist.org'
+      }
+    ];
+  });
+  const [draggingMemberIndex, setDraggingMemberIndex] = useState<number | null>(null);
+
+  const [teamP1Name, setTeamP1Name] = useState(settings.team_p1_name || 'Pastor Maxon Francois');
+  const [teamP1RoleEn, setTeamP1RoleEn] = useState(settings.team_p1_role_en || 'Senior Pastor');
+  const [teamP1RoleHt, setTeamP1RoleHt] = useState(settings.team_p1_role_ht || 'Pastè Prensipal');
+  const [teamP1BioEn, setTeamP1BioEn] = useState(settings.team_p1_bio_en || "Pastor Maxon Francois has served in pastoral ministry for over 15 years, with a deep passion for preaching expository biblical truth and preparing the church for Christ's return.");
+  const [teamP1BioHt, setTeamP1BioHt] = useState(settings.team_p1_bio_ht || 'Pastè Maxon Francois gen plis pase 15 ane ap preche Pawòl Bondye a ak yon vizyon klè pou anseye verite biblik la san chanjman epi prepare kominote a pou retou Seyè a.');
+  const [teamP1ImageUrl, setTeamP1ImageUrl] = useState(settings.team_p1_image_url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=300&auto=format&fit=crop');
+  const [teamP1Email, setTeamP1Email] = useState(settings.team_p1_email || 'pastor@parousiabaptist.org');
+
+  const [teamP2Name, setTeamP2Name] = useState(settings.team_p2_name || 'Pastor Jean-Pierre Louis');
+  const [teamP2RoleEn, setTeamP2RoleEn] = useState(settings.team_p2_role_en || 'Assistant Pastor');
+  const [teamP2RoleHt, setTeamP2RoleHt] = useState(settings.team_p2_role_ht || 'Asistan Pastè');
+  const [teamP2BioEn, setTeamP2BioEn] = useState(settings.team_p2_bio_en || "Pastor Jean-Pierre coordinates youth discipleship, counseling, and direct operations of our missionary schools and medical outposts in Okay, Haiti.");
+  const [teamP2BioHt, setTeamP2BioHt] = useState(settings.team_p2_bio_ht || 'Pastè Jean-Pierre konsantre sou devlopman jèn yo, vizit fraternel yo, ak sipò dirèk nan lekòl ak klinik misyon nou yo an Ayiti.');
+  const [teamP2ImageUrl, setTeamP2ImageUrl] = useState(settings.team_p2_image_url || 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=300&auto=format&fit=crop');
+  const [teamP2Email, setTeamP2Email] = useState(settings.team_p2_email || 'it@parousiabaptist.org');
+
+  const [expectTitleEn, setExpectTitleEn] = useState(settings.expect_title_en || 'What to Expect');
+  const [expectTitleHt, setExpectTitleHt] = useState(settings.expect_title_ht || 'Kisa pou Atann');
+  const [expectP1En, setExpectP1En] = useState(settings.expect_p1_en || 'When you step into a service at Parousia Baptist Ministries, you will experience a warm, friendly, and reverent atmosphere. Our worship is spirit-filled and biblical, and our bilingual environment welcomes all.');
+  const [expectP1Ht, setExpectP1Ht] = useState(settings.expect_p1_ht || 'Lè w vin adore avèk nou nan Parousia Baptist Ministries, w ap jwenn yon anbyans cho, kote yo adore Bondye ak reverans e ak kè kontan. Sèvis nou yo se an Kreyòl ak an Angle pou pèmèt tout moun patisipe fasilman.');
+  const [expectImageUrl, setExpectImageUrl] = useState(settings.expect_image_url || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=800&auto=format&fit=crop');
+  const [expectBullet1En, setExpectBullet1En] = useState(settings.expect_bullet1_en || 'Christ-centered praise, blending traditional hymns and modern worship');
+  const [expectBullet1Ht, setExpectBullet1Ht] = useState(settings.expect_bullet1_ht || 'Adorasyon ak Louwanj ki edifye kè ou');
+  const [expectBullet2En, setExpectBullet2En] = useState(settings.expect_bullet2_en || 'Expository, practical teaching straight from the holy scriptures');
+  const [expectBullet2Ht, setExpectBullet2Ht] = useState(settings.expect_bullet2_ht || 'Mesaj solid ki baze sèlman sou Bib la');
+  const [expectBullet3En, setExpectBullet3En] = useState(settings.expect_bullet3_en || 'A supportive, tight-knit family that will welcome you with open arms');
+  const [expectBullet3Ht, setExpectBullet3Ht] = useState(settings.expect_bullet3_ht || 'Yon kominote k ap resevwa w ak bra louvri');
+
+  // Drag visual feedback states for Home Tabs
+  const [isDraggingAboutUs, setIsDraggingAboutUs] = useState(false);
+  const [isDraggingTeamP1, setIsDraggingTeamP1] = useState(false);
+  const [isDraggingTeamP2, setIsDraggingTeamP2] = useState(false);
+  const [isDraggingExpect, setIsDraggingExpect] = useState(false);
+
+  // Home sub-tab state for editing
+  const [homeSubTab, setHomeSubTab] = useState<'about' | 'beliefs' | 'team' | 'expect'>('about');
+
+  // Backup state & callback
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const handleBackupClick = async () => {
+    setIsBackingUp(true);
+    triggerAlert(language === 'fr_ht' ? 'Y ap kreye sovgad la...' : 'Creating website backup...', 'success');
+    try {
+      const res = await backupWebsite();
+      if (res.success) {
+        triggerAlert(language === 'fr_ht' 
+          ? `Sovgad kreye nan Parousie/backups/backup_${res.timestamp}!` 
+          : `Backup created successfully in Parousie/backups/backup_${res.timestamp}!`, 
+          'success'
+        );
+      } else {
+        triggerAlert(res.error || 'Failed to create backup', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error occurred', 'error');
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
+  const handleSyncYoutube = async () => {
+    if (!ytChannelUrl) {
+      triggerAlert(language === 'fr_ht' ? 'Tanpri mete yon URL chanèl anvan.' : 'Please enter a channel URL first.', 'error');
+      return;
+    }
+    
+    setIsSyncing(true);
+    triggerAlert(language === 'fr_ht' ? 'Y ap senkronize videyo depi YouTube...' : 'Syncing streams from YouTube...', 'success');
+    
+    try {
+      const result = await syncSermonsFromYoutube(ytChannelUrl);
+      if (result.success) {
+        triggerAlert(language === 'fr_ht' 
+          ? `Senkronizasyon fini! Enpòte ${result.count} nouvo videyo siksè.` 
+          : `Sync complete! Imported ${result.count} new videos successfully.`, 
+          'success'
+        );
+        router.refresh();
+      } else {
+        triggerAlert(result.error || 'Sync failed', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error running sync', 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const compressAndResizeImage = (
+    file: File, 
+    maxWidth: number, 
+    maxHeight: number, 
+    quality: number, 
+    callback: (base64: string) => void
+  ) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          callback(event.target?.result as string);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        // Use PNG for logos to preserve transparency, JPEG for hero background for high compression ratio
+        const isPNG = file.type === 'image/png' || file.name.endsWith('.png');
+        const format = isPNG ? 'image/png' : 'image/jpeg';
+        const compressedB64 = canvas.toDataURL(format, isPNG ? undefined : quality);
+        callback(compressedB64);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // File loading and drag-and-drop / paste helpers
+  const handleLogoFile = (file: File | undefined) => {
+    if (!file) return;
+    compressAndResizeImage(file, 400, 400, 0.9, (b64) => {
+      setLogoUrl(b64);
+      extractColorsFromLogo(b64);
+    });
+  };
+
+  const handleHeroFile = (file: File | undefined) => {
+    if (!file) return;
+    compressAndResizeImage(file, 1920, 1080, 0.8, (b64) => {
+      setBgUrl(b64);
+    });
+  };
+
+  const handlePasteLogo = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) handleLogoFile(file);
+        break;
+      }
+    }
+  };
+
+  const handlePasteHero = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) handleHeroFile(file);
+        break;
+      }
+    }
+  };
+
+  const handleDropLogo = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingLogo(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleLogoFile(files[0]);
+    }
+  };
+
+  const handleDropHero = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingHero(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleHeroFile(files[0]);
+    }
+  };
+
+  const handleCustomThumbnailFile = (file: File | undefined) => {
+    if (!file) return;
+    compressAndResizeImage(file, 800, 600, 0.8, (b64) => {
+      setCustomLiveEventThumbnailUrl(b64);
+    });
+  };
+
+  const handlePasteCustomThumbnail = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) handleCustomThumbnailFile(file);
+        break;
+      }
+    }
+  };
+
+  const handleDropCustomThumbnail = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingCustomThumbnail(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleCustomThumbnailFile(files[0]);
+    }
+  };
+
+  const handleSchedFile = (file: File | undefined) => {
+    if (!file) return;
+    compressAndResizeImage(file, 800, 600, 0.85, (b64) => {
+      setSchedImg(b64);
+    });
+  };
+
+  const handlePasteSched = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) handleSchedFile(file);
+        break;
+      }
+    }
+  };
+
+  const handleDropSched = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingSched(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleSchedFile(files[0]);
+    }
+  };
+
+  // MINISTRY IMAGE HANDLERS
+  const handleMinFile = (file: File | undefined) => {
+    if (!file) return;
+    compressAndResizeImage(file, 800, 600, 0.85, (b64) => {
+      setMinForm(prev => ({ ...prev, image_url: b64 }));
+    });
+  };
+
+  const handlePasteMin = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) handleMinFile(file);
+        break;
+      }
+    }
+  };
+
+  const handleDropMin = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingMin(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleMinFile(files[0]);
+    }
+  };
+
+  // HAITI MISSION IMAGE HANDLERS
+  const handleMissFile = (file: File | undefined) => {
+    if (!file) return;
+    compressAndResizeImage(file, 800, 600, 0.85, (b64) => {
+      setPMissImg(b64);
+    });
+  };
+
+  const handlePasteMiss = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) handleMissFile(file);
+        break;
+      }
+    }
+  };
+
+  const handleDropMiss = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingMiss(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleMissFile(files[0]);
+    }
+  };
+
+  // HOME TABS IMAGE HANDLERS
+  const handleAboutUsFile = (file: File | undefined) => {
+    if (!file) return;
+    compressAndResizeImage(file, 800, 600, 0.85, (b64) => {
+      setAboutUsImageUrl(b64);
+    });
+  };
+
+  const handlePasteAboutUs = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) handleAboutUsFile(file);
+        break;
+      }
+    }
+  };
+
+  const handleDropAboutUs = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingAboutUs(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleAboutUsFile(files[0]);
+    }
+  };
+
+  const handleTeamMemberFile = (index: number, file: File | undefined) => {
+    if (!file) return;
+    compressAndResizeImage(file, 400, 400, 0.85, (b64) => {
+      setTeamMembers(prev => {
+        const copy = [...prev];
+        copy[index] = { ...copy[index], image_url: b64 };
+        return copy;
+      });
+    });
+  };
+
+  const handlePasteTeamMember = (index: number, e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) handleTeamMemberFile(index, file);
+        break;
+      }
+    }
+  };
+
+  const handleDropTeamMember = (index: number, e: React.DragEvent) => {
+    e.preventDefault();
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleTeamMemberFile(index, files[0]);
+    }
+  };
+
+  const handleAddTeamMember = () => {
+    setTeamMembers(prev => [
+      ...prev,
+      {
+        name: '',
+        role_en: '',
+        role_ht: '',
+        bio_en: '',
+        bio_ht: '',
+        image_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=300&auto=format&fit=crop',
+        email: ''
+      }
+    ]);
+  };
+
+  const handleDeleteTeamMember = (index: number) => {
+    if (teamMembers.length <= 1) {
+      triggerAlert(
+        language === 'fr_ht' 
+          ? 'Ou dwe genyen omwen yon manm ekip.' 
+          : 'You must have at least one team member.', 
+        'error'
+      );
+      return;
+    }
+    if (!confirm(language === 'fr_ht' ? 'Èske ou vle siprime manm sa a nan ekip la?' : 'Are you sure you want to delete this team member?')) {
+      return;
+    }
+    setTeamMembers(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleMoveTeamMember = (index: number, direction: 'up' | 'down') => {
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === teamMembers.length - 1) return;
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    setTeamMembers(prev => {
+      const copy = [...prev];
+      const temp = copy[index];
+      copy[index] = copy[targetIndex];
+      copy[targetIndex] = temp;
+      return copy;
+    });
+  };
+
+  const handleUpdateTeamMember = (index: number, field: keyof TeamMember, value: string) => {
+    setTeamMembers(prev => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
+  };
+
+  const handleAutoTranslate = async () => {
+    const hasHt = blogForm.title_kreyol.trim() || blogForm.content_kreyol.trim();
+    const hasEn = blogForm.title_english.trim() || blogForm.content_english.trim();
+
+    if (!hasHt && !hasEn) {
+      triggerAlert(
+        language === 'fr_ht'
+          ? 'Tanpri mete tèks an kreyòl oswa an anglè anvan ou tradui.'
+          : 'Please enter content in either Creole or English before translating.',
+        'error'
+      );
+      return;
+    }
+
+    let fromLang: 'en' | 'fr_ht' = 'fr_ht';
+    if (hasHt && !hasEn) {
+      fromLang = 'fr_ht';
+    } else if (hasEn && !hasHt) {
+      fromLang = 'en';
+    } else {
+      fromLang = language === 'fr_ht' ? 'fr_ht' : 'en';
+    }
+
+    setIsTranslating(true);
+    triggerAlert(
+      language === 'fr_ht'
+        ? 'Tradiksyon entèlijan an kouran...'
+        : 'Smart translation in progress...',
+      'success'
+    );
+
+    try {
+      const sourceTitle = fromLang === 'en' ? blogForm.title_english : blogForm.title_kreyol;
+      const sourceContent = fromLang === 'en' ? blogForm.content_english : blogForm.content_kreyol;
+
+      const res = await translateBlogContentAction(sourceTitle, sourceContent, fromLang);
+      if (res.success && res.translatedTitle && res.translatedContent) {
+        setBlogForm(prev => {
+          if (fromLang === 'en') {
+            return {
+              ...prev,
+              title_kreyol: res.translatedTitle!,
+              content_kreyol: res.translatedContent!
+            };
+          } else {
+            return {
+              ...prev,
+              title_english: res.translatedTitle!,
+              content_english: res.translatedContent!
+            };
+          }
+        });
+        triggerAlert(
+          language === 'fr_ht'
+            ? 'Tradiksyon fini ak siksè!'
+            : 'Translation completed successfully!',
+          'success'
+        );
+      } else {
+        triggerAlert(res.error || 'Translation failed', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'An error occurred during translation', 'error');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleTeamP1File = (file: File | undefined) => {
+    if (!file) return;
+    compressAndResizeImage(file, 400, 400, 0.85, (b64) => {
+      setTeamP1ImageUrl(b64);
+    });
+  };
+
+  const handlePasteTeamP1 = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) handleTeamP1File(file);
+        break;
+      }
+    }
+  };
+
+  const handleDropTeamP1 = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingTeamP1(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleTeamP1File(files[0]);
+    }
+  };
+
+  const handleTeamP2File = (file: File | undefined) => {
+    if (!file) return;
+    compressAndResizeImage(file, 400, 400, 0.85, (b64) => {
+      setTeamP2ImageUrl(b64);
+    });
+  };
+
+  const handlePasteTeamP2 = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) handleTeamP2File(file);
+        break;
+      }
+    }
+  };
+
+  const handleDropTeamP2 = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingTeamP2(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleTeamP2File(files[0]);
+    }
+  };
+
+  const handleExpectFile = (file: File | undefined) => {
+    if (!file) return;
+    compressAndResizeImage(file, 800, 600, 0.85, (b64) => {
+      setExpectImageUrl(b64);
+    });
+  };
+
+  const handlePasteExpect = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) handleExpectFile(file);
+        break;
+      }
+    }
+  };
+
+  const handleDropExpect = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingExpect(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleExpectFile(files[0]);
+    }
+  };
+
+  const handleHomeTabsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      let finalAboutUsImg = aboutUsImageUrl;
+      if (aboutUsImageUrl && aboutUsImageUrl.startsWith('data:')) {
+        triggerAlert(language === 'fr_ht' ? 'Y ap chaje imaj "Ki Moun Nou Ye" a...' : 'Uploading "About Us" image...', 'success');
+        const res = await clientUploadAsset('home_about_us_bg.jpg', aboutUsImageUrl);
+        if (res.success && res.url) {
+          finalAboutUsImg = res.url;
+          setAboutUsImageUrl(res.url);
+        } else {
+          triggerAlert(res.error || 'Failed to upload "About Us" image', 'error');
+          return;
+        }
+      }
+
+      // Upload any new team member photos
+      const updatedTeamMembers = [...teamMembers];
+      for (let i = 0; i < updatedTeamMembers.length; i++) {
+        const member = updatedTeamMembers[i];
+        if (member.image_url && member.image_url.startsWith('data:')) {
+          triggerAlert(
+            language === 'fr_ht' 
+              ? `Y ap chaje foto pou ${member.name || 'lidè ' + (i + 1)}...` 
+              : `Uploading photo for ${member.name || 'leader ' + (i + 1)}...`, 
+            'success'
+          );
+          const res = await clientUploadAsset(`home_team_member_${i}_${Date.now()}.jpg`, member.image_url);
+          if (res.success && res.url) {
+            updatedTeamMembers[i] = { ...member, image_url: res.url };
+          } else {
+            triggerAlert(res.error || `Failed to upload photo for ${member.name || 'leader ' + (i + 1)}`, 'error');
+            return;
+          }
+        }
+      }
+      setTeamMembers(updatedTeamMembers);
+
+      let finalExpectImg = expectImageUrl;
+      if (expectImageUrl && expectImageUrl.startsWith('data:')) {
+        triggerAlert(language === 'fr_ht' ? 'Y ap chaje imaj "Kisa pou Atann" lan...' : 'Uploading "What to Expect" image...', 'success');
+        const res = await clientUploadAsset('home_expect_bg.jpg', expectImageUrl);
+        if (res.success && res.url) {
+          finalExpectImg = res.url;
+          setExpectImageUrl(res.url);
+        } else {
+          triggerAlert(res.error || 'Failed to upload "What to Expect" image', 'error');
+          return;
+        }
+      }
+
+      triggerAlert(language === 'fr_ht' ? 'Y ap sove chanjman yo...' : 'Saving changes...', 'success');
+
+      const settingsMap: Record<string, string> = {
+        about_us_title_en: aboutUsTitleEn,
+        about_us_title_ht: aboutUsTitleHt,
+        about_us_p1_en: aboutUsP1En,
+        about_us_p1_ht: aboutUsP1Ht,
+        about_us_p2_en: aboutUsP2En,
+        about_us_p2_ht: aboutUsP2Ht,
+        about_us_image_url: finalAboutUsImg,
+
+        beliefs_title_en: beliefsTitleEn,
+        beliefs_title_ht: beliefsTitleHt,
+        belief_1_title_en: belief1TitleEn,
+        belief_1_title_ht: belief1TitleHt,
+        belief_1_desc_en: belief1DescEn,
+        belief_1_desc_ht: belief1DescHt,
+        belief_2_title_en: belief2TitleEn,
+        belief_2_title_ht: belief2TitleHt,
+        belief_2_desc_en: belief2DescEn,
+        belief_2_desc_ht: belief2DescHt,
+        belief_3_title_en: belief3TitleEn,
+        belief_3_title_ht: belief3TitleHt,
+        belief_3_desc_en: belief3DescEn,
+        belief_3_desc_ht: belief3DescHt,
+        belief_4_title_en: belief4TitleEn,
+        belief_4_title_ht: belief4TitleHt,
+        belief_4_desc_en: belief4DescEn,
+        belief_4_desc_ht: belief4DescHt,
+
+        team_title_en: teamTitleEn,
+        team_title_ht: teamTitleHt,
+        team_members_json: JSON.stringify(updatedTeamMembers),
+        // Legacy keys for backwards compatibility:
+        team_p1_name: updatedTeamMembers[0]?.name || '',
+        team_p1_role_en: updatedTeamMembers[0]?.role_en || '',
+        team_p1_role_ht: updatedTeamMembers[0]?.role_ht || '',
+        team_p1_bio_en: updatedTeamMembers[0]?.bio_en || '',
+        team_p1_bio_ht: updatedTeamMembers[0]?.bio_ht || '',
+        team_p1_image_url: updatedTeamMembers[0]?.image_url || '',
+        team_p1_email: updatedTeamMembers[0]?.email || '',
+        team_p2_name: updatedTeamMembers[1]?.name || '',
+        team_p2_role_en: updatedTeamMembers[1]?.role_en || '',
+        team_p2_role_ht: updatedTeamMembers[1]?.role_ht || '',
+        team_p2_bio_en: updatedTeamMembers[1]?.bio_en || '',
+        team_p2_bio_ht: updatedTeamMembers[1]?.bio_ht || '',
+        team_p2_image_url: updatedTeamMembers[1]?.image_url || '',
+        team_p2_email: updatedTeamMembers[1]?.email || '',
+
+        expect_title_en: expectTitleEn,
+        expect_title_ht: expectTitleHt,
+        expect_p1_en: expectP1En,
+        expect_p1_ht: expectP1Ht,
+        expect_image_url: finalExpectImg,
+        expect_bullet1_en: expectBullet1En,
+        expect_bullet1_ht: expectBullet1Ht,
+        expect_bullet2_en: expectBullet2En,
+        expect_bullet2_ht: expectBullet2Ht,
+        expect_bullet3_en: expectBullet3En,
+        expect_bullet3_ht: expectBullet3Ht,
+      };
+
+      const res = await updateGlobalSettings(settingsMap);
+      if (res.success) {
+        triggerAlert(language === 'fr_ht' ? 'Paj Akèy konfigire avèk siksè!' : 'Home tabs configured successfully!', 'success');
+      } else {
+        triggerAlert(res.error || 'Failed to save configuration', 'error');
+      }
+    } catch (err: any) {
+      console.error(err);
+      triggerAlert(err.message || 'An error occurred while saving', 'error');
+    }
+  };
+
+  // FREE GIFT FILE HANDLERS & HELPERS
+  const handleGiftFile = (file: File | undefined) => {
+    if (!file) return;
+    setGiftIsUploading(true);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      if (e.target?.result) {
+        setGiftFileUrl(e.target.result as string);
+        triggerAlert(language === 'fr_ht' ? 'Fichye chaje avèk siksè nan memwa kach!' : 'File loaded into cache successfully!', 'success');
+      }
+      setGiftIsUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePasteGift = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      const file = items[i].getAsFile();
+      if (file) {
+        handleGiftFile(file);
+        break;
+      }
+    }
+  };
+
+  const handleDropGift = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingGift(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleGiftFile(files[0]);
+    }
+  };
+
+  // SUBSCRIBERS UTILITY ACTIONS
+  const [copiedSubscribers, setCopiedSubscribers] = useState(false);
+  const handleCopySubscribersEmails = () => {
+    const emails = subscriberList.map(s => s.email).filter(Boolean).join(', ');
+    if (!emails) {
+      triggerAlert(language === 'fr_ht' ? 'Pa gen okenn imel ki disponib.' : 'No email addresses available.', 'error');
+      return;
+    }
+    navigator.clipboard.writeText(emails);
+    setCopiedSubscribers(true);
+    triggerAlert(language === 'fr_ht' ? 'Lis imel yo kopye!' : 'Emails list copied!', 'success');
+    setTimeout(() => {
+      setCopiedSubscribers(false);
+    }, 2000);
+  };
+
+  const handleDeleteSubscriber = async (id: number) => {
+    if (!confirm(language === 'fr_ht' ? 'Èske ou sèten ou vle efase abònman sa a?' : 'Are you sure you want to delete this subscriber?')) {
+      return;
+    }
+    
+    const previousList = subscriberList;
+    setSubscriberList(subscriberList.filter(sub => sub.id !== id));
+    
+    try {
+      const res = await deleteLead(id);
+      if (!res.success) {
+        triggerAlert(language === 'fr_ht' ? 'Ere: ' + res.error : 'Error: ' + res.error, 'error');
+        setSubscriberList(previousList);
+      } else {
+        triggerAlert(language === 'fr_ht' ? 'Abònman an efase avèk siksè!' : 'Subscriber deleted successfully!', 'success');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error occurred', 'error');
+      setSubscriberList(previousList);
+    }
+  };
+
+  // DAILY DEVOTIONAL HANDLERS
+  const handleToggleAutoPublish = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const isChecked = e.target.checked;
+    const val = isChecked ? 'true' : 'false';
+    setDevotionalAutoPublish(val);
+    try {
+      const res = await updateGlobalSettings({ devotional_auto_publish: val });
+      if (res.success) {
+        triggerAlert(
+          language === 'fr_ht'
+            ? 'Anfòm! Chanjman konfigirasyon sove.'
+            : 'Settings updated successfully.',
+          'success'
+        );
+      } else {
+        triggerAlert(res.error || 'Failed to update auto-publish state', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error updating settings', 'error');
+    }
+  };
+
+  const handleDevotionalSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingDevotionalId === null) return;
+
+    try {
+      const res = await saveDailyDevotional(
+        editingDevotionalId,
+        editDevotionalForm.verse_ref_english,
+        editDevotionalForm.verse_ref_kreyol,
+        editDevotionalForm.verse_text_english,
+        editDevotionalForm.verse_text_kreyol,
+        editDevotionalForm.lesson_english,
+        editDevotionalForm.lesson_kreyol,
+        editDevotionalForm.status
+      );
+
+      if (res.success) {
+        setDevotionalList(prev =>
+          prev.map(d =>
+            d.id === editingDevotionalId
+              ? {
+                  ...d,
+                  verse_ref_english: editDevotionalForm.verse_ref_english,
+                  verse_ref_kreyol: editDevotionalForm.verse_ref_kreyol,
+                  verse_text_english: editDevotionalForm.verse_text_english,
+                  verse_text_kreyol: editDevotionalForm.verse_text_kreyol,
+                  lesson_english: editDevotionalForm.lesson_english,
+                  lesson_kreyol: editDevotionalForm.lesson_kreyol,
+                  status: editDevotionalForm.status
+                }
+              : d
+          )
+        );
+        setEditingDevotionalId(null);
+        triggerAlert(
+          language === 'fr_ht' ? 'Devosyonèl sove avèk siksè!' : 'Devotional saved successfully!',
+          'success'
+        );
+      } else {
+        triggerAlert(res.error || 'Failed to save', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error saving', 'error');
+    }
+  };
+
+  const handleDevotionalApprove = async (id: number) => {
+    try {
+      const res = await approveDailyDevotional(id);
+      if (res.success) {
+        setDevotionalList(prev =>
+          prev.map(d => (d.id === id ? { ...d, status: 'approved' } : d))
+        );
+        triggerAlert(
+          language === 'fr_ht' ? 'Devosyonèl apwouve epi pibliye!' : 'Devotional approved and published!',
+          'success'
+        );
+      } else {
+        triggerAlert(res.error || 'Failed to approve', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error approving', 'error');
+    }
+  };
+
+  const handleDevotionalDelete = async (id: number) => {
+    if (
+      !confirm(
+        language === 'fr_ht'
+          ? 'Èske ou sèten ou vle efase devosyonèl sa a?'
+          : 'Are you sure you want to delete this devotional?'
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const res = await deleteDailyDevotional(id);
+      if (res.success) {
+        setDevotionalList(prev => prev.filter(d => d.id !== id));
+        triggerAlert(
+          language === 'fr_ht' ? 'Devosyonèl efase!' : 'Devotional deleted successfully!',
+          'success'
+        );
+      } else {
+        triggerAlert(res.error || 'Failed to delete', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error deleting', 'error');
+    }
+  };
+
+  const handleDevotionalGenerate = async () => {
+    // Generate for today's date in local system timezone (YYYY-MM-DD format)
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+
+    try {
+      triggerAlert(
+        language === 'fr_ht' ? 'Y ap jenere nouvo devosyonèl...' : 'Generating new devotional...',
+        'success'
+      );
+      const res = await generateDevotionalAction(dateStr);
+      if (res.success && res.devotional) {
+        // Since we might already have this date, insert or replace it in the local state
+        setDevotionalList(prev => {
+          const filtered = prev.filter(d => d.date !== dateStr);
+          return [res.devotional!, ...filtered];
+        });
+        triggerAlert(
+          language === 'fr_ht'
+            ? 'Nouvo devosyonèl jenere avèk siksè!'
+            : 'New devotional generated successfully!',
+          'success'
+        );
+      } else {
+        triggerAlert(res.error || 'Failed to generate devotional', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error generating', 'error');
+    }
+  };
+
+  const startEditDevotional = (devotional: DailyDevotional) => {
+    setEditingDevotionalId(devotional.id);
+    setEditDevotionalForm({
+      verse_ref_english: devotional.verse_ref_english,
+      verse_ref_kreyol: devotional.verse_ref_kreyol,
+      verse_text_english: devotional.verse_text_english,
+      verse_text_kreyol: devotional.verse_text_kreyol,
+      lesson_english: devotional.lesson_english,
+      lesson_kreyol: devotional.lesson_kreyol,
+      status: devotional.status
+    });
+  };
+
+  // KNOWLEDGE BASE (GLOBAL CONTEXT) HANDLERS
+  const handleKbFile = async (file: File | undefined) => {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      triggerAlert(language === 'fr_ht' ? 'Sèlman dosye PDF yo sipòte pou drag & drop.' : 'Only PDF files are supported for drag & drop.', 'error');
+      return;
+    }
+
+    setKbIsUploading(true);
+    triggerAlert(language === 'fr_ht' ? 'Y ap chaje dosye PDF sa a...' : 'Uploading PDF file...', 'success');
+
+    try {
+      const res = await clientUploadAsset(file.name, file);
+      if (res.success && res.url) {
+        const title = file.name.replace(/\.[^/.]+$/, "").replace(/_/g, ' ');
+        const saveRes = await addKnowledgeBaseItem(title, 'pdf', res.url);
+        if (saveRes.success) {
+          triggerAlert(language === 'fr_ht' ? 'PDF ajoute nan konesans kominotè!' : 'PDF successfully added to Knowledge Base!', 'success');
+          
+          if (automateWithDoc) {
+            triggerAlert(language === 'fr_ht' 
+              ? 'AI ap analize PDF la epi mete sit la ajou otomatikman...' 
+              : 'AI is extracting PDF contents and automating website updates...', 'success');
+            
+            const autoRes = await automateWebsiteContentFromPdf(res.url);
+            if (autoRes.success) {
+              triggerAlert(autoRes.message || 'Successfully updated content!', 'success');
+            } else {
+              triggerAlert(autoRes.error || 'AI Extraction failed', 'error');
+            }
+          }
+
+          router.refresh();
+        } else {
+          triggerAlert(saveRes.error || 'Failed to save to database', 'error');
+        }
+      } else {
+        triggerAlert(res.error || 'Failed to upload PDF', 'error');
+      }
+      setKbIsUploading(false);
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error uploading PDF', 'error');
+      setKbIsUploading(false);
+    }
+  };
+
+  const handleKbTextOrUrl = async (text: string) => {
+    if (!text) return;
+    const cleanUrl = text.trim();
+    if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+      triggerAlert(language === 'fr_ht' ? 'Sèlman URL ki kòmanse ak http/https sipòte.' : 'Only URLs starting with http/https are supported.', 'error');
+      return;
+    }
+
+    setKbIsUploading(true);
+    let type = 'link';
+    let title = 'Referans Lyen';
+
+    if (cleanUrl.includes('docs.google.com/document')) {
+      type = 'google_doc';
+      title = language === 'fr_ht' ? 'Dokiman Google' : 'Google Doc Reference';
+    } else if (cleanUrl.includes('docs.google.com/spreadsheets')) {
+      type = 'google_sheet';
+      title = language === 'fr_ht' ? 'Fèy Google' : 'Google Sheet Reference';
+    } else {
+      title = language === 'fr_ht' ? 'Lyen Referans' : 'Web Resource Link';
+    }
+
+    try {
+      const saveRes = await addKnowledgeBaseItem(title, type, cleanUrl);
+      if (saveRes.success) {
+        triggerAlert(language === 'fr_ht' ? 'Lyen referans ajoute!' : 'Link successfully added to Knowledge Base!', 'success');
+        router.refresh();
+      } else {
+        triggerAlert(saveRes.error || 'Failed to save link', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error saving link', 'error');
+    } finally {
+      setKbIsUploading(false);
+    }
+  };
+
+  const handleKbPaste = (e: React.ClipboardEvent) => {
+    const text = e.clipboardData.getData('text');
+    if (text) {
+      handleKbTextOrUrl(text);
+    }
+  };
+
+  const handleKbDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingKb(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleKbFile(files[0]);
+    } else {
+      const text = e.dataTransfer.getData('text');
+      if (text) {
+        handleKbTextOrUrl(text);
+      }
+    }
+  };
+
+  const handleManualKbSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!kbManualTitle || !kbManualUrl) {
+      triggerAlert(language === 'fr_ht' ? 'Tit ak URL yo obligatwa.' : 'Title and URL are required.', 'error');
+      return;
+    }
+
+    setKbIsUploading(true);
+    try {
+      const saveRes = await addKnowledgeBaseItem(kbManualTitle, kbManualType, kbManualUrl);
+      if (saveRes.success) {
+        triggerAlert(language === 'fr_ht' ? 'Resource ajoute avèk siksè!' : 'Resource added successfully!', 'success');
+        setKbManualTitle('');
+        setKbManualUrl('');
+        router.refresh();
+      } else {
+        triggerAlert(saveRes.error || 'Failed to save resource', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error saving resource', 'error');
+    } finally {
+      setKbIsUploading(false);
+    }
+  };
+
+  const handleDeleteKb = async (id: number) => {
+    if (!confirm(language === 'fr_ht' ? 'Èske ou sèten ou vle siprime resous sa a?' : 'Are you sure you want to delete this resource?')) {
+      return;
+    }
+
+    try {
+      const res = await deleteKnowledgeBaseItem(id);
+      if (res.success) {
+        triggerAlert(language === 'fr_ht' ? 'Resous la siprime!' : 'Resource deleted successfully!', 'success');
+        router.refresh();
+      } else {
+        triggerAlert(res.error || 'Failed to delete resource', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error deleting resource', 'error');
+    }
+  };
+
+  const handleResetContentFromPdf = async (pdfUrl: string, documentTitle: string) => {
+    const warningMessage = language === 'fr_ht'
+      ? `AVÈTISMAN KRITIK: Sa pral efase epi ranplase tout orè sèvis, pwojè kominote, aktivite, ak paramèt aktyèl yo ak enfòmasyon ki nan dokiman "${documentTitle}" sa a. Èske ou sèten ou vle efase paramèt aktyèl yo epi kontinye?`
+      : `CRITICAL WARNING: This will overwrite and completely replace your current service schedules, community outreach projects, upcoming events, and global configurations with the content extracted from "${documentTitle}". Any manual edits made will be lost. Are you sure you want to continue?`;
+    
+    if (window.confirm(warningMessage)) {
+      setKbIsUploading(true);
+      triggerAlert(language === 'fr_ht' 
+        ? 'AI ap analize PDF la epi mete sit la ajou otomatikman...' 
+        : 'AI is extracting PDF contents and automating website updates...', 'success');
+      
+      try {
+        const autoRes = await automateWebsiteContentFromPdf(pdfUrl);
+        if (autoRes.success) {
+          triggerAlert(autoRes.message || 'Successfully updated content!', 'success');
+          router.refresh();
+        } else {
+          triggerAlert(autoRes.error || 'AI Extraction failed', 'error');
+        }
+      } catch (err: any) {
+        triggerAlert(err.message || 'Error processing document content', 'error');
+      } finally {
+        setKbIsUploading(false);
+      }
+    }
+  };
+
+  // Automated client-side canvas color extraction
+  const extractColorsFromLogo = (base64Image: string) => {
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      
+      canvas.width = 40;
+      canvas.height = 40;
+      ctx.drawImage(img, 0, 0, 40, 40);
+      
+      const imgData = ctx.getImageData(0, 0, 40, 40).data;
+      const colorMap: Record<string, number> = {};
+      
+      for (let i = 0; i < imgData.length; i += 4) {
+        const r = imgData[i];
+        const g = imgData[i+1];
+        const b = imgData[i+2];
+        const a = imgData[i+3];
+        
+        if (a < 180) continue; // Skip transparency
+        
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        const diff = max - min;
+        
+        if (diff < 20) continue; // Skip neutral grays/blacks/whites
+        
+        const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+        if (luminance < 40 || luminance > 220) continue; // Skip too dark/too bright
+        
+        const rgbKey = `${r},${g},${b}`;
+        colorMap[rgbKey] = (colorMap[rgbKey] || 0) + 1;
+      }
+      
+      const sortedColors = Object.entries(colorMap).sort((a, b) => b[1] - a[1]);
+      
+      if (sortedColors.length > 0) {
+        const [domR, domG, domB] = sortedColors[0][0].split(',').map(Number);
+        
+        const rgbToHex = (r: number, g: number, b: number) => 
+          "#" + [r, g, b].map(x => {
+            const hex = x.toString(16);
+            return hex.length === 1 ? "0" + hex : hex;
+          }).join("");
+          
+        const primaryHex = rgbToHex(domR, domG, domB);
+        
+        // Hover is a slightly darker version
+        const hoverR = Math.max(0, Math.floor(domR * 0.85));
+        const hoverG = Math.max(0, Math.floor(domG * 0.85));
+        const hoverB = Math.max(0, Math.floor(domB * 0.85));
+        const hoverHex = rgbToHex(hoverR, hoverG, hoverB);
+        
+        // Find a distinct secondary accent color from top 10 dominant colors
+        let accentHex = '#3b82f6';
+        let foundDistinct = false;
+        for (let j = 1; j < Math.min(10, sortedColors.length); j++) {
+          const [secR, secG, secB] = sortedColors[j][0].split(',').map(Number);
+          const distance = Math.sqrt(
+            Math.pow(secR - domR, 2) + 
+            Math.pow(secG - domG, 2) + 
+            Math.pow(secB - domB, 2)
+          );
+          if (distance > 70) {
+            accentHex = rgbToHex(secR, secG, secB);
+            foundDistinct = true;
+            break;
+          }
+        }
+        if (!foundDistinct) {
+          accentHex = rgbToHex(255 - domR, 255 - domG, 255 - domB);
+        }
+        
+        setThemePrimary(primaryHex);
+        setThemeHover(hoverHex);
+        setThemeAccent(accentHex);
+        triggerAlert(language === 'fr_ht' ? 'Palèt koulè detekte epi aplike!' : 'Color palette detected and applied!', 'success');
+      }
+    };
+    img.src = base64Image;
+  };
+
+  const handleSettingsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    let finalLogoUrl = logoUrl;
+    let finalBgUrl = bgUrl;
+    let finalGiftFileUrl = giftFileUrl;
+
+    // Check if new logo needs to be uploaded as a file
+    if (logoUrl.startsWith('data:')) {
+      const uploadRes = await clientUploadAsset('logo.png', logoUrl);
+      if (uploadRes.success && uploadRes.url) {
+        finalLogoUrl = uploadRes.url;
+        setLogoUrl(uploadRes.url); // Update state
+      } else {
+        triggerAlert(language === 'fr_ht' ? 'Ere pandan uploade logo: ' + uploadRes.error : 'Error uploading logo: ' + uploadRes.error, 'error');
+        return;
+      }
+    }
+
+    // Check if new background needs to be uploaded as a file
+    if (bgUrl.startsWith('data:')) {
+      const uploadRes = await clientUploadAsset('hero_bg.jpg', bgUrl);
+      if (uploadRes.success && uploadRes.url) {
+        finalBgUrl = uploadRes.url;
+        setBgUrl(uploadRes.url); // Update state
+      } else {
+        triggerAlert(language === 'fr_ht' ? 'Ere pandan uploade background: ' + uploadRes.error : 'Error uploading background: ' + uploadRes.error, 'error');
+        return;
+      }
+    }
+
+    // Check if new free gift file needs to be uploaded as a file
+    if (giftFileUrl.startsWith('data:')) {
+      let ext = 'txt';
+      if (giftFileUrl.includes('application/pdf')) ext = 'pdf';
+      else if (giftFileUrl.includes('msword') || giftFileUrl.includes('officedocument')) ext = 'docx';
+      
+      const uploadRes = await clientUploadAsset(`free_gift_${Date.now()}.${ext}`, giftFileUrl);
+      if (uploadRes.success && uploadRes.url) {
+        finalGiftFileUrl = uploadRes.url;
+        setGiftFileUrl(uploadRes.url); // Update state
+      } else {
+        triggerAlert(language === 'fr_ht' ? 'Ere pandan chajman kado a: ' + uploadRes.error : 'Error uploading free gift: ' + uploadRes.error, 'error');
+        return;
+      }
+    }
+
+    // Check if new custom live event thumbnail needs to be uploaded as a file
+    let finalCustomLiveEventThumbnailUrl = customLiveEventThumbnailUrl;
+    if (customLiveEventThumbnailUrl.startsWith('data:')) {
+      const uploadRes = await clientUploadAsset(`custom_live_event_thumbnail_${Date.now()}.jpg`, customLiveEventThumbnailUrl);
+      if (uploadRes.success && uploadRes.url) {
+        finalCustomLiveEventThumbnailUrl = uploadRes.url;
+        setCustomLiveEventThumbnailUrl(uploadRes.url); // Update state
+      } else {
+        triggerAlert(language === 'fr_ht' ? 'Ere pandan uploade thumbnail: ' + uploadRes.error : 'Error uploading custom live stream event thumbnail: ' + uploadRes.error, 'error');
+        return;
+      }
+    }
+
+    const res = await updateGlobalSettings({
+      pastor_name: pastorName,
+      pastor_message_kreyol: pMsgHt,
+      pastor_message_english: pMsgEn,
+      church_phone: chPhone,
+      church_email: chEmail,
+      church_address: chAddr,
+      admin_password: adminPass,
+      home_background_url: finalBgUrl,
+      live_stream_active: liveActive,
+      live_stream_url: liveUrl,
+      youtube_channel_url: ytChannelUrl,
+      live_stream_event_id: liveStreamEventId,
+      custom_live_event_thumbnail_url: finalCustomLiveEventThumbnailUrl,
+      logo_url: finalLogoUrl,
+      theme_primary: themePrimary,
+      theme_hover: themeHover,
+      theme_accent: themeAccent,
+      theme_mode: themeMode,
+      hero_bg_opacity_light: heroBgOpacityLight,
+      hero_bg_opacity_dark: heroBgOpacityDark,
+      soften_hero_text_bg: softenHeroTextBg,
+      hide_stripe: hideStripe,
+      cashapp_id: cashappId,
+      venmo_id: venmoId,
+      apple_pay_phone: applePayPhone,
+      zelle_phone: zellePhone,
+      zelle_name: zelleName,
+      show_cashapp: showCashapp,
+      show_venmo: showVenmo,
+      show_apple_pay: showApplePay,
+      show_check: showCheck,
+      check_payable_to: checkPayableTo,
+      check_mailing_address: checkMailingAddress,
+      free_gift_title_kreyol: giftTitleHt,
+      free_gift_title_english: giftTitleEn,
+      free_gift_desc_kreyol: giftDescHt,
+      free_gift_desc_english: giftDescEn,
+      free_gift_file_url: finalGiftFileUrl,
+      free_gift_admin_notes: giftAdminNotes,
+      devotional_theme: devotionalTheme
+    });
+
+    if (res.success) {
+      triggerAlert(t.adminSaveSuccess, 'success');
+      
+      // Auto-trigger a website backup on successful settings save for total convenience!
+      const backupRes = await backupWebsite();
+      if (backupRes.success) {
+        triggerAlert(language === 'fr_ht' 
+          ? `Sit la sovgade nan Parousie/backups/backup_${backupRes.timestamp}!` 
+          : `Website backed up successfully in Parousie/backups/backup_${backupRes.timestamp}!`, 
+          'success'
+        );
+      }
+      
+      router.refresh();
+    } else {
+      triggerAlert(res.error || 'Update failed', 'error');
+    }
+  };
+
+  // 2. SERVICE SCHEDULES SUB-MUTATIONS STATE
+  const parseTimeToMinutes = (timeStr: string): number => {
+    const clean = timeStr.trim().toUpperCase();
+    const match = clean.match(/(\d+)(?::(\d+))?\s*(AM|PM)/);
+    if (!match) return 0;
+    let hours = parseInt(match[1], 10);
+    const minutes = match[2] ? parseInt(match[2], 10) : 0;
+    const ampm = match[3];
+    if (ampm === 'PM' && hours !== 12) hours += 12;
+    if (ampm === 'AM' && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+  };
+
+  const parseTimeRange = (rangeStr: string): { start: number; end: number } | null => {
+    const parts = rangeStr.split('-');
+    if (parts.length !== 2) return null;
+    const start = parseTimeToMinutes(parts[0]);
+    const end = parseTimeToMinutes(parts[1]);
+    if (start === 0 && end === 0) return null;
+    return { start, end };
+  };
+
+  const intervalsOverlap = (r1: { start: number; end: number }, r2: { start: number; end: number }): boolean => {
+    return Math.max(r1.start, r2.start) < Math.min(r1.end, r2.end);
+  };
+
+  const [editingScheduleId, setEditingScheduleId] = useState<number | null>(null);
+  const [schedDayHt, setSchedDayHt] = useState('');
+  const [schedDayEn, setSchedDayEn] = useState('');
+  const [schedTime, setSchedTime] = useState('');
+  const [schedTitleHt, setSchedTitleHt] = useState('');
+  const [schedTitleEn, setSchedTitleEn] = useState('');
+  const [schedDescHt, setSchedDescHt] = useState('');
+  const [schedDescEn, setSchedDescEn] = useState('');
+  const [schedImg, setSchedImg] = useState('');
+  const [schedIsLiveStream, setSchedIsLiveStream] = useState(false);
+  const [hasManuallyToggledLiveStream, setHasManuallyToggledLiveStream] = useState(false);
+
+  // Auto-default Sunday Services to be checked for live stream
+  useEffect(() => {
+    if (editingScheduleId === null && !hasManuallyToggledLiveStream) {
+      const dayEnLower = schedDayEn.toLowerCase().trim();
+      const dayHtLower = schedDayHt.toLowerCase().trim();
+      const isSunday = 
+        dayEnLower === 'sunday' || 
+        dayHtLower === 'dimanch' ||
+        dayEnLower.startsWith('sun') ||
+        dayHtLower.startsWith('dim');
+      
+      setSchedIsLiveStream(isSunday);
+    }
+  }, [schedDayEn, schedDayHt, editingScheduleId, hasManuallyToggledLiveStream]);
+
+  const getScheduleConflict = () => {
+    if (!schedIsLiveStream || !schedTime || !schedDayEn) return null;
+
+    const currentRange = parseTimeRange(schedTime);
+    if (!currentRange) return null;
+
+    const conflict = schedules.find(s => {
+      if (s.id === editingScheduleId) return false;
+      if (s.is_livestreamed !== 1) return false;
+
+      const isSameDay = 
+        s.day_english.toLowerCase().trim() === schedDayEn.toLowerCase().trim() ||
+        s.day_kreyol.toLowerCase().trim() === schedDayHt.toLowerCase().trim();
+
+      if (!isSameDay) return false;
+
+      const otherRange = parseTimeRange(s.time);
+      if (!otherRange) return false;
+
+      return intervalsOverlap(currentRange, otherRange);
+    });
+
+    return conflict || null;
+  };
+
+  const handleSaveSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const conflict = getScheduleConflict();
+    if (conflict) {
+      const confirmSave = confirm(
+        language === 'fr_ht'
+          ? `Atansyon: gen yon lòt sèvis an dirèk ki planifye nan menm lè sa a (${conflict.time}). Èske ou vle sove li kanmenm?`
+          : `Warning: cannot schedule 2 live stream events at the same time. This overlaps with "${conflict.title_english}" (${conflict.time}). Do you want to proceed anyway?`
+      );
+      if (!confirmSave) return;
+    }
+
+    let finalImgUrl = schedImg;
+    if (schedImg && schedImg.startsWith('data:')) {
+      triggerAlert(language === 'en' ? 'Uploading schedule image...' : 'Y ap chaje imaj orè a...', 'success');
+      const uploadRes = await clientUploadAsset(`schedule_${Date.now()}.jpg`, schedImg);
+      if (uploadRes.success && uploadRes.url) {
+        finalImgUrl = uploadRes.url;
+        setSchedImg(uploadRes.url!);
+      } else {
+        triggerAlert(uploadRes.error || 'Failed to upload schedule image', 'error');
+        return;
+      }
+    }
+
+    const res = await saveServiceSchedule(editingScheduleId, {
+      day_kreyol: schedDayHt,
+      day_english: schedDayEn,
+      time: schedTime,
+      title_kreyol: schedTitleHt,
+      title_english: schedTitleEn,
+      description_kreyol: schedDescHt,
+      description_english: schedDescEn,
+      image_url: finalImgUrl || undefined,
+      is_livestreamed: schedIsLiveStream ? 1 : 0
+    });
+    if (res.success) {
+      triggerAlert(t.adminSaveSuccess, 'success');
+      resetScheduleForm();
+      router.refresh();
+    } else {
+      triggerAlert(res.error || 'Failed to save', 'error');
+    }
+  };
+
+  const resetScheduleForm = () => {
+    setEditingScheduleId(null);
+    setSchedDayHt('');
+    setSchedDayEn('');
+    setSchedTime('');
+    setSchedTitleHt('');
+    setSchedTitleEn('');
+    setSchedDescHt('');
+    setSchedDescEn('');
+    setSchedImg('');
+    setSchedIsLiveStream(false);
+    setHasManuallyToggledLiveStream(false);
+  };
+
+  const handleEditScheduleClick = (sched: ServiceSchedule) => {
+    setEditingScheduleId(sched.id);
+    setSchedDayHt(sched.day_kreyol);
+    setSchedDayEn(sched.day_english);
+    setSchedTime(sched.time);
+    setSchedTitleHt(sched.title_kreyol);
+    setSchedTitleEn(sched.title_english);
+    setSchedDescHt(sched.description_kreyol || '');
+    setSchedDescEn(sched.description_english || '');
+    setSchedImg(sched.image_url || '');
+    setSchedIsLiveStream(sched.is_livestreamed === 1);
+    setHasManuallyToggledLiveStream(true);
+  };
+
+  const handleDeleteSchedule = async (id: number) => {
+    if (!confirm(language === 'fr_ht' ? 'Èske ou sèten ou vle siprime orè sa a?' : 'Are you sure you want to delete this schedule?')) return;
+    const res = await deleteServiceSchedule(id);
+    if (res.success) {
+      triggerAlert(t.adminSaveSuccess, 'success');
+      router.refresh();
+    } else {
+      triggerAlert(res.error || 'Failed to delete', 'error');
+    }
+  };
+
+  // 3. HAITI MISSIONS SUB-MUTATIONS STATE
+  const [editingMissionId, setEditingMissionId] = useState<number | null>(null);
+  const [missTitleHt, setPMissTitleHt] = useState('');
+  const [missTitleEn, setPMissTitleEn] = useState('');
+  const [missDescHt, setPMissDescHt] = useState('');
+  const [missDescEn, setPMissDescEn] = useState('');
+  const [missImg, setPMissImg] = useState('');
+  const [missRaised, setPMissRaised] = useState(0);
+  const [missGoal, setPMissGoal] = useState(0);
+  const [missDate, setPMissDate] = useState('');
+
+  const handleSaveMission = async (e: React.FormEvent) => {
+    e.preventDefault();
+    let finalImgUrl = missImg;
+    if (missImg && missImg.startsWith('data:')) {
+      triggerAlert(language === 'en' ? 'Uploading project image...' : 'Y ap chaje imaj pwojè a...', 'success');
+      const uploadRes = await clientUploadAsset(`mission_${Date.now()}.jpg`, missImg);
+      if (uploadRes.success && uploadRes.url) {
+        finalImgUrl = uploadRes.url;
+        setPMissImg(uploadRes.url!);
+      } else {
+        triggerAlert(uploadRes.error || 'Failed to upload project image', 'error');
+        return;
+      }
+    }
+
+    const res = await saveHaitiMission(editingMissionId, {
+      title_kreyol: missTitleHt,
+      title_english: missTitleEn,
+      description_kreyol: missDescHt,
+      description_english: missDescEn,
+      image_url: finalImgUrl,
+      funds_raised: Number(missRaised),
+      funds_goal: Number(missGoal),
+      date: missDate || new Date().toISOString().split('T')[0]
+    });
+    if (res.success) {
+      triggerAlert(t.adminSaveSuccess, 'success');
+      resetMissionForm();
+      router.refresh();
+    } else {
+      triggerAlert(res.error || 'Failed to save', 'error');
+    }
+  };
+
+  const resetMissionForm = () => {
+    setEditingMissionId(null);
+    setPMissTitleHt('');
+    setPMissTitleEn('');
+    setPMissDescHt('');
+    setPMissDescEn('');
+    setPMissImg('');
+    setPMissRaised(0);
+    setPMissGoal(0);
+    setPMissDate('');
+  };
+
+  const handleEditMissionClick = (miss: HaitiMission) => {
+    setEditingMissionId(miss.id);
+    setPMissTitleHt(miss.title_kreyol);
+    setPMissTitleEn(miss.title_english);
+    setPMissDescHt(miss.description_kreyol);
+    setPMissDescEn(miss.description_english);
+    setPMissImg(miss.image_url || '');
+    setPMissRaised(miss.funds_raised);
+    setPMissGoal(miss.funds_goal);
+    setPMissDate(miss.date);
+  };
+
+  const handleDeleteMission = async (id: number) => {
+    if (!confirm(language === 'fr_ht' ? 'Èske ou sèten ou vle siprime pwojè sa a?' : 'Are you sure you want to delete this project?')) return;
+    const res = await deleteHaitiMission(id);
+    if (res.success) {
+      triggerAlert(t.adminSaveSuccess, 'success');
+      router.refresh();
+    } else {
+      triggerAlert(res.error || 'Failed to delete', 'error');
+    }
+  };
+
+  // 4. LOCAL OUTREACH SUB-MUTATIONS STATE
+  const [editingOutreachId, setEditingOutreachId] = useState<number | null>(null);
+  const [outrTitleHt, setOutrTitleHt] = useState('');
+  const [outrTitleEn, setOutrTitleEn] = useState('');
+  const [outrDescHt, setOutrDescHt] = useState('');
+  const [outrDescEn, setOutrDescEn] = useState('');
+  const [outrSchedHt, setOutrSchedHt] = useState('');
+  const [outrSchedEn, setOutrSchedEn] = useState('');
+
+  const handleSaveOutreach = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = await saveLocalOutreach(editingOutreachId, {
+      title_kreyol: outrTitleHt,
+      title_english: outrTitleEn,
+      description_kreyol: outrDescHt,
+      description_english: outrDescEn,
+      schedule_kreyol: outrSchedHt,
+      schedule_english: outrSchedEn
+    });
+    if (res.success) {
+      triggerAlert(t.adminSaveSuccess, 'success');
+      resetOutreachForm();
+      router.refresh();
+    } else {
+      triggerAlert(res.error || 'Failed to save', 'error');
+    }
+  };
+
+  const resetOutreachForm = () => {
+    setEditingOutreachId(null);
+    setOutrTitleHt('');
+    setOutrTitleEn('');
+    setOutrDescHt('');
+    setOutrDescEn('');
+    setOutrSchedHt('');
+    setOutrSchedEn('');
+  };
+
+  const handleEditOutreachClick = (outr: LocalOutreach) => {
+    setEditingOutreachId(outr.id);
+    setOutrTitleHt(outr.title_kreyol);
+    setOutrTitleEn(outr.title_english);
+    setOutrDescHt(outr.description_kreyol);
+    setOutrDescEn(outr.description_english);
+    setOutrSchedHt(outr.schedule_kreyol);
+    setOutrSchedEn(outr.schedule_english);
+  };
+
+  const handleDeleteOutreach = async (id: number) => {
+    if (!confirm(language === 'fr_ht' ? 'Èske ou vle siprime pwojè kominote sa a?' : 'Are you sure you want to delete this community project?')) return;
+    const res = await deleteLocalOutreach(id);
+    if (res.success) {
+      triggerAlert(t.adminSaveSuccess, 'success');
+      router.refresh();
+    } else {
+      triggerAlert(res.error || 'Failed to delete', 'error');
+    }
+  };
+
+  // 5. EVENTS SUB-MUTATIONS STATE
+  const [editingEventId, setEditingEventId] = useState<number | null>(null);
+  const [evTitleHt, setEvTitleHt] = useState('');
+  const [evTitleEn, setEvTitleEn] = useState('');
+  const [evDate, setEvDate] = useState('');
+  const [evTime, setEvTime] = useState('');
+  const [evLocHt, setEvLocHt] = useState('');
+  const [evLocEn, setEvLocEn] = useState('');
+  const [evDescHt, setEvDescHt] = useState('');
+  const [evDescEn, setEvDescEn] = useState('');
+
+  const handleSaveEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = await saveEvent(editingEventId, {
+      title_kreyol: evTitleHt,
+      title_english: evTitleEn,
+      date: evDate,
+      time: evTime,
+      location_kreyol: evLocHt,
+      location_english: evLocEn,
+      description_kreyol: evDescHt,
+      description_english: evDescEn
+    });
+    if (res.success) {
+      triggerAlert(t.adminSaveSuccess, 'success');
+      resetEventForm();
+      router.refresh();
+    } else {
+      triggerAlert(res.error || 'Failed to save', 'error');
+    }
+  };
+
+  const resetEventForm = () => {
+    setEditingEventId(null);
+    setEvTitleHt('');
+    setEvTitleEn('');
+    setEvDate('');
+    setEvTime('');
+    setEvLocHt('');
+    setEvLocEn('');
+    setEvDescHt('');
+    setEvDescEn('');
+  };
+
+  const handleEditEventClick = (ev: EventRecord) => {
+    setEditingEventId(ev.id);
+    setEvTitleHt(ev.title_kreyol);
+    setEvTitleEn(ev.title_english);
+    setEvDate(ev.date);
+    setEvTime(ev.time);
+    setEvLocHt(ev.location_kreyol);
+    setEvLocEn(ev.location_english);
+    setEvDescHt(ev.description_kreyol || '');
+    setEvDescEn(ev.description_english || '');
+  };
+
+  const handleDeleteEvent = async (id: number) => {
+    if (!confirm(language === 'fr_ht' ? 'Èske ou vle siprime evènman sa a?' : 'Are you sure you want to delete this event?')) return;
+    const res = await deleteEvent(id);
+    if (res.success) {
+      triggerAlert(t.adminSaveSuccess, 'success');
+      router.refresh();
+    } else {
+      triggerAlert(res.error || 'Failed to delete', 'error');
+    }
+  };
+
+  // 6. EVENT REGISTRATION DELETIONS
+  const handleDeleteRegistration = async (id: number) => {
+    if (!confirm(language === 'fr_ht' ? 'Èske ou vle siprime enskripsyon sa a?' : 'Are you sure you want to delete this registration?')) return;
+    const res = await deleteRegistration(id);
+    if (res.success) {
+      triggerAlert(t.adminSaveSuccess, 'success');
+      router.refresh();
+    } else {
+      triggerAlert(res.error || 'Failed to delete', 'error');
+    }
+  };
+
+  // 7. SERMONS (VIDEO ARCHIVES) SUB-MUTATIONS STATE
+  const [editingSermonId, setEditingSermonId] = useState<number | null>(null);
+  const [sermTitleHt, setSermTitleHt] = useState('');
+  const [sermTitleEn, setSermTitleEn] = useState('');
+  const [sermDate, setSermDate] = useState('');
+  const [sermSpeaker, setSermSpeaker] = useState('');
+  const [sermYoutubeId, setSermYoutubeId] = useState('');
+  const [sermDescHt, setSermDescHt] = useState('');
+  const [sermDescEn, setSermDescEn] = useState('');
+
+  const handleSaveSermon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = await saveSermon(editingSermonId, {
+      title_kreyol: sermTitleHt,
+      title_english: sermTitleEn,
+      date: sermDate,
+      speaker: sermSpeaker,
+      youtube_id: sermYoutubeId,
+      description_kreyol: sermDescHt,
+      description_english: sermDescEn
+    });
+    if (res.success) {
+      triggerAlert(t.adminSaveSuccess, 'success');
+      resetSermonForm();
+      router.refresh();
+    } else {
+      triggerAlert(res.error || 'Failed to save', 'error');
+    }
+  };
+
+  const resetSermonForm = () => {
+    setEditingSermonId(null);
+    setSermTitleHt('');
+    setSermTitleEn('');
+    setSermDate('');
+    setSermSpeaker('');
+    setSermYoutubeId('');
+    setSermDescHt('');
+    setSermDescEn('');
+  };
+
+  const handleEditSermonClick = (serm: Sermon) => {
+    setEditingSermonId(serm.id);
+    setSermTitleHt(serm.title_kreyol);
+    setSermTitleEn(serm.title_english);
+    setSermDate(serm.date);
+    setSermSpeaker(serm.speaker);
+    setSermYoutubeId(serm.youtube_id);
+    setSermDescHt(serm.description_kreyol || '');
+    setSermDescEn(serm.description_english || '');
+  };
+
+  const handleDeleteSermon = async (id: number) => {
+    if (!confirm(language === 'fr_ht' ? 'Èske ou vle siprime sèmon sa a?' : 'Are you sure you want to delete this sermon?')) return;
+    const res = await deleteSermon(id);
+    if (res.success) {
+      triggerAlert(t.adminSaveSuccess, 'success');
+      router.refresh();
+    } else {
+      triggerAlert(res.error || 'Failed to delete', 'error');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+      <style dangerouslySetInnerHTML={{ __html: `
+        :root {
+          --primary-color: ${themePrimary};
+          --primary-hover: ${themeHover};
+          --accent-color: ${themeAccent};
+        }
+      `}} />
+      
+      {/* Admin Dashboard header */}
+      <header className="bg-slate-900 border-b border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white border border-slate-800 overflow-hidden flex items-center justify-center p-0.5 shadow-md">
+              <img src={logoUrl} alt="Eglise Baptiste de la Parousie Logo" className="w-full h-full object-contain" />
+            </div>
+            <div>
+              <h1 className="text-base md:text-lg font-bold font-serif text-white">{t.churchName}</h1>
+              <p className="text-xs text-amber-400 font-semibold uppercase tracking-wider">{t.adminWelcome}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {/* Language Switcher */}
+            <button 
+              onClick={() => setLanguage(language === 'fr_ht' ? 'en' : 'fr_ht')}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs font-semibold hover:border-amber-500 text-amber-400 cursor-pointer"
+            >
+              <Globe2 className="w-3.5 h-3.5" />
+              <span>{language === 'fr_ht' ? 'English' : 'Kreyòl'}</span>
+            </button>
+
+            {/* Logout */}
+            <button
+              onClick={handleSignOut}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white text-xs font-bold transition-all cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>{t.adminSignOut}</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Container Grid */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 grid lg:grid-cols-4 gap-8">
+        
+        {/* Floating Admin alerts */}
+        {alertMsg && (
+          <div className={`fixed top-6 right-6 z-50 px-5 py-4 rounded-xl border shadow-2xl flex items-center gap-3 animate-slide-in ${alertType === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-rose-500/10 border-rose-500/30 text-rose-400'}`}>
+            <Check className="w-5 h-5" />
+            <span className="text-sm font-semibold">{alertMsg}</span>
+          </div>
+        )}
+
+        {/* Sidebar Tabs Selectors */}
+        <aside className="lg:col-span-1 flex flex-col gap-2">
+          
+          <button 
+            onClick={() => { setActiveTab('settings'); }}
+            className={`w-full text-left px-4 py-3.5 rounded-xl border flex items-center gap-3 text-sm font-semibold transition-all cursor-pointer ${activeTab === 'settings' ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-lg shadow-amber-500/10' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+          >
+            <Settings className="w-4 h-4" />
+            <span>{t.adminTabSettings}</span>
+          </button>
+
+          <button 
+            onClick={() => { setActiveTab('hometabs'); }}
+            className={`w-full text-left px-4 py-3.5 rounded-xl border flex items-center gap-3 text-sm font-semibold transition-all cursor-pointer ${activeTab === 'hometabs' ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-lg shadow-amber-500/10' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>{t.adminTabHomeTabs}</span>
+          </button>
+
+          <button 
+            onClick={() => { setActiveTab('schedules'); }}
+            className={`w-full text-left px-4 py-3.5 rounded-xl border flex items-center gap-3 text-sm font-semibold transition-all cursor-pointer ${activeTab === 'schedules' ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-lg shadow-amber-500/10' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+          >
+            <Clock className="w-4 h-4" />
+            <span>{t.adminTabSchedules}</span>
+          </button>
+
+          <button 
+            onClick={() => { setActiveTab('missions'); }}
+            className={`w-full text-left px-4 py-3.5 rounded-xl border flex items-center gap-3 text-sm font-semibold transition-all cursor-pointer ${activeTab === 'missions' ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-lg shadow-amber-500/10' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+          >
+            <Heart className="w-4 h-4" />
+            <span>{t.adminTabMissions}</span>
+          </button>
+
+          <button 
+            onClick={() => { setActiveTab('outreach'); }}
+            className={`w-full text-left px-4 py-3.5 rounded-xl border flex items-center gap-3 text-sm font-semibold transition-all cursor-pointer ${activeTab === 'outreach' ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-lg shadow-amber-500/10' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>{t.adminTabOutreach}</span>
+          </button>
+
+          <button 
+            onClick={() => { setActiveTab('ministries'); }}
+            className={`w-full text-left px-4 py-3.5 rounded-xl border flex items-center gap-3 text-sm font-semibold transition-all cursor-pointer ${activeTab === 'ministries' ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-lg shadow-amber-500/10' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+          >
+            <Users className="w-4 h-4" />
+            <span>{language === 'en' ? 'Ministries' : 'Ministè yo'}</span>
+          </button>
+
+          <button 
+            onClick={() => { setActiveTab('events'); }}
+            className={`w-full text-left px-4 py-3.5 rounded-xl border flex items-center gap-3 text-sm font-semibold transition-all cursor-pointer ${activeTab === 'events' ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-lg shadow-amber-500/10' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+          >
+            <Calendar className="w-4 h-4" />
+            <span>{t.adminTabEvents}</span>
+          </button>
+
+          <button 
+            onClick={() => { setActiveTab('registrations'); }}
+            className={`w-full text-left px-4 py-3.5 rounded-xl border flex justify-between items-center text-sm font-semibold transition-all cursor-pointer ${activeTab === 'registrations' ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-lg shadow-amber-500/10' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+          >
+            <div className="flex items-center gap-3">
+              <UserCheck className="w-4 h-4" />
+              <span>{t.adminRegistrationsTitle}</span>
+            </div>
+            {registrations.length > 0 && (
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${activeTab === 'registrations' ? 'bg-slate-950 text-amber-400' : 'bg-amber-500 text-slate-950'}`}>
+                {registrations.length}
+              </span>
+            )}
+          </button>
+
+          <button 
+            onClick={() => { setActiveTab('sermons'); }}
+            className={`w-full text-left px-4 py-3.5 rounded-xl border flex justify-between items-center text-sm font-semibold transition-all cursor-pointer ${activeTab === 'sermons' ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-lg shadow-amber-500/10' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+          >
+            <div className="flex items-center gap-3">
+              <Video className="w-4 h-4" />
+              <span>{t.navSermons}</span>
+            </div>
+            {sermons.length > 0 && (
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${activeTab === 'sermons' ? 'bg-slate-950 text-amber-400' : 'bg-amber-500 text-slate-950'}`}>
+                {sermons.length}
+              </span>
+            )}
+          </button>
+
+          <button 
+            onClick={() => { setActiveTab('subscribers'); }}
+            className={`w-full text-left px-4 py-3.5 rounded-xl border flex justify-between items-center text-sm font-semibold transition-all cursor-pointer ${activeTab === 'subscribers' ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-lg shadow-amber-500/10' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+          >
+            <div className="flex items-center gap-3">
+              <Users className="w-4 h-4" />
+              <span>{t.adminTabSubscribers}</span>
+            </div>
+            {subscriberList.length > 0 && (
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${activeTab === 'subscribers' ? 'bg-slate-950 text-amber-400' : 'bg-amber-500 text-slate-950'}`}>
+                {subscriberList.length}
+              </span>
+            )}
+          </button>
+
+          <button 
+            onClick={() => { setActiveTab('devotional'); }}
+            className={`w-full text-left px-4 py-3.5 rounded-xl border flex justify-between items-center text-sm font-semibold transition-all cursor-pointer ${activeTab === 'devotional' ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-lg shadow-amber-500/10' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+          >
+            <div className="flex items-center gap-3">
+              <BookOpen className="w-4 h-4" />
+              <span>{t.adminTabDevotional}</span>
+            </div>
+            {devotionalList.filter(d => d.status === 'pending').length > 0 && (
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${activeTab === 'devotional' ? 'bg-slate-950 text-amber-400' : 'bg-red-500 text-white'}`}>
+                {devotionalList.filter(d => d.status === 'pending').length}
+              </span>
+            )}
+          </button>
+
+          {/* SECURITY & ADMINS TAB */}
+          {isSuperAdmin && (
+            <button 
+              onClick={() => { setActiveTab('admins'); }}
+              className={`w-full text-left px-4 py-3.5 rounded-xl border flex items-center gap-3 text-sm font-semibold transition-all cursor-pointer ${activeTab === 'admins' ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-lg shadow-amber-500/10' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+            >
+              <UserCheck className="w-4 h-4" />
+              <span>{t.adminTabAdmins}</span>
+            </button>
+          )}
+
+          {/* CONTACT MESSAGES TAB */}
+          <button 
+            onClick={() => { setActiveTab('contact'); }}
+            className={`w-full text-left px-4 py-3.5 rounded-xl border flex justify-between items-center text-sm font-semibold transition-all cursor-pointer ${activeTab === 'contact' ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-lg shadow-amber-500/10' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+          >
+            <div className="flex items-center gap-3">
+              <Mail className="w-4 h-4" />
+              <span>{t.adminTabContact}</span>
+            </div>
+            {contactLogs.length > 0 && (
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${activeTab === 'contact' ? 'bg-slate-950 text-amber-400' : 'bg-amber-500 text-slate-950'}`}>
+                {contactLogs.length}
+              </span>
+            )}
+          </button>
+
+          {/* PRAYER MODERATION TAB */}
+          <button 
+            onClick={() => { setActiveTab('prayers'); }}
+            className={`w-full text-left px-4 py-3.5 rounded-xl border flex justify-between items-center text-sm font-semibold transition-all cursor-pointer ${activeTab === 'prayers' ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-lg shadow-amber-500/10' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+          >
+            <div className="flex items-center gap-3">
+              <Heart className="w-4 h-4" />
+              <span>{t.adminTabPrayers}</span>
+            </div>
+            {moderationPrayers.length > 0 && (
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${activeTab === 'prayers' ? 'bg-slate-950 text-amber-400' : 'bg-amber-500 text-slate-950'}`}>
+                {moderationPrayers.length}
+              </span>
+            )}
+          </button>
+
+          {/* PASTOR'S BLOG TAB */}
+          <button 
+            onClick={() => { setActiveTab('blog'); }}
+            className={`w-full text-left px-4 py-3.5 rounded-xl border flex justify-between items-center text-sm font-semibold transition-all cursor-pointer ${activeTab === 'blog' ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-lg shadow-amber-500/10' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+          >
+            <div className="flex items-center gap-3">
+              <FileText className="w-4 h-4" />
+              <span>{t.adminTabBlog}</span>
+            </div>
+            {blogPostsList.length > 0 && (
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${activeTab === 'blog' ? 'bg-slate-950 text-amber-400' : 'bg-amber-500 text-slate-950'}`}>
+                {blogPostsList.length}
+              </span>
+            )}
+          </button>
+
+          <div className="mt-8 p-4 rounded-xl bg-slate-900/30 border border-slate-850 text-xs text-slate-500">
+            <span className="font-bold block text-slate-400 uppercase tracking-wider mb-1">Pòtay Pèmanan</span>
+            <span>Pou nenpòt kòd modifikasyon dirèk nan sistèm nan.</span>
+          </div>
+
+        </aside>
+
+        {/* Tab Panel Content Box */}
+        <section className="lg:col-span-3 rounded-2xl bg-slate-900 border border-slate-800 p-6 md:p-8 shadow-xl">
+          
+          {/* TAB 1: GLOBAL SITE SETTINGS */}
+          {activeTab === 'settings' && (<>
+            <form onSubmit={handleSettingsSubmit} className="space-y-6">
+              <h3 className="text-xl font-bold text-white mb-6 border-b border-slate-800 pb-3 font-serif">
+                {t.adminTabSettings}
+              </h3>
+
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-850">
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Pastor&apos;s Name / Non Pastè a</label>
+                <input 
+                  type="text" 
+                  value={pastorName}
+                  onChange={(e) => setPastorName(e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-sm text-slate-100 transition-all font-semibold"
+                  placeholder="e.g. Pasteur Jean-Claude"
+                />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Pastor Message (Kreyòl)</label>
+                  <textarea 
+                    rows={4}
+                    value={pMsgHt}
+                    onChange={(e) => setPMsgHt(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg bg-slate-950 border border-slate-800 focus:border-amber-500 focus:outline-none text-sm text-slate-100 transition-all resize-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Pastor Message (English)</label>
+                  <textarea 
+                    rows={4}
+                    value={pMsgEn}
+                    onChange={(e) => setPMsgEn(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg bg-slate-950 border border-slate-800 focus:border-amber-500 focus:outline-none text-sm text-slate-100 transition-all resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Church Phone</label>
+                  <input 
+                    type="text" 
+                    value={chPhone}
+                    onChange={(e) => setChPhone(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg bg-slate-950 border border-slate-800 focus:border-amber-500 focus:outline-none text-sm text-slate-100 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Church Email</label>
+                  <input 
+                    type="email" 
+                    value={chEmail}
+                    onChange={(e) => setChEmail(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg bg-slate-950 border border-slate-800 focus:border-amber-500 focus:outline-none text-sm text-slate-100 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Church Address</label>
+                  <input 
+                    type="text" 
+                    value={chAddr}
+                    onChange={(e) => {
+                      const newVal = e.target.value;
+                      setChAddress(newVal);
+                      if (!checkMailingAddress || checkMailingAddress === '789 Community Blvd, Fort Lauderdale, FL 33311' || checkMailingAddress === chAddr) {
+                        setCheckMailingAddress(newVal);
+                      }
+                    }}
+                    className="w-full px-4 py-3 rounded-lg bg-slate-950 border border-slate-800 focus:border-amber-500 focus:outline-none text-sm text-slate-100 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-850 flex items-center gap-3">
+                <Lock className="w-5 h-5 text-amber-500 shrink-0" />
+                <div>
+                  <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Gemini API Configuration (Secure)</h4>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Your Gemini API key is now securely managed via environment variables (<code>GEMINI_API_KEY</code>) to prevent data exposure or scraper theft. No client-side storage is used.
+                  </p>
+                </div>
+              </div>
+
+              {/* CHURCH BRANDING, LOGO, & COLORS SECTION */}
+              <div className="grid lg:grid-cols-2 gap-6 p-6 rounded-2xl bg-slate-900 border border-slate-800/80 shadow-xl">
+                {/* Church Logo Customizer */}
+                <div className="flex flex-col h-full justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-2">
+                      <Palette className="w-4 h-4" />
+                      <span>Logo Egliz la (Church Logo)</span>
+                    </h3>
+                    <p className="text-xs text-slate-400 mb-4">
+                      Trennen oswa kole logo a la a, oswa klike pou w chwazi yon nouvo imaj. (Drag, paste, or click to upload new logo).
+                    </p>
+                  </div>
+
+                  <div 
+                    onClick={() => document.getElementById('logo-file-input')?.click()}
+                    onPaste={handlePasteLogo}
+                    onDragOver={(e) => { e.preventDefault(); setIsDraggingLogo(true); }}
+                    onDragLeave={() => setIsDraggingLogo(false)}
+                    onDrop={handleDropLogo}
+                    className={`relative border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all min-h-[160px] group overflow-hidden ${
+                      isDraggingLogo 
+                        ? 'border-amber-500 bg-amber-500/10 scale-[1.02]' 
+                        : 'border-slate-800 hover:border-amber-500/50 bg-slate-950/50'
+                    }`}
+                  >
+                    <input 
+                      type="file" 
+                      id="logo-file-input" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={(e) => handleLogoFile(e.target.files?.[0])} 
+                    />
+                    
+                    {logoUrl ? (
+                      <div className="flex items-center gap-4 z-10 w-full">
+                        <div className="w-20 h-20 rounded-lg bg-white border border-slate-800 overflow-hidden p-1 flex items-center justify-center shrink-0 shadow-lg group-hover:scale-105 transition-all">
+                          <img src={logoUrl} alt="Logo preview" className="w-full h-full object-contain" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <span className="text-xs font-bold text-slate-200 block truncate">Logo_Aktif.png</span>
+                          <span className="text-[10px] text-slate-400 mt-1 block">Klike pou chanje, trennen yon lòt imaj, oswa kòpye-kole la a</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-slate-400">
+                        <UploadCloud className="w-8 h-8 group-hover:text-amber-400 transition-all animate-bounce" />
+                        <span className="text-xs font-bold">Chwazi, Trennen oswa Kole Logo a</span>
+                        <span className="text-[10px] text-slate-500">Imaj PNG oswa JPG</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="mt-2 text-[10px] text-slate-500">
+                    * Koulè sit la ap chanje otomatikman pou koresponn ak logo sa a apre ou fin uploade li.
+                  </div>
+                </div>
+
+                {/* Color Adjuster & Preview */}
+                <div className="flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-2">
+                      <Settings className="w-4 h-4" />
+                      <span>Koulè Sit la (Color Adjuster)</span>
+                    </h3>
+                    <p className="text-xs text-slate-400 mb-4">
+                      Sistèm nan detekte koulè otomatikman. Ou ka chanje koulè prensipal ak segondè yo la a.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4 mb-4">
+                    <div className="p-3 rounded-lg bg-slate-950 border border-slate-850">
+                      <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Prensipal (Primary)</label>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="color" 
+                          value={themePrimary} 
+                          onChange={(e) => setThemePrimary(e.target.value)}
+                          className="w-7 h-7 rounded border border-slate-800 bg-transparent cursor-pointer"
+                        />
+                        <input 
+                          type="text" 
+                          value={themePrimary} 
+                          onChange={(e) => setThemePrimary(e.target.value)}
+                          className="w-full px-1.5 py-1 rounded bg-slate-900 border border-slate-800 focus:outline-none text-[10px] font-mono text-slate-300"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-slate-950 border border-slate-850">
+                      <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Mete Sou Li (Hover)</label>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="color" 
+                          value={themeHover} 
+                          onChange={(e) => setThemeHover(e.target.value)}
+                          className="w-7 h-7 rounded border border-slate-800 bg-transparent cursor-pointer"
+                        />
+                        <input 
+                          type="text" 
+                          value={themeHover} 
+                          onChange={(e) => setThemeHover(e.target.value)}
+                          className="w-full px-1.5 py-1 rounded bg-slate-900 border border-slate-800 focus:outline-none text-[10px] font-mono text-slate-300"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-slate-950 border border-slate-850">
+                      <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Aksan (Accent)</label>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="color" 
+                          value={themeAccent} 
+                          onChange={(e) => setThemeAccent(e.target.value)}
+                          className="w-7 h-7 rounded border border-slate-800 bg-transparent cursor-pointer"
+                        />
+                        <input 
+                          type="text" 
+                          value={themeAccent} 
+                          onChange={(e) => setThemeAccent(e.target.value)}
+                          className="w-full px-1.5 py-1 rounded bg-slate-900 border border-slate-800 focus:outline-none text-[10px] font-mono text-slate-300"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Theme Mode Selector */}
+                  <div className="mb-4 p-3 rounded-lg bg-slate-950 border border-slate-850">
+                    <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-wider">Tèm Background la (Background Theme Mode)</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setThemeMode('dark')}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 border cursor-pointer ${
+                          themeMode === 'dark'
+                            ? 'bg-slate-900 border-amber-500 text-white shadow-lg'
+                            : 'bg-slate-950 border-slate-850 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        <span className="w-2.5 h-2.5 rounded-full bg-slate-950 border border-slate-850" />
+                        <span>Tèm Nwa (Dark Mode)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setThemeMode('light')}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 border cursor-pointer ${
+                          themeMode === 'light'
+                            ? 'bg-white border-amber-500 text-slate-950 shadow-lg'
+                            : 'bg-slate-950 border-slate-850 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        <span className="w-2.5 h-2.5 rounded-full bg-white border border-slate-300" />
+                        <span>Tèm Klè (Light Mode)</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Hero Background Opacity Settings */}
+                  <div className="mb-4 p-3 rounded-lg bg-slate-950 border border-slate-850 space-y-4">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Klète Foto Dèyè a (Hero Background Opacity)</label>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-[10px] text-slate-400 font-semibold">Tèm Klè (Light Mode): {heroBgOpacityLight}%</span>
+                          <span className="text-[10px] text-amber-500 font-bold">{Number(heroBgOpacityLight) < 20 ? 'Crisp & Soft' : 'High Visibility'}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input 
+                            type="range" 
+                            min="0" 
+                            max="100" 
+                            value={heroBgOpacityLight} 
+                            onChange={(e) => setHeroBgOpacityLight(e.target.value)}
+                            className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-[10px] text-slate-400 font-semibold">Tèm Nwa (Dark Mode): {heroBgOpacityDark}%</span>
+                          <span className="text-[10px] text-amber-500 font-bold">{Number(heroBgOpacityDark) < 30 ? 'Cinematic' : 'High Visibility'}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input 
+                            type="range" 
+                            min="0" 
+                            max="100" 
+                            value={heroBgOpacityDark} 
+                            onChange={(e) => setHeroBgOpacityDark(e.target.value)}
+                            className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Glassmorphic Text Shield Toggle */}
+                  <div className="mb-4 p-3 rounded-lg bg-slate-950 border border-slate-850 flex items-center justify-between">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Adousi Dèyè Tèks (Soften Text Backdrop)</label>
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        {language === 'fr_ht' 
+                          ? 'Aktive yon bèl kouch semi-transparan ak backdrop-blur dèyè tèks la pou rann li fasil pou li.' 
+                          : 'Activates a beautiful semi-transparent layer with backdrop-blur behind the hero text for readability.'}
+                      </span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer flex-shrink-0 ml-4">
+                      <input 
+                        type="checkbox" 
+                        checked={softenHeroTextBg === 'true'} 
+                        onChange={(e) => setSoftenHeroTextBg(e.target.checked ? 'true' : 'false')}
+                        className="sr-only peer" 
+                      />
+                      <div className="w-11 h-6 bg-slate-800 rounded-full peer peer-focus:ring-2 peer-focus:ring-amber-500/10 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500 peer-checked:after:bg-white" />
+                    </label>
+                  </div>
+
+                  {/* Interactive Live Preview Component */}
+                  <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-850 flex items-center justify-between gap-4">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Aparans (Live Demo)</span>
+                    <div className="flex items-center gap-3">
+                      {/* Button styled dynamically */}
+                      <button 
+                        type="button"
+                        style={{ backgroundColor: themePrimary }}
+                        className="px-3 py-1.5 rounded-lg text-slate-950 text-xs font-bold shadow-md opacity-90 hover:opacity-100 transition-all pointer-events-none"
+                      >
+                        Sèvis nou yo
+                      </button>
+                      {/* Accent color dot/badge */}
+                      <span 
+                        style={{ backgroundColor: themeAccent }}
+                        className="px-2 py-0.5 rounded-full text-white text-[9px] font-bold uppercase animate-pulse pointer-events-none"
+                      >
+                        En Dirèk
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* HERO BACKGROUND IMAGE AND LIVE BROADCAST SETTINGS */}
+              <div className="grid md:grid-cols-2 gap-6 p-4 rounded-xl bg-slate-950 border border-slate-850">
+                <div className="flex flex-col justify-between h-full">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Home Page Hero Background Image</label>
+                    <p className="text-[10px] text-slate-500 mb-3">
+                      Trennen, kole, oswa chwazi yon nouvo imaj background isit la. (Drag/drop, copy/paste, or browse hero bg image).
+                    </p>
+                  </div>
+
+                  <div 
+                    onClick={() => document.getElementById('hero-file-input')?.click()}
+                    onPaste={handlePasteHero}
+                    onDragOver={(e) => { e.preventDefault(); setIsDraggingHero(true); }}
+                    onDragLeave={() => setIsDraggingHero(false)}
+                    onDrop={handleDropHero}
+                    className={`relative border border-dashed rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all min-h-[110px] group overflow-hidden ${
+                      isDraggingHero 
+                        ? 'border-amber-500 bg-amber-500/10 scale-[1.02]' 
+                        : 'border-slate-800 hover:border-amber-500/50 bg-slate-900/40'
+                    }`}
+                  >
+                    <input 
+                      type="file" 
+                      id="hero-file-input" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={(e) => handleHeroFile(e.target.files?.[0])} 
+                    />
+
+                    {bgUrl ? (
+                      <div className="flex items-center gap-3 z-10 w-full">
+                        <div className="w-16 h-12 rounded bg-slate-950 border border-slate-800 overflow-hidden shrink-0 shadow-lg">
+                          <img src={bgUrl} alt="Background preview" className="w-full h-full object-cover opacity-80" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <span className="text-xs font-bold text-slate-200 block truncate">Fondo_Home_Page.jpg</span>
+                          <span className="text-[9px] text-slate-400 block mt-1">Klike pou chanje, trennen yon lòt imaj, oswa kòpye-kole la a</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1 text-slate-400">
+                        <UploadCloud className="w-6 h-6 group-hover:text-amber-400 transition-all" />
+                        <span className="text-[11px] font-semibold">Trennen oswa Kole Imaj la</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-2.5">
+                    <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1">Direct URL Input (Opsyonèl / Optional)</label>
+                    <input 
+                      type="text" 
+                      value={bgUrl}
+                      onChange={(e) => setBgUrl(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-[10px] text-slate-100 transition-all font-mono"
+                      placeholder="Anplis uploade, ou ka kòpye yon URL imaj isit la..."
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col justify-between h-full">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Live Stream Broadcast Settings</label>
+                    <p className="text-[10px] text-slate-500 mb-3">
+                      Ajiste epi aktive difizyon dirèk sèvis yo sou sit la.
+                    </p>
+                  </div>
+                  
+                  <div className="p-4 rounded-lg bg-slate-900/40 border border-slate-850 flex flex-col gap-4">
+                    <div className="flex gap-4">
+                      <div className="flex-1">
+                        <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase">Status</label>
+                        <select 
+                          value={liveActive}
+                          onChange={(e) => setLiveActive(e.target.value)}
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all font-semibold"
+                        >
+                          <option value="true">Active (En Dirèk / Live)</option>
+                          <option value="false">Inactive (Offline)</option>
+                        </select>
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase">YouTube Video ID</label>
+                        <input 
+                          type="text" 
+                          value={liveUrl}
+                          onChange={(e) => setLiveUrl(e.target.value)}
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all font-mono font-bold"
+                          placeholder="e.g. dQw4w9WgXcQ"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase">Streamed Event / Evènman ki pral difize</label>
+                      <select 
+                        value={liveStreamEventId}
+                        onChange={(e) => setLiveStreamEventId(e.target.value)}
+                        className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all font-semibold"
+                      >
+                        <option value="default">Default: Sunday Services (Sèvis Dimanch - Otomatik)</option>
+                        {events.map((evt) => (
+                          <option key={evt.id} value={String(evt.id)}>
+                            {evt.date} - {language === 'fr_ht' ? evt.title_kreyol : evt.title_english}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {liveStreamEventId !== 'default' && (
+                      <>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase">Event Thumbnail Preset / Modèl Thumbnail</label>
+                          <select 
+                            value={
+                              customLiveEventThumbnailUrl === 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=600&auto=format&fit=crop' ? 'wedding' :
+                              customLiveEventThumbnailUrl === 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=600&auto=format&fit=crop' ? 'funeral' :
+                              customLiveEventThumbnailUrl === 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?q=80&w=600&auto=format&fit=crop' ? 'seminar' :
+                              customLiveEventThumbnailUrl === 'https://images.unsplash.com/photo-1444212477490-ca407925329e?q=80&w=600&auto=format&fit=crop' ? 'worship' :
+                              customLiveEventThumbnailUrl ? 'custom' : 'none'
+                            }
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === 'wedding') {
+                                setCustomLiveEventThumbnailUrl('https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=600&auto=format&fit=crop');
+                              } else if (val === 'funeral') {
+                                setCustomLiveEventThumbnailUrl('https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=600&auto=format&fit=crop');
+                              } else if (val === 'seminar') {
+                                setCustomLiveEventThumbnailUrl('https://images.unsplash.com/photo-1515187029135-18ee286d815b?q=80&w=600&auto=format&fit=crop');
+                              } else if (val === 'worship') {
+                                setCustomLiveEventThumbnailUrl('https://images.unsplash.com/photo-1444212477490-ca407925329e?q=80&w=600&auto=format&fit=crop');
+                              } else if (val === 'none') {
+                                setCustomLiveEventThumbnailUrl('');
+                              } else {
+                                setCustomLiveEventThumbnailUrl(settings.custom_live_event_thumbnail_url || 'custom_upload_placeholder');
+                              }
+                            }}
+                            className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all font-semibold"
+                          >
+                            <option value="none">No Thumbnail / Pa gen Thumbnail</option>
+                            <option value="wedding">💍 Wedding / Maryaj (Preset)</option>
+                            <option value="funeral">🕊️ Funeral & Memorial / Fineral (Preset)</option>
+                            <option value="seminar">📚 Seminar & Conference / Seminè (Preset)</option>
+                            <option value="worship">🎸 Special Worship & Concert / Adorasyon (Preset)</option>
+                            <option value="custom">🖼️ Custom Upload / Telechaje Imaj Pa Ou</option>
+                          </select>
+                        </div>
+
+                        {(!['https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=600&auto=format&fit=crop',
+                           'https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=600&auto=format&fit=crop',
+                           'https://images.unsplash.com/photo-1515187029135-18ee286d815b?q=80&w=600&auto=format&fit=crop',
+                           'https://images.unsplash.com/photo-1444212477490-ca407925329e?q=80&w=600&auto=format&fit=crop'].includes(customLiveEventThumbnailUrl) && customLiveEventThumbnailUrl !== '') && (
+                          <div className="mt-2 w-full">
+                            <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase">Custom Event Thumbnail / Chwazi Thumbnail pa w</label>
+                            <div 
+                              onClick={() => document.getElementById('custom-thumbnail-file-input')?.click()}
+                              onPaste={handlePasteCustomThumbnail}
+                              onDragOver={(e) => { e.preventDefault(); setIsDraggingCustomThumbnail(true); }}
+                              onDragLeave={() => setIsDraggingCustomThumbnail(false)}
+                              onDrop={handleDropCustomThumbnail}
+                              className={`relative border border-dashed rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all min-h-[110px] group overflow-hidden ${
+                                isDraggingCustomThumbnail 
+                                  ? 'border-amber-500 bg-amber-500/10 scale-[1.02]' 
+                                  : 'border-slate-800 hover:border-amber-500/50 bg-slate-900/40'
+                              }`}
+                            >
+                              <input 
+                                type="file" 
+                                id="custom-thumbnail-file-input" 
+                                accept="image/*" 
+                                className="hidden" 
+                                onChange={(e) => handleCustomThumbnailFile(e.target.files?.[0])} 
+                              />
+
+                              {customLiveEventThumbnailUrl && customLiveEventThumbnailUrl !== 'custom_upload_placeholder' ? (
+                                <div className="flex items-center gap-3 z-10 w-full">
+                                  <div className="w-16 h-12 rounded bg-slate-950 border border-slate-800 overflow-hidden shrink-0 shadow-lg">
+                                    <img src={customLiveEventThumbnailUrl} alt="Custom thumbnail preview" className="w-full h-full object-cover opacity-80" />
+                                  </div>
+                                  <div className="flex-1 text-left">
+                                    <span className="text-xs font-bold text-slate-200 block truncate">Custom_Thumbnail.jpg</span>
+                                    <span className="text-[9px] text-slate-400 block mt-1">Klike pou chanje, trennen yon lòt imaj, oswa kòpye-kole la a</span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col items-center gap-1 text-slate-400">
+                                  <UploadCloud className="w-6 h-6 group-hover:text-amber-400 transition-all" />
+                                  <span className="text-[11px] font-semibold">Trennen oswa Kole Imaj la</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="mt-2.5">
+                              <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1">Direct Thumbnail URL / Lyen Imaj Dirèk</label>
+                              <input 
+                                type="text" 
+                                value={customLiveEventThumbnailUrl === 'custom_upload_placeholder' ? '' : customLiveEventThumbnailUrl}
+                                onChange={(e) => setCustomLiveEventThumbnailUrl(e.target.value)}
+                                className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-[10px] text-slate-100 transition-all font-mono"
+                                placeholder="Kòpye yon URL imaj isit la..."
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  
+                  <span className="text-[10px] text-slate-500 mt-2 block">Lè li aktif, yon bannière &apos;En Dirèk / Live Now&apos; ak jwè videyo a ap parèt sou paj akèy la.</span>
+                </div>
+              </div>
+
+
+
+              {/* Stripe & Cash Transfer Payment Panel Control */}
+              <div className="p-5 rounded-xl bg-slate-950 border border-slate-850 shadow-inner">
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Tithes & Offerings / Tit ak Ofann</label>
+                <div className="flex items-start gap-3 mt-3">
+                  <input 
+                    type="checkbox" 
+                    id="hide-stripe-checkbox"
+                    checked={hideStripe === 'true'}
+                    onChange={(e) => setHideStripe(e.target.checked ? 'true' : 'false')}
+                    className="w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-800 focus:ring-amber-500 focus:ring-2 mt-0.5 cursor-pointer"
+                  />
+                  <div className="flex-1">
+                    <label htmlFor="hide-stripe-checkbox" className="text-sm text-slate-200 font-semibold cursor-pointer block">
+                      {language === 'fr_ht' 
+                        ? "Kache panèl Stripe (Kat Kredi) sou paj Tit ak Ofann nan" 
+                        : "Hide Stripe panel (Credit Card form) on the Tithes & Offerings page"}
+                    </label>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {language === 'fr_ht'
+                        ? "Si legliz la pa gen kont Stripe, vire opsyon sa a pou retire fòm kat kredi a epi montre metòd transfè mobil yo (Zelle, CashApp, etc.)."
+                        : "If the church does not have a Stripe merchant account, turn this on to hide the credit card inputs and prominently display direct mobile transfer options."}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-900/60">
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-[10px] font-bold uppercase text-slate-400">CashApp ID / KasApp</label>
+                      <label className="flex items-center gap-1.5 cursor-pointer text-[10px] text-slate-500 hover:text-slate-300 font-semibold select-none">
+                        <input 
+                          type="checkbox"
+                          checked={showCashapp === 'true'}
+                          onChange={(e) => setShowCashapp(e.target.checked ? 'true' : 'false')}
+                          className="w-3.5 h-3.5 rounded border-slate-800 bg-slate-900 text-amber-500 focus:ring-0 cursor-pointer"
+                        />
+                        {language === 'fr_ht' ? 'Montre' : 'Show'}
+                      </label>
+                    </div>
+                    <input 
+                      type="text"
+                      value={cashappId}
+                      onChange={(e) => setCashappId(e.target.value)}
+                      placeholder="e.g. $EgliseParousie"
+                      disabled={showCashapp !== 'true'}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-[10px] font-bold uppercase text-slate-400">Venmo ID</label>
+                      <label className="flex items-center gap-1.5 cursor-pointer text-[10px] text-slate-500 hover:text-slate-300 font-semibold select-none">
+                        <input 
+                          type="checkbox"
+                          checked={showVenmo === 'true'}
+                          onChange={(e) => setShowVenmo(e.target.checked ? 'true' : 'false')}
+                          className="w-3.5 h-3.5 rounded border-slate-800 bg-slate-900 text-amber-500 focus:ring-0 cursor-pointer"
+                        />
+                        {language === 'fr_ht' ? 'Montre' : 'Show'}
+                      </label>
+                    </div>
+                    <input 
+                      type="text"
+                      value={venmoId}
+                      onChange={(e) => setVenmoId(e.target.value)}
+                      placeholder="e.g. @EgliseParousie"
+                      disabled={showVenmo !== 'true'}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-[10px] font-bold uppercase text-slate-400">Apple Pay Phone / Email</label>
+                      <label className="flex items-center gap-1.5 cursor-pointer text-[10px] text-slate-500 hover:text-slate-300 font-semibold select-none">
+                        <input 
+                          type="checkbox"
+                          checked={showApplePay === 'true'}
+                          onChange={(e) => setShowApplePay(e.target.checked ? 'true' : 'false')}
+                          className="w-3.5 h-3.5 rounded border-slate-800 bg-slate-900 text-amber-500 focus:ring-0 cursor-pointer"
+                        />
+                        {language === 'fr_ht' ? 'Montre' : 'Show'}
+                      </label>
+                    </div>
+                    <input 
+                      type="text"
+                      value={applePayPhone}
+                      onChange={(e) => setApplePayPhone(e.target.value)}
+                      placeholder="e.g. 929 599 8809"
+                      disabled={showApplePay !== 'true'}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-900/40">
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-[10px] font-bold uppercase text-slate-400">Zelle Recipient Name / Non Benefisyè Zelle</label>
+                    </div>
+                    <input 
+                      type="text"
+                      value={zelleName}
+                      onChange={(e) => setZelleName(e.target.value)}
+                      placeholder="e.g. Eglise Baptiste de la Parousie"
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-[10px] font-bold uppercase text-slate-400">Zelle Phone Number or Email / Nimewo Zelle oswa Imèl</label>
+                    </div>
+                    <input 
+                      type="text"
+                      value={zellePhone}
+                      onChange={(e) => setZellePhone(e.target.value)}
+                      placeholder="e.g. 929 599 8809"
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-900/40">
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-[10px] font-bold uppercase text-slate-400">Pay to the order of (Check / Money Order) / Fè Chèk oswa Mandat sou non</label>
+                      <label className="flex items-center gap-1.5 cursor-pointer text-[10px] text-slate-500 hover:text-slate-300 font-semibold select-none">
+                        <input 
+                          type="checkbox"
+                          checked={showCheck === 'true'}
+                          onChange={(e) => setShowCheck(e.target.checked ? 'true' : 'false')}
+                          className="w-3.5 h-3.5 rounded border-slate-800 bg-slate-900 text-amber-500 focus:ring-0 cursor-pointer"
+                        />
+                        {language === 'fr_ht' ? 'Montre' : 'Show'}
+                      </label>
+                    </div>
+                    <input 
+                      type="text"
+                      value={checkPayableTo}
+                      onChange={(e) => setCheckPayableTo(e.target.value)}
+                      placeholder="e.g. Eglise Baptiste de la Parousie"
+                      disabled={showCheck !== 'true'}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-[10px] font-bold uppercase text-slate-400">Mailing Address / Adrès pou Chèk ak Mandat-Kat yo</label>
+                    </div>
+                    <input 
+                      type="text"
+                      value={checkMailingAddress}
+                      onChange={(e) => setCheckMailingAddress(e.target.value)}
+                      placeholder="e.g. 789 Community Blvd, Fort Lauderdale, FL 33311"
+                      disabled={showCheck !== 'true'}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Free Giveaway Spiritual Resource Customizer */}
+              <div className="p-6 rounded-xl bg-slate-950 border border-slate-850 space-y-6">
+                <div>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-amber-500" />
+                    <span>Resous Devosyonèl & Kado Espirityèl (Configurable Giveaway)</span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Moun k ap vizite sit la epi ki vle abòne pou grandi nan lafwa ap resevwa kado espirityèl sa a (liv elektwonik, plan meditasyon, vèsè, elatriye).
+                  </p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Kado / Resous Tit (Kreyòl)</label>
+                    <input 
+                      type="text" 
+                      value={giftTitleHt} 
+                      onChange={(e) => setGiftTitleHt(e.target.value)}
+                      placeholder="e.g. Devosyonèl Parousie 2026"
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Giveaway Title (English)</label>
+                    <input 
+                      type="text" 
+                      value={giftTitleEn} 
+                      onChange={(e) => setGiftTitleEn(e.target.value)}
+                      placeholder="e.g. Parousie Devotional 2026"
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Kado / Resous Deskripsyon (Kreyòl)</label>
+                    <textarea 
+                      rows={3}
+                      value={giftDescHt} 
+                      onChange={(e) => setGiftDescHt(e.target.value)}
+                      placeholder="Mete yon ti deskripsyon tou kout sou benediksyon liv sa a ap pote..."
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Giveaway Description (English)</label>
+                    <textarea 
+                      rows={3}
+                      value={giftDescEn} 
+                      onChange={(e) => setGiftDescEn(e.target.value)}
+                      placeholder="Write a brief encouraging description of the booklet..."
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1.5">Fichye Kado a (Giveaway E-Book/PDF/File Resource)</label>
+                  
+                  <div 
+                    onClick={() => document.getElementById('gift-file-input')?.click()}
+                    onPaste={handlePasteGift}
+                    onDragOver={(e) => { e.preventDefault(); setIsDraggingGift(true); }}
+                    onDragLeave={() => setIsDraggingGift(false)}
+                    onDrop={handleDropGift}
+                    className={`relative border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all min-h-[140px] group overflow-hidden ${
+                      isDraggingGift 
+                        ? 'border-amber-500 bg-amber-500/10 scale-[1.02]' 
+                        : 'border-slate-800 hover:border-amber-500/50 bg-slate-950/50'
+                    }`}
+                  >
+                    <input 
+                      type="file" 
+                      id="gift-file-input" 
+                      accept=".pdf,.txt,.docx,.doc" 
+                      className="hidden" 
+                      onChange={(e) => handleGiftFile(e.target.files?.[0])} 
+                    />
+                    
+                    {giftFileUrl ? (
+                      <div className="flex items-center gap-4 z-10 w-full">
+                        <div className="w-12 h-12 rounded-lg bg-amber-500/10 border border-amber-500/20 overflow-hidden flex items-center justify-center shrink-0 shadow-lg">
+                          <FileText className="w-6 h-6 text-amber-400" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <span className="text-xs font-bold text-slate-200 block truncate">
+                            {giftFileUrl.startsWith('data:') ? 'Fichye_Nouvo_Chaje.pdf' : giftFileUrl.split('/').pop()}
+                          </span>
+                          <span className="text-[10px] text-slate-400 mt-0.5 block">
+                            Trennen yon lòt fichye, oswa kopye-kole la a pou chanje
+                          </span>
+                          {giftFileUrl.startsWith('/') && (
+                            <a 
+                              href={giftFileUrl} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              onClick={(e) => e.stopPropagation()} 
+                              className="text-[10px] text-amber-500 hover:underline mt-1 inline-block"
+                            >
+                              Gade fichye aktyèl la
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-slate-400">
+                        <UploadCloud className="w-8 h-8 group-hover:text-amber-400 transition-all animate-bounce" />
+                        <span className="text-xs font-bold">Chwazi, Trennen oswa Kole Liv/PDF kado a</span>
+                        <span className="text-[10px] text-slate-500">Sipòte PDF, TXT, oubyen DOCX</span>
+                      </div>
+                    )}
+
+                    {giftIsUploading && (
+                      <div className="absolute inset-0 bg-slate-950/80 flex items-center justify-center gap-3">
+                        <RefreshCw className="w-5 h-5 text-amber-500 animate-spin" />
+                        <span className="text-xs text-slate-300 font-semibold">Ap chaje fichye a nan memwa kach...</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Admin Reference Notes (Private/Hidden) */}
+                <div className="pt-4 border-t border-slate-900">
+                  <label className="block text-[10px] font-bold uppercase text-amber-500 mb-1 flex items-center gap-1.5">
+                    <Lock className="w-3 h-3" />
+                    <span>Nòt Referans Admin (Private Admin Reference Notes) — Pa vizib sou paj prensipal la</span>
+                  </label>
+                  <p className="text-[10px] text-slate-500 mb-2">
+                    Sove kontèks, lyen sou orijin materyèl sa a, oswa nòt sou kijan li te kreye pou referans ou pita.
+                  </p>
+                  <textarea 
+                    rows={4}
+                    value={giftAdminNotes} 
+                    onChange={(e) => setGiftAdminNotes(e.target.value)}
+                    placeholder="Mete lyen, nòt referans, oswa enfòmasyon sou kreyasyon kado espirityèl sa a la a..."
+                    className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all font-mono"
+                  />
+                </div>
+              </div>
+
+              {isSuperAdmin && (
+                <div className="p-4 rounded-xl bg-slate-950 border border-slate-850">
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Update Security Code / Admin Password</label>
+                  <div className="relative max-w-sm">
+                    <input 
+                      type={showAdminPass ? "text" : "password"} 
+                      value={adminPass}
+                      onChange={(e) => setAdminPass(e.target.value)}
+                      className="w-full pl-9 pr-10 py-2.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-200 transition-all font-mono font-bold"
+                    />
+                    <Lock className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <button
+                      type="button"
+                      onClick={() => setShowAdminPass(!showAdminPass)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 focus:outline-none cursor-pointer"
+                      aria-label={showAdminPass ? "Hide password" : "Show password"}
+                    >
+                      {showAdminPass ? (
+                        <EyeOff className="w-3.5 h-3.5" />
+                      ) : (
+                        <Eye className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* DEVOTIONAL THEME SELECTOR */}
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-850 space-y-2">
+                <label className="block text-xs font-bold uppercase text-slate-400">
+                  {t.adminSettingsThemeLabel}
+                </label>
+                <p className="text-xs text-slate-500">
+                  {t.adminSettingsThemeDesc}
+                </p>
+                <input 
+                  type="text" 
+                  list="devotional-themes" 
+                  value={devotionalTheme} 
+                  onChange={(e) => setDevotionalTheme(e.target.value)} 
+                  placeholder={language === 'en' ? "Type or select a theme (e.g. Easter, Christmas, Forgiveness, none)..." : "Tape oswa chwazi yon tèm (egz. Pak, Nwèl, Padon, okenn)..."}
+                  className="mt-2 w-full max-w-sm px-4 py-2.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-200 transition-all font-semibold" 
+                />
+                <datalist id="devotional-themes">
+                  <option value="none" />
+                  <option value="faith" />
+                  <option value="love" />
+                  <option value="hope" />
+                  <option value="strength" />
+                  <option value="peace" />
+                  <option value="grace" />
+                  <option value="easter" />
+                  <option value="christmas" />
+                  <option value="thanksgiving" />
+                  <option value="forgiveness" />
+                </datalist>
+              </div>
+
+              <div className="flex justify-between items-center pt-4">
+                <button 
+                  type="button"
+                  onClick={handleBackupClick}
+                  disabled={isBackingUp}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 font-bold transition-all text-xs cursor-pointer disabled:opacity-50"
+                >
+                  <Database className="w-3.5 h-3.5 text-amber-500" />
+                  <span>{isBackingUp ? (language === 'fr_ht' ? 'Y ap sovgade...' : 'Backing up...') : (language === 'fr_ht' ? 'Sove yon Sovgard' : 'Create Site Backup')}</span>
+                </button>
+
+                <button 
+                  type="submit"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold transition-all shadow-lg cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{t.btnSave}</span>
+                </button>
+              </div>
+            </form>
+
+              <div className="border-t border-slate-800 my-10 pt-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500">
+                    <BookOpen className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white font-serif">
+                      {language === 'fr_ht' ? 'Sant Konesans & Kontèks Global' : 'Knowledge Base & Global Context'}
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {language === 'fr_ht' 
+                        ? 'Administre dokiman ak referans ki defini baz konesans egliz la.' 
+                        : 'Manage documents and references that define the church knowledge base.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid lg:grid-cols-5 gap-8">
+                  {/* Left Column: Upload / Manual Entry */}
+                  <div className="lg:col-span-2 space-y-6">
+                    {/* Automation Toggle Switch */}
+                    <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-900/60 border border-slate-850 shadow-sm w-full">
+                      <div className="flex flex-col gap-0.5 max-w-[75%]">
+                        <span className="text-xs font-bold text-slate-200">
+                          {language === 'fr_ht' 
+                            ? 'Mete kontni sit la ajou otomatikman' 
+                            : 'Automate Website Updates'}
+                        </span>
+                        <span className="text-[10px] text-slate-500 leading-normal">
+                          {language === 'fr_ht' 
+                            ? 'Itilize AI Extractor pou mete orè ak enfòmasyon ajou otomatikman lè w ap uploade yon nouvo PDF' 
+                            : 'Use AI Extractor to automatically refresh schedules and content upon uploading a new PDF'}
+                        </span>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => setAutomateWithDoc(!automateWithDoc)}
+                        className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          automateWithDoc ? 'bg-amber-500' : 'bg-slate-800'
+                        }`}
+                        role="switch"
+                        aria-checked={automateWithDoc}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-slate-950 shadow-lg ring-0 transition duration-200 ease-in-out ${
+                            automateWithDoc ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    {/* D&D Landing zone */}
+                    <div 
+                      onDragOver={(e) => { e.preventDefault(); setIsDraggingKb(true); }}
+                      onDragLeave={() => setIsDraggingKb(false)}
+                      onDrop={handleKbDrop}
+                      onPaste={handleKbPaste}
+                      className={`relative border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center gap-4 text-center cursor-pointer transition-all min-h-[180px] group ${
+                        isDraggingKb 
+                          ? 'border-amber-500 bg-amber-500/10 scale-[1.01]' 
+                          : 'border-slate-800 hover:border-amber-500/40 bg-slate-950/40'
+                      }`}
+                    >
+                      <input 
+                        type="file" 
+                        id="kb-pdf-file-input" 
+                        accept=".pdf" 
+                        className="hidden" 
+                        onChange={(e) => handleKbFile(e.target.files?.[0])} 
+                      />
+                      
+                      <div className="flex flex-col items-center gap-2">
+                        {kbIsUploading ? (
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="w-8 h-8 border-3 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+                            <span className="text-xs font-bold text-amber-500">
+                              {language === 'fr_ht' ? 'Y ap trete dokiman...' : 'Processing document...'}
+                            </span>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="p-3 rounded-full bg-slate-900 group-hover:bg-amber-500/10 text-slate-400 group-hover:text-amber-500 transition-all">
+                              <UploadCloud className="w-8 h-8 animate-pulse" />
+                            </div>
+                            <span className="text-xs font-bold text-slate-200">
+                              {language === 'fr_ht' ? 'Trennen oswa Kole Dokiman/Lyen yo' : 'Drag & Drop PDF or Paste Links'}
+                            </span>
+                            <span className="text-[10px] text-slate-500 max-w-[200px] leading-relaxed">
+                              {language === 'fr_ht' 
+                                ? 'PDF, lyen Google Docs/Sheets, oswa kòpye-kole tèks isit la' 
+                                : 'Supports local PDFs, Google Docs/Sheets URL pasting'}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => document.getElementById('kb-pdf-file-input')?.click()}
+                        className="mt-1 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[10px] font-bold text-slate-300 transition-all cursor-pointer"
+                      >
+                        {language === 'fr_ht' ? 'Chwazi PDF nan Odinatè' : 'Browse Local PDF'}
+                      </button>
+                    </div>
+
+                    {/* Manual Form */}
+                    <form onSubmit={handleManualKbSubmit} className="p-5 rounded-2xl bg-slate-950 border border-slate-850 space-y-4">
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                        <Plus className="w-3.5 h-3.5 text-amber-500" />
+                        <span>{language === 'fr_ht' ? 'Ajoute Manyèlman' : 'Manual Resource Registration'}</span>
+                      </h4>
+
+                      <div>
+                        <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1">Resource Title / Tit Resous la</label>
+                        <input 
+                          type="text"
+                          required
+                          value={kbManualTitle}
+                          onChange={(e) => setKbManualTitle(e.target.value)}
+                          placeholder="e.g. Istorik Egliz la"
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-white"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1">Resource Type / Kalite</label>
+                          <select 
+                            value={kbManualType}
+                            onChange={(e) => setKbManualType(e.target.value)}
+                            className="w-full px-2.5 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-[11px] text-white font-semibold"
+                          >
+                            <option value="pdf">PDF File</option>
+                            <option value="google_doc">Google Doc</option>
+                            <option value="google_sheet">Google Sheet</option>
+                            <option value="link">Web Link</option>
+                          </select>
+                        </div>
+                        <div className="flex items-end">
+                          <button
+                            type="submit"
+                            disabled={kbIsUploading}
+                            className="w-full py-1.5 rounded bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 font-bold text-xs transition-all cursor-pointer shadow flex items-center justify-center gap-1"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>{language === 'fr_ht' ? 'Anrejistre' : 'Register'}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1">Resource URL / Lyen an</label>
+                        <input 
+                          type="text"
+                          required
+                          value={kbManualUrl}
+                          onChange={(e) => setKbManualUrl(e.target.value)}
+                          placeholder="https://..."
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-white font-mono"
+                        />
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Right Column: Resource Grid / List */}
+                  <div className="lg:col-span-3">
+                    <div className="p-4 rounded-2xl bg-slate-950 border border-slate-850 h-full flex flex-col justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center justify-between">
+                          <span>{language === 'fr_ht' ? 'Resous ki Sove yo' : 'Registered Knowledge Assets'}</span>
+                          <span className="px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-[9px] font-mono text-slate-400">
+                            {kbList.length} total
+                          </span>
+                        </h4>
+
+                        {kbList.length === 0 ? (
+                          <div className="h-[260px] border border-dashed border-slate-850 rounded-xl flex flex-col items-center justify-center text-center p-6 text-slate-500 gap-2">
+                            <BookOpen className="w-8 h-8 text-slate-700 animate-pulse" />
+                            <span className="text-xs font-bold">{language === 'fr_ht' ? 'Pa gen resous konesans ankò' : 'No knowledge assets found'}</span>
+                            <span className="text-[10px] max-w-[200px] leading-relaxed">
+                              {language === 'fr_ht' 
+                                ? 'Uploade PDF oswa sove lyen yo pou anrichi kontèks egliz la.' 
+                                : 'Upload PDFs or link reference materials to feed church context.'}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
+                            {kbList.map((item) => {
+                              // Choose Icon and color based on type
+                              let Icon = Link2;
+                              let iconColor = 'text-purple-400 bg-purple-500/10 border-purple-500/20';
+                              let badgeText = 'Web Link';
+                              if (item.type === 'pdf') {
+                                Icon = FileText;
+                                iconColor = 'text-red-400 bg-red-500/10 border-red-500/20';
+                                badgeText = 'PDF Document';
+                              } else if (item.type === 'google_doc') {
+                                Icon = FileText;
+                                iconColor = 'text-blue-400 bg-blue-500/10 border-blue-500/20';
+                                badgeText = 'Google Doc';
+                              } else if (item.type === 'google_sheet') {
+                                Icon = FileSpreadsheet;
+                                iconColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+                                badgeText = 'Google Sheet';
+                              }
+
+                              return (
+                                <div 
+                                  key={item.id} 
+                                  className="p-3 rounded-xl bg-slate-900/60 border border-slate-850 flex items-center justify-between gap-4 hover:border-slate-700 transition-all group"
+                                >
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className={`p-2 rounded-lg border shrink-0 ${iconColor}`}>
+                                      <Icon className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold text-slate-100 truncate block">
+                                          {item.title}
+                                        </span>
+                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-slate-950 border border-slate-800 text-slate-400 uppercase tracking-widest shrink-0">
+                                          {badgeText}
+                                        </span>
+                                      </div>
+                                      <a 
+                                        href={item.url} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="text-[9px] text-slate-500 hover:text-amber-500 font-mono truncate block mt-0.5 transition-all"
+                                      >
+                                        {item.url}
+                                      </a>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    {item.type === 'pdf' && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleResetContentFromPdf(item.url, item.title)}
+                                        className="p-2 rounded-lg hover:bg-amber-500/10 text-slate-500 hover:text-amber-500 border border-transparent hover:border-amber-500/20 transition-all cursor-pointer"
+                                        title={language === 'fr_ht' ? 'Mete kontni ajou ak PDF sa a' : 'Reset content using this PDF'}
+                                      >
+                                        <Wand2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteKb(item.id)}
+                                      className="p-2 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 border border-transparent hover:border-red-500/20 transition-all cursor-pointer"
+                                      title={language === 'fr_ht' ? 'Siprime' : 'Delete'}
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-4 p-3 rounded-xl bg-slate-900/20 border border-slate-850/60 text-[10px] text-slate-500 leading-relaxed">
+                        <span className="font-bold text-slate-400 uppercase block mb-0.5 tracking-wider">
+                          {language === 'fr_ht' ? 'Konsènan Baz Konesans' : 'About the Knowledge Base'}
+                        </span>
+                        {language === 'fr_ht' 
+                          ? 'Resous sa yo sèvi pou verifye ak anrichi enfòmasyon otomatik yo nan sit la (pastè, oratè, aktivite, elatriye).'
+                          : 'These resources enrich the context used for auto-populating summaries, stream ingestion, and pastor details.'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+          </>)}
+
+          {/* TAB 1.5: HOME SUB-TABS MANAGER */}
+          {activeTab === 'hometabs' && (
+            <div className="space-y-8">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                <div>
+                  <h3 className="text-xl font-bold text-white font-serif">
+                    {language === 'fr_ht' ? 'Konfigire Onglè Paj Akèy' : 'Configure Home Page Tabs'}
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {language === 'fr_ht' 
+                      ? 'Konfigire kontni dinamik ak imaj pou onglè "Konsènan Nou", "Kwayans", "Ekip", ak "Kisa pou Atann".'
+                      : 'Configure dynamic content and premium image uploads for "About Us", "Beliefs", "Our Team", and "What to Expect".'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Sub-Tabs Pill Navigation */}
+              <div className="flex flex-wrap gap-2 p-1.5 rounded-xl bg-slate-950 border border-slate-850/60 max-w-2xl">
+                <button
+                  type="button"
+                  onClick={() => setHomeSubTab('about')}
+                  className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
+                    homeSubTab === 'about'
+                      ? 'bg-amber-500 text-slate-950 shadow-md'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                  }`}
+                >
+                  {language === 'fr_ht' ? 'Konsènan Nou' : 'About Us'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHomeSubTab('beliefs')}
+                  className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
+                    homeSubTab === 'beliefs'
+                      ? 'bg-amber-500 text-slate-950 shadow-md'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                  }`}
+                >
+                  {language === 'fr_ht' ? 'Kwayans Nou' : 'Our Beliefs'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHomeSubTab('team')}
+                  className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
+                    homeSubTab === 'team'
+                      ? 'bg-amber-500 text-slate-950 shadow-md'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                  }`}
+                >
+                  {language === 'fr_ht' ? 'Ekip la' : 'Our Team'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHomeSubTab('expect')}
+                  className={`flex-1 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
+                    homeSubTab === 'expect'
+                      ? 'bg-amber-500 text-slate-950 shadow-md'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                  }`}
+                >
+                  {language === 'fr_ht' ? 'Kisa pou Atann' : 'What to Expect'}
+                </button>
+              </div>
+
+              <form onSubmit={handleHomeTabsSubmit} className="space-y-6">
+                
+                {/* SUB-TAB: ABOUT US */}
+                {homeSubTab === 'about' && (
+                  <div className="p-6 rounded-xl bg-slate-950 border border-slate-850/60 space-y-6">
+                    <div className="border-b border-slate-900 pb-3">
+                      <h4 className="text-sm font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                        <Church className="w-4 h-4" />
+                        <span>{language === 'fr_ht' ? 'Paj "Konsènan Nou" (About Us)' : 'About Us Page Content'}</span>
+                      </h4>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Title (Kreyòl)</label>
+                        <input
+                          type="text"
+                          required
+                          value={aboutUsTitleHt}
+                          onChange={(e) => setAboutUsTitleHt(e.target.value)}
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Title (English)</label>
+                        <input
+                          type="text"
+                          required
+                          value={aboutUsTitleEn}
+                          onChange={(e) => setAboutUsTitleEn(e.target.value)}
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Paragraph 1 (Kreyòl)</label>
+                          <textarea
+                            required
+                            value={aboutUsP1Ht}
+                            onChange={(e) => setAboutUsP1Ht(e.target.value)}
+                            className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-24 resize-none leading-relaxed"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Paragraph 1 (English)</label>
+                          <textarea
+                            required
+                            value={aboutUsP1En}
+                            onChange={(e) => setAboutUsP1En(e.target.value)}
+                            className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-24 resize-none leading-relaxed"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Paragraph 2 (Kreyòl)</label>
+                          <textarea
+                            required
+                            value={aboutUsP2Ht}
+                            onChange={(e) => setAboutUsP2Ht(e.target.value)}
+                            className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-24 resize-none leading-relaxed"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Paragraph 2 (English)</label>
+                          <textarea
+                            required
+                            value={aboutUsP2En}
+                            onChange={(e) => setAboutUsP2En(e.target.value)}
+                            className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-24 resize-none leading-relaxed"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Drag-Drop-Paste Image Zone */}
+                    <div className="space-y-2">
+                      <label className="block text-[10px] font-bold uppercase text-slate-400">Background Image / Imaj background</label>
+                      <div
+                        onClick={() => document.getElementById('about-us-file-input')?.click()}
+                        onPaste={handlePasteAboutUs}
+                        onDragOver={(e) => { e.preventDefault(); setIsDraggingAboutUs(true); }}
+                        onDragLeave={() => setIsDraggingAboutUs(false)}
+                        onDrop={handleDropAboutUs}
+                        className={`relative border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all min-h-[160px] group overflow-hidden ${
+                          isDraggingAboutUs 
+                            ? 'border-amber-500 bg-amber-500/10 scale-[1.01]' 
+                            : 'border-slate-800 hover:border-amber-500/50 bg-slate-950/50'
+                        }`}
+                      >
+                        <input
+                          type="file"
+                          id="about-us-file-input"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => handleAboutUsFile(e.target.files?.[0])}
+                        />
+
+                        {aboutUsImageUrl ? (
+                          <div className="flex flex-col md:flex-row items-center gap-4 z-10 w-full">
+                            <div className="w-32 h-20 rounded-lg border border-slate-800 overflow-hidden shrink-0 shadow-lg group-hover:scale-105 transition-all">
+                              <img src={aboutUsImageUrl} alt="About Us background preview" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex-1 text-left">
+                              <span className="text-xs font-bold text-slate-200 block truncate">about_us_bg.jpg</span>
+                              <span className="text-[10px] text-slate-400 mt-1 block">
+                                {language === 'fr_ht' 
+                                  ? 'Klike pou chanje, trennen yon lòt imaj, oswa kòpye-kole la a.' 
+                                  : 'Click to choose, drag and drop another image, or paste an image here.'}
+                              </span>
+                              <input 
+                                type="text"
+                                value={aboutUsImageUrl.startsWith('data:') ? 'Base64 image asset...' : aboutUsImageUrl}
+                                readOnly
+                                className="w-full mt-2 px-2 py-1 rounded bg-slate-900 border border-slate-850 text-[10px] text-slate-400 pointer-events-none"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-2 text-slate-400">
+                            <UploadCloud className="w-8 h-8 group-hover:text-amber-400 transition-all animate-bounce" />
+                            <span className="text-xs font-bold">{language === 'fr_ht' ? 'Chwazi, Trennen oswa Kole yon imaj' : 'Select, Drag & Drop, or Paste an Image'}</span>
+                            <span className="text-[10px] text-slate-500">Imaj PNG oswa JPG</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* SUB-TAB: OUR BELIEFS */}
+                {homeSubTab === 'beliefs' && (
+                  <div className="p-6 rounded-xl bg-slate-950 border border-slate-850/60 space-y-6">
+                    <div className="border-b border-slate-900 pb-3">
+                      <h4 className="text-sm font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                        <BookOpen className="w-4 h-4" />
+                        <span>{language === 'fr_ht' ? 'Paj "Kwayans Nou Yo" (Our Beliefs)' : 'Our Beliefs Page Content'}</span>
+                      </h4>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Section Title (Kreyòl)</label>
+                        <input
+                          type="text"
+                          required
+                          value={beliefsTitleHt}
+                          onChange={(e) => setBeliefsTitleHt(e.target.value)}
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Section Title (English)</label>
+                        <input
+                          type="text"
+                          required
+                          value={beliefsTitleEn}
+                          onChange={(e) => setBeliefsTitleEn(e.target.value)}
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Belief 1 */}
+                    <div className="p-4 rounded-lg bg-slate-900/30 border border-slate-850 space-y-4">
+                      <h5 className="text-xs font-bold text-amber-400/80 uppercase">Kwayans 1 / Belief 1</h5>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Kreyòl)</label>
+                          <input
+                            type="text"
+                            required
+                            value={belief1TitleHt}
+                            onChange={(e) => setBelief1TitleHt(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white font-semibold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (English)</label>
+                          <input
+                            type="text"
+                            required
+                            value={belief1TitleEn}
+                            onChange={(e) => setBelief1TitleEn(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white font-semibold"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Kreyòl)</label>
+                          <textarea
+                            required
+                            value={belief1DescHt}
+                            onChange={(e) => setBelief1DescHt(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-16 resize-none leading-relaxed"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (English)</label>
+                          <textarea
+                            required
+                            value={belief1DescEn}
+                            onChange={(e) => setBelief1DescEn(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-16 resize-none leading-relaxed"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Belief 2 */}
+                    <div className="p-4 rounded-lg bg-slate-900/30 border border-slate-850 space-y-4">
+                      <h5 className="text-xs font-bold text-amber-400/80 uppercase">Kwayans 2 / Belief 2</h5>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Kreyòl)</label>
+                          <input
+                            type="text"
+                            required
+                            value={belief2TitleHt}
+                            onChange={(e) => setBelief2TitleHt(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white font-semibold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (English)</label>
+                          <input
+                            type="text"
+                            required
+                            value={belief2TitleEn}
+                            onChange={(e) => setBelief2TitleEn(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white font-semibold"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Kreyòl)</label>
+                          <textarea
+                            required
+                            value={belief2DescHt}
+                            onChange={(e) => setBelief2DescHt(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-16 resize-none leading-relaxed"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (English)</label>
+                          <textarea
+                            required
+                            value={belief2DescEn}
+                            onChange={(e) => setBelief2DescEn(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-16 resize-none leading-relaxed"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Belief 3 */}
+                    <div className="p-4 rounded-lg bg-slate-900/30 border border-slate-850 space-y-4">
+                      <h5 className="text-xs font-bold text-amber-400/80 uppercase">Kwayans 3 / Belief 3</h5>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Kreyòl)</label>
+                          <input
+                            type="text"
+                            required
+                            value={belief3TitleHt}
+                            onChange={(e) => setBelief3TitleHt(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white font-semibold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (English)</label>
+                          <input
+                            type="text"
+                            required
+                            value={belief3TitleEn}
+                            onChange={(e) => setBelief3TitleEn(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white font-semibold"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Kreyòl)</label>
+                          <textarea
+                            required
+                            value={belief3DescHt}
+                            onChange={(e) => setBelief3DescHt(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-16 resize-none leading-relaxed"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (English)</label>
+                          <textarea
+                            required
+                            value={belief3DescEn}
+                            onChange={(e) => setBelief3DescEn(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-16 resize-none leading-relaxed"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Belief 4 */}
+                    <div className="p-4 rounded-lg bg-slate-900/30 border border-slate-850 space-y-4">
+                      <h5 className="text-xs font-bold text-amber-400/80 uppercase">Kwayans 4 / Belief 4</h5>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Kreyòl)</label>
+                          <input
+                            type="text"
+                            required
+                            value={belief4TitleHt}
+                            onChange={(e) => setBelief4TitleHt(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white font-semibold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (English)</label>
+                          <input
+                            type="text"
+                            required
+                            value={belief4TitleEn}
+                            onChange={(e) => setBelief4TitleEn(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white font-semibold"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Kreyòl)</label>
+                          <textarea
+                            required
+                            value={belief4DescHt}
+                            onChange={(e) => setBelief4DescHt(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-16 resize-none leading-relaxed"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (English)</label>
+                          <textarea
+                            required
+                            value={belief4DescEn}
+                            onChange={(e) => setBelief4DescEn(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-16 resize-none leading-relaxed"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* SUB-TAB: OUR TEAM */}
+                {homeSubTab === 'team' && (
+                  <div className="p-6 rounded-xl bg-slate-950 border border-slate-850/60 space-y-6">
+                    <div className="border-b border-slate-900 pb-3">
+                      <h4 className="text-sm font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        <span>{language === 'fr_ht' ? 'Paj "Ekip Nou An" (Our Team)' : 'Our Team Page Content'}</span>
+                      </h4>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Section Title (Kreyòl)</label>
+                        <input
+                          type="text"
+                          required
+                          value={teamTitleHt}
+                          onChange={(e) => setTeamTitleHt(e.target.value)}
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Section Title (English)</label>
+                        <input
+                          type="text"
+                          required
+                          value={teamTitleEn}
+                          onChange={(e) => setTeamTitleEn(e.target.value)}
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Dynamic Team Members List */}
+                    <div className="space-y-6">
+                      {teamMembers.map((member, index) => (
+                        <div 
+                          key={index}
+                          className="p-5 rounded-lg bg-slate-900/30 border border-slate-850 space-y-4 relative group/member"
+                        >
+                          <div className="flex items-center justify-between border-b border-slate-850 pb-2">
+                            <h5 className="text-xs font-bold text-amber-400 uppercase tracking-wider">
+                              {language === 'fr_ht' 
+                                ? `Manm Ekip ${index + 1}` 
+                                : `Team Member ${index + 1}`}
+                              {member.name ? ` - ${member.name}` : ''}
+                            </h5>
+                            <div className="flex items-center gap-1.5 z-10">
+                              <button
+                                type="button"
+                                title={language === 'fr_ht' ? 'Moute' : 'Move Up'}
+                                onClick={() => handleMoveTeamMember(index, 'up')}
+                                disabled={index === 0}
+                                className="p-1 rounded bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 text-slate-400 hover:text-amber-400 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:border-slate-800 disabled:hover:bg-slate-950 transition-all cursor-pointer"
+                              >
+                                <ArrowUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                title={language === 'fr_ht' ? 'Desann' : 'Move Down'}
+                                onClick={() => handleMoveTeamMember(index, 'down')}
+                                disabled={index === teamMembers.length - 1}
+                                className="p-1 rounded bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 text-slate-400 hover:text-amber-400 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:border-slate-800 disabled:hover:bg-slate-950 transition-all cursor-pointer"
+                              >
+                                <ArrowDown className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                title={language === 'fr_ht' ? 'Siprime' : 'Delete'}
+                                onClick={() => handleDeleteTeamMember(index)}
+                                className="p-1 rounded bg-slate-950 border border-rose-950 hover:border-rose-500 hover:bg-rose-950/20 text-rose-400/80 hover:text-rose-400 transition-all cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid md:grid-cols-3 gap-4">
+                            <div className="md:col-span-2 space-y-4">
+                              <div className="grid md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Name / Non</label>
+                                  <input
+                                    type="text"
+                                    required
+                                    value={member.name}
+                                    onChange={(e) => handleUpdateTeamMember(index, 'name', e.target.value)}
+                                    className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white font-semibold"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Email / Imel</label>
+                                  <input
+                                    type="email"
+                                    required
+                                    value={member.email || ''}
+                                    onChange={(e) => handleUpdateTeamMember(index, 'email', e.target.value)}
+                                    className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="grid md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Role / Ròl (Kreyòl)</label>
+                                  <input
+                                    type="text"
+                                    required
+                                    value={member.role_ht}
+                                    onChange={(e) => handleUpdateTeamMember(index, 'role_ht', e.target.value)}
+                                    className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Role / Role (English)</label>
+                                  <input
+                                    type="text"
+                                    required
+                                    value={member.role_en}
+                                    onChange={(e) => handleUpdateTeamMember(index, 'role_en', e.target.value)}
+                                    className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="grid md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bio / Biyografi (Kreyòl)</label>
+                                  <textarea
+                                    required
+                                    value={member.bio_ht}
+                                    onChange={(e) => handleUpdateTeamMember(index, 'bio_ht', e.target.value)}
+                                    className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-20 resize-none leading-relaxed"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bio / Biography (English)</label>
+                                  <textarea
+                                    required
+                                    value={member.bio_en}
+                                    onChange={(e) => handleUpdateTeamMember(index, 'bio_en', e.target.value)}
+                                    className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-20 resize-none leading-relaxed"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Team Member Photo Upload */}
+                            <div>
+                              <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Photo / Foto (400x400)</label>
+                              <div
+                                onClick={() => document.getElementById(`team-member-file-input-${index}`)?.click()}
+                                onPaste={(e) => handlePasteTeamMember(index, e)}
+                                onDragOver={(e) => { e.preventDefault(); setDraggingMemberIndex(index); }}
+                                onDragLeave={() => setDraggingMemberIndex(null)}
+                                onDrop={(e) => { handleDropTeamMember(index, e); setDraggingMemberIndex(null); }}
+                                className={`relative border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all min-h-[180px] h-full group/drop overflow-hidden ${
+                                  draggingMemberIndex === index 
+                                    ? 'border-amber-500 bg-amber-500/10 scale-[1.01]' 
+                                    : 'border-slate-800 hover:border-amber-500/50 bg-slate-950/50'
+                                }`}
+                              >
+                                <input
+                                  type="file"
+                                  id={`team-member-file-input-${index}`}
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => handleTeamMemberFile(index, e.target.files?.[0])}
+                                />
+
+                                {member.image_url ? (
+                                  <div className="text-center z-10 w-full space-y-2">
+                                    <div className="w-20 h-20 rounded-full border-2 border-slate-800 overflow-hidden mx-auto shrink-0 shadow-lg group-hover/drop:scale-105 transition-all">
+                                      <img src={member.image_url} alt="Team member preview" className="w-full h-full object-cover" />
+                                    </div>
+                                    <span className="text-[10px] font-bold text-slate-300 block truncate">
+                                      {member.name ? `${member.name.replace(/\s+/g, '_')}.jpg` : `Member_${index + 1}.jpg`}
+                                    </span>
+                                    <span className="text-[9px] text-slate-400 block leading-tight">
+                                      {language === 'fr_ht' ? 'Trennen, klike oswa kole pou chanje' : 'Drag, click or paste to change'}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col items-center gap-1 text-slate-400 text-center">
+                                    <UploadCloud className="w-6 h-6 group-hover/drop:text-amber-400 transition-all animate-bounce" />
+                                    <span className="text-[10px] font-bold">
+                                      {language === 'fr_ht' ? 'Chwazi oswa Kole Foto' : 'Choose or Paste Photo'}
+                                    </span>
+                                    <span className="text-[9px] text-slate-500">Imaj Kare (PNG/JPG)</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Add Team Member Button */}
+                    <div className="flex justify-center border-t border-slate-900 pt-4">
+                      <button
+                        type="button"
+                        onClick={handleAddTeamMember}
+                        className="px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 hover:border-amber-500/50 hover:bg-amber-500/20 text-amber-400 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-lg hover:shadow-amber-500/5 hover:-translate-y-0.5"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>{language === 'fr_ht' ? 'Ajoute yon Manm Ekip' : 'Add Team Member'}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* SUB-TAB: WHAT TO EXPECT */}
+                {homeSubTab === 'expect' && (
+                  <div className="p-6 rounded-xl bg-slate-950 border border-slate-850/60 space-y-6">
+                    <div className="border-b border-slate-900 pb-3">
+                      <h4 className="text-sm font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                        <Heart className="w-4 h-4" />
+                        <span>{language === 'fr_ht' ? 'Paj "Kisa pou Atann" (What to Expect)' : 'What to Expect Page Content'}</span>
+                      </h4>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Section Title (Kreyòl)</label>
+                        <input
+                          type="text"
+                          required
+                          value={expectTitleHt}
+                          onChange={(e) => setExpectTitleHt(e.target.value)}
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Section Title (English)</label>
+                        <input
+                          type="text"
+                          required
+                          value={expectTitleEn}
+                          onChange={(e) => setExpectTitleEn(e.target.value)}
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Description (Kreyòl)</label>
+                        <textarea
+                          required
+                          value={expectP1Ht}
+                          onChange={(e) => setExpectP1Ht(e.target.value)}
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-24 resize-none leading-relaxed"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Description (English)</label>
+                        <textarea
+                          required
+                          value={expectP1En}
+                          onChange={(e) => setExpectP1En(e.target.value)}
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-24 resize-none leading-relaxed"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Bullet Points */}
+                    <div className="p-4 rounded-lg bg-slate-900/30 border border-slate-850 space-y-4">
+                      <h5 className="text-xs font-bold text-amber-400/80 uppercase">Pwen kle yo / Bullet Points (3 items)</h5>
+                      
+                      <div className="space-y-4">
+                        {/* Bullet 1 */}
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bullet 1 (Kreyòl)</label>
+                            <input
+                              type="text"
+                              required
+                              value={expectBullet1Ht}
+                              onChange={(e) => setExpectBullet1Ht(e.target.value)}
+                              className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bullet 1 (English)</label>
+                            <input
+                              type="text"
+                              required
+                              value={expectBullet1En}
+                              onChange={(e) => setExpectBullet1En(e.target.value)}
+                              className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Bullet 2 */}
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bullet 2 (Kreyòl)</label>
+                            <input
+                              type="text"
+                              required
+                              value={expectBullet2Ht}
+                              onChange={(e) => setExpectBullet2Ht(e.target.value)}
+                              className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bullet 2 (English)</label>
+                            <input
+                              type="text"
+                              required
+                              value={expectBullet2En}
+                              onChange={(e) => setExpectBullet2En(e.target.value)}
+                              className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Bullet 3 */}
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bullet 3 (Kreyòl)</label>
+                            <input
+                              type="text"
+                              required
+                              value={expectBullet3Ht}
+                              onChange={(e) => setExpectBullet3Ht(e.target.value)}
+                              className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bullet 3 (English)</label>
+                            <input
+                              type="text"
+                              required
+                              value={expectBullet3En}
+                              onChange={(e) => setExpectBullet3En(e.target.value)}
+                              className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Drag-Drop-Paste Image Zone */}
+                    <div className="space-y-2">
+                      <label className="block text-[10px] font-bold uppercase text-slate-400">Section Image / Imaj Seksyon</label>
+                      <div
+                        onClick={() => document.getElementById('expect-file-input')?.click()}
+                        onPaste={handlePasteExpect}
+                        onDragOver={(e) => { e.preventDefault(); setIsDraggingExpect(true); }}
+                        onDragLeave={() => setIsDraggingExpect(false)}
+                        onDrop={handleDropExpect}
+                        className={`relative border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all min-h-[160px] group overflow-hidden ${
+                          isDraggingExpect 
+                            ? 'border-amber-500 bg-amber-500/10 scale-[1.01]' 
+                            : 'border-slate-800 hover:border-amber-500/50 bg-slate-950/50'
+                        }`}
+                      >
+                        <input
+                          type="file"
+                          id="expect-file-input"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => handleExpectFile(e.target.files?.[0])}
+                        />
+
+                        {expectImageUrl ? (
+                          <div className="flex flex-col md:flex-row items-center gap-4 z-10 w-full">
+                            <div className="w-32 h-20 rounded-lg border border-slate-800 overflow-hidden shrink-0 shadow-lg group-hover:scale-105 transition-all">
+                              <img src={expectImageUrl} alt="What to Expect preview" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex-1 text-left">
+                              <span className="text-xs font-bold text-slate-200 block truncate">expect_bg.jpg</span>
+                              <span className="text-[10px] text-slate-400 mt-1 block">
+                                {language === 'fr_ht' 
+                                  ? 'Klike pou chanje, trennen yon lòt imaj, oswa kòpye-kole la a.' 
+                                  : 'Click to choose, drag and drop another image, or paste an image here.'}
+                              </span>
+                              <input 
+                                type="text"
+                                value={expectImageUrl.startsWith('data:') ? 'Base64 image asset...' : expectImageUrl}
+                                readOnly
+                                className="w-full mt-2 px-2 py-1 rounded bg-slate-900 border border-slate-850 text-[10px] text-slate-400 pointer-events-none"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-2 text-slate-400">
+                            <UploadCloud className="w-8 h-8 group-hover:text-amber-400 transition-all animate-bounce" />
+                            <span className="text-xs font-bold">{language === 'fr_ht' ? 'Chwazi, Trennen oswa Kole yon imaj' : 'Select, Drag & Drop, or Paste an Image'}</span>
+                            <span className="text-[10px] text-slate-500">Imaj PNG oswa JPG</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Persistent Save Button for all sub-sections */}
+                <div className="flex justify-end pt-4 border-t border-slate-800">
+                  <button
+                    type="submit"
+                    className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl transition-all shadow-lg shadow-amber-500/10 flex items-center gap-2 text-xs"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{language === 'fr_ht' ? 'Sove Tout Chanjman yo' : 'Save All Changes'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* TAB 2: SERVICE SCHEDULES MANAGER */}
+          {activeTab === 'schedules' && (
+            <div className="space-y-8">
+              <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 className="text-xl font-bold text-white font-serif">{t.adminTabSchedules}</h3>
+                {editingScheduleId && (
+                  <button 
+                    onClick={resetScheduleForm}
+                    className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-850 text-xs font-bold"
+                  >
+                    {t.btnAddNew}
+                  </button>
+                )}
+              </div>
+
+              {/* Form to Add or Edit */}
+              <form onSubmit={handleSaveSchedule} className="p-5 rounded-xl bg-slate-950 border border-slate-850 space-y-4">
+                <h4 className="text-xs font-bold uppercase text-amber-400">
+                  {editingScheduleId ? 'Modify Schedule / Modifye' : 'Create New Schedule / Ajoute Nouvo'}
+                </h4>
+                
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Day / Jou (Kreyòl)</label>
+                    <input 
+                      type="text" required placeholder="e.g. Dimanch" value={schedDayHt} onChange={e => setSchedDayHt(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Day / Jou (English)</label>
+                    <input 
+                      type="text" required placeholder="e.g. Sunday" value={schedDayEn} onChange={e => setSchedDayEn(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Time / Lè</label>
+                    <input 
+                      type="text" required placeholder="e.g. 9:00 AM - 11:30 AM" value={schedTime} onChange={e => setSchedTime(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Kreyòl)</label>
+                    <input 
+                      type="text" required value={schedTitleHt} onChange={e => setSchedTitleHt(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (English)</label>
+                    <input 
+                      type="text" required value={schedTitleEn} onChange={e => setSchedTitleEn(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Kreyòl)</label>
+                    <textarea 
+                      rows={2} value={schedDescHt} onChange={e => setSchedDescHt(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (English)</label>
+                    <textarea 
+                      rows={2} value={schedDescEn} onChange={e => setSchedDescEn(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-none"
+                    />
+                  </div>
+                </div>
+
+
+                {/* Visual Image Dropzone / Clipboard Paste / File Browse */}
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold uppercase text-slate-500">
+                    {language === 'fr_ht' ? 'Imaj pou Orè Sèvis la (Fakiltatif)' : 'Service Schedule Image (Optional)'}
+                  </label>
+                  
+                  <div 
+                    onClick={() => document.getElementById('sched-file-input')?.click()}
+                    onPaste={handlePasteSched}
+                    onDragOver={(e) => { e.preventDefault(); setIsDraggingSched(true); }}
+                    onDragLeave={() => setIsDraggingSched(false)}
+                    onDrop={handleDropSched}
+                    className={`relative border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all min-h-[120px] group overflow-hidden ${
+                      isDraggingSched 
+                        ? 'border-amber-500 bg-amber-500/10 scale-[1.01]' 
+                        : 'border-slate-800 hover:border-amber-500/50 bg-slate-900/50 hover:bg-slate-900/85'
+                    }`}
+                  >
+                    <input 
+                      type="file" 
+                      id="sched-file-input" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={(e) => handleSchedFile(e.target.files?.[0])} 
+                    />
+                    
+                    {schedImg ? (
+                      <div className="flex items-center gap-4 z-10 w-full">
+                        <div className="w-16 h-16 rounded-lg bg-slate-950 border border-slate-800 overflow-hidden p-0.5 flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-all">
+                          <img src={schedImg} alt="Schedule preview" className="w-full h-full object-cover rounded" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <span className="text-xs font-bold text-slate-200 block truncate">
+                            {language === 'fr_ht' ? 'Imaj_Aktiv.png' : 'Active_Image.png'}
+                          </span>
+                          <span className="text-[10px] text-slate-400 mt-1 block">
+                            {language === 'fr_ht' 
+                              ? 'Klike pou chanje, trennen yon lòt imaj, oswa kòpye-kole la a' 
+                              : 'Click to change, drag another image, or copy-paste here'}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSchedImg('');
+                          }}
+                          className="p-1.5 rounded-lg bg-slate-950 border border-slate-850 hover:bg-rose-950 hover:border-rose-900 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
+                          title={language === 'fr_ht' ? 'Retire imaj' : 'Remove image'}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1.5 text-slate-400">
+                        <UploadCloud className="w-7 h-7 group-hover:text-amber-400 transition-all animate-bounce" />
+                        <span className="text-xs font-bold text-center">
+                          {language === 'fr_ht' 
+                            ? 'Chwazi, Trennen oswa Kole yon Imaj' 
+                            : 'Browse, Drag, or Paste an Image'}
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          {language === 'fr_ht' 
+                            ? 'Sipòte PNG, JPG (Y ap konprime otomatikman)' 
+                            : 'Supports PNG, JPG (Will be auto-compressed)'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-2">
+                    <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1">
+                      {language === 'fr_ht' ? 'URL Dirèk pou Imaj (Opsyonèl)' : 'Direct URL Input (Optional)'}
+                    </label>
+                    <input 
+                      type="text" 
+                      value={schedImg}
+                      onChange={(e) => setSchedImg(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-[10px] text-slate-100 transition-all font-mono"
+                      placeholder={language === 'fr_ht' ? "Oswa kòpye yon URL imaj isit la..." : "Or paste any image URL here..."}
+                    />
+                  </div>
+                </div>
+
+                {/* Conflict Warning banner */}
+                {getScheduleConflict() && (
+                  <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-900/60 text-rose-200 flex items-start gap-2.5 text-xs animate-pulse">
+                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold text-rose-400">
+                        {language === 'fr_ht' 
+                          ? 'Atansyon: gen konfli nan lè a!' 
+                          : 'Warning: cannot schedule 2 live stream events at the same time'}
+                      </p>
+                      <p className="text-[10px] text-rose-300/80 mt-0.5">
+                        {language === 'fr_ht'
+                          ? `Orè sa a konflije avèk "${getScheduleConflict()?.title_kreyol}" (${getScheduleConflict()?.time})`
+                          : `This conflicts with "${getScheduleConflict()?.title_english}" (${getScheduleConflict()?.time})`}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between flex-wrap gap-4 pt-4 border-t border-slate-900">
+                  {/* Neon Glow Purple Live Stream Checkbox */}
+                  <div className="flex items-center gap-3 cursor-pointer select-none" onClick={() => {
+                    setSchedIsLiveStream(!schedIsLiveStream);
+                    setHasManuallyToggledLiveStream(true);
+                  }}>
+                    <div className={`w-5.5 h-5.5 rounded border flex items-center justify-center transition-all ${
+                      schedIsLiveStream 
+                        ? 'border-purple-500 bg-purple-600/20 text-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.4)]' 
+                        : 'border-slate-700 bg-slate-900 text-transparent hover:border-purple-500/50'
+                    }`}>
+                      {schedIsLiveStream && (
+                        <svg className="w-3.5 h-3.5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="3">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                    <span className="text-lg font-bold text-purple-400 drop-shadow-[0_0_6px_rgba(168,85,247,0.3)] font-sans tracking-wide">
+                      {language === 'fr_ht' ? 'Difizyon an Dirèk' : 'Live Stream'}
+                    </span>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {editingScheduleId && (
+                      <button 
+                        type="button" onClick={resetScheduleForm}
+                        className="px-4 py-2 rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-xs font-semibold text-slate-300"
+                      >
+                        {t.btnCancel}
+                      </button>
+                    )}
+                    <button 
+                      type="submit"
+                      className="px-4 py-2 rounded bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs"
+                    >
+                      {t.btnSave}
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              {/* Schedules List Grid */}
+              <div className="space-y-4">
+                {schedules.map(sched => (
+                  <div key={sched.id} className="p-4 rounded-xl border border-slate-800 bg-slate-950/20 flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      {sched.image_url && (
+                        <div className="w-10 h-10 rounded bg-slate-900 border border-slate-800 overflow-hidden shrink-0">
+                          <img src={sched.image_url} alt={sched.title_english} className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                      <div>
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="text-xs font-bold text-amber-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-850">
+                            {sched.day_kreyol} / {sched.day_english}
+                          </span>
+                          <span className="text-xs font-medium text-slate-500">{sched.time}</span>
+                          {sched.is_livestreamed === 1 && (
+                            <span className="text-[10px] font-bold text-purple-400 bg-purple-950/40 border border-purple-800/60 px-2 py-0.5 rounded shadow-[0_0_8px_rgba(168,85,247,0.2)] flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse shrink-0" />
+                              {language === 'fr_ht' ? 'An Dirèk' : 'Live Stream'}
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="text-sm font-bold text-white">
+                          {sched.title_kreyol} <span className="text-slate-500">|</span> {sched.title_english}
+                        </h4>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleEditScheduleClick(sched)}
+                        className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-500 transition-colors cursor-pointer"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteSchedule(sched.id)}
+                        className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: HAITI MISSIONS MANAGER */}
+          {activeTab === 'missions' && (
+            <div className="space-y-8">
+              <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 className="text-xl font-bold text-white font-serif">{t.adminTabMissions}</h3>
+                {editingMissionId && (
+                  <button onClick={resetMissionForm} className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-850 text-xs font-bold">
+                    {t.btnAddNew}
+                  </button>
+                )}
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleSaveMission} className="p-5 rounded-xl bg-slate-950 border border-slate-850 space-y-4">
+                <h4 className="text-xs font-bold uppercase text-amber-400">
+                  {editingMissionId ? 'Modify Haiti Project' : 'Create New Haiti Mission'}
+                </h4>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Project Name (Kreyòl)</label>
+                    <input 
+                      type="text" required value={missTitleHt} onChange={e => setPMissTitleHt(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Project Name (English)</label>
+                    <input 
+                      type="text" required value={missTitleEn} onChange={e => setPMissTitleEn(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Kreyòl)</label>
+                    <textarea 
+                      rows={3} value={missDescHt} onChange={e => setPMissDescHt(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (English)</label>
+                    <textarea 
+                      rows={3} value={missDescEn} onChange={e => setPMissDescEn(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Visual Image Dropzone / Clipboard Paste / File Browse */}
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold uppercase text-slate-500">
+                    {language === 'fr_ht' ? 'Imaj pou Misyon an (Fakiltatif)' : 'Mission Image (Optional)'}
+                  </label>
+                  
+                  <div 
+                    onClick={() => document.getElementById('miss-file-input')?.click()}
+                    onPaste={handlePasteMiss}
+                    onDragOver={(e) => { e.preventDefault(); setIsDraggingMiss(true); }}
+                    onDragLeave={() => setIsDraggingMiss(false)}
+                    onDrop={handleDropMiss}
+                    className={`relative border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all min-h-[120px] group overflow-hidden ${
+                      isDraggingMiss 
+                        ? 'border-amber-500 bg-amber-500/10 scale-[1.01]' 
+                        : 'border-slate-800 hover:border-amber-500/50 bg-slate-900/50 hover:bg-slate-900/85'
+                    }`}
+                  >
+                    <input 
+                      type="file" 
+                      id="miss-file-input" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={(e) => handleMissFile(e.target.files?.[0])} 
+                    />
+                    
+                    {missImg ? (
+                      <div className="flex items-center gap-4 z-10 w-full">
+                        <div className="w-16 h-16 rounded-lg bg-slate-950 border border-slate-800 overflow-hidden p-0.5 flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-all">
+                          <img src={missImg} alt="Mission preview" className="w-full h-full object-cover rounded" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <span className="text-xs font-bold text-slate-200 block truncate">
+                            {language === 'fr_ht' ? 'Imaj_Misyon.png' : 'Mission_Image.png'}
+                          </span>
+                          <span className="text-[10px] text-slate-400 mt-1 block">
+                            {language === 'fr_ht' 
+                              ? 'Klike pou chanje, trennen yon lòt imaj, oswa kòpye-kole la a' 
+                              : 'Click to change, drag another image, or copy-paste here'}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPMissImg('');
+                          }}
+                          className="p-1.5 rounded-lg bg-slate-950 border border-slate-850 hover:bg-rose-950 hover:border-rose-900 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
+                          title={language === 'fr_ht' ? 'Retire imaj' : 'Remove image'}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1.5 text-slate-400">
+                        <UploadCloud className="w-7 h-7 group-hover:text-amber-400 transition-all animate-bounce" />
+                        <span className="text-xs font-bold text-center">
+                          {language === 'fr_ht' 
+                            ? 'Chwazi, Trennen oswa Kole yon Imaj' 
+                            : 'Browse, Drag, or Paste an Image'}
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          {language === 'fr_ht' 
+                            ? 'Sipòte PNG, JPG (Y ap konprime otomatikman)' 
+                            : 'Supports PNG, JPG (Will be auto-compressed)'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-2">
+                    <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1">
+                      {language === 'fr_ht' ? 'URL Dirèk pou Imaj (Opsyonèl)' : 'Direct URL Input (Optional)'}
+                    </label>
+                    <input 
+                      type="text" 
+                      value={missImg}
+                      onChange={(e) => setPMissImg(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-[10px] text-slate-100 transition-all font-mono"
+                      placeholder={language === 'fr_ht' ? "Oswa kòpye yon URL imaj isit la..." : "Or paste any image URL here..."}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Funds Raised ($)</label>
+                    <input 
+                      type="number" value={missRaised} onChange={e => setPMissRaised(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Goal ($)</label>
+                    <input 
+                      type="number" value={missGoal} onChange={e => setPMissGoal(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  {editingMissionId && (
+                    <button type="button" onClick={resetMissionForm} className="px-4 py-2 rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-xs text-slate-300">
+                      {t.btnCancel}
+                    </button>
+                  )}
+                  <button type="submit" className="px-4 py-2 rounded bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs">
+                    {t.btnSave}
+                  </button>
+                </div>
+              </form>
+
+              {/* List */}
+              <div className="space-y-4">
+                {missions.map(miss => (
+                  <div key={miss.id} className="p-4 rounded-xl border border-slate-800 bg-slate-950/20 flex justify-between items-center">
+                    <div>
+                      <h4 className="text-sm font-bold text-white">{miss.title_kreyol} <span className="text-slate-500">|</span> {miss.title_english}</h4>
+                      <p className="text-xs text-slate-400 mt-1">Goal: ${miss.funds_goal.toLocaleString()} | Raised: ${miss.funds_raised.toLocaleString()}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleEditMissionClick(miss)} className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-500 transition-colors cursor-pointer">
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDeleteMission(miss.id)} className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: LOCAL OUTREACH MANAGER */}
+          {activeTab === 'outreach' && (
+            <div className="space-y-8">
+              <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 className="text-xl font-bold text-white font-serif">{t.adminTabOutreach}</h3>
+                {editingOutreachId && (
+                  <button onClick={resetOutreachForm} className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-850 text-xs font-bold">
+                    {t.btnAddNew}
+                  </button>
+                )}
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleSaveOutreach} className="p-5 rounded-xl bg-slate-950 border border-slate-850 space-y-4">
+                <h4 className="text-xs font-bold uppercase text-amber-400">
+                  {editingOutreachId ? 'Modify Outreach Project' : 'Create New Outreach Project'}
+                </h4>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Project Name (Kreyòl)</label>
+                    <input 
+                      type="text" required value={outrTitleHt} onChange={e => setOutrTitleHt(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Project Name (English)</label>
+                    <input 
+                      type="text" required value={outrTitleEn} onChange={e => setOutrTitleEn(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Kreyòl)</label>
+                    <textarea 
+                      rows={2} value={outrDescHt} onChange={e => setOutrDescHt(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (English)</label>
+                    <textarea 
+                      rows={2} value={outrDescEn} onChange={e => setOutrDescEn(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Schedule Info (Kreyòl)</label>
+                    <input 
+                      type="text" required placeholder="e.g. Chak Samdi, 8:00 AM" value={outrSchedHt} onChange={e => setOutrSchedHt(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Schedule Info (English)</label>
+                    <input 
+                      type="text" required placeholder="e.g. Every Saturday, 8:00 AM" value={outrSchedEn} onChange={e => setOutrSchedEn(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  {editingOutreachId && (
+                    <button type="button" onClick={resetOutreachForm} className="px-4 py-2 rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-xs text-slate-300">
+                      {t.btnCancel}
+                    </button>
+                  )}
+                  <button type="submit" className="px-4 py-2 rounded bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs">
+                    {t.btnSave}
+                  </button>
+                </div>
+              </form>
+
+              {/* List */}
+              <div className="space-y-4">
+                {outreaches.map(outr => (
+                  <div key={outr.id} className="p-4 rounded-xl border border-slate-800 bg-slate-950/20 flex justify-between items-center">
+                    <div>
+                      <h4 className="text-sm font-bold text-white">{outr.title_kreyol} <span className="text-slate-500">|</span> {outr.title_english}</h4>
+                      <p className="text-xs text-slate-400 mt-1">Schedule: {outr.schedule_kreyol} / {outr.schedule_english}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleEditOutreachClick(outr)} className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-500 transition-colors cursor-pointer">
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDeleteOutreach(outr.id)} className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: EVENTS MANAGER */}
+          {activeTab === 'events' && (
+            <div className="space-y-8">
+              <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 className="text-xl font-bold text-white font-serif">{t.adminTabEvents}</h3>
+                {editingEventId && (
+                  <button onClick={resetEventForm} className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-850 text-xs font-bold">
+                    {t.btnAddNew}
+                  </button>
+                )}
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleSaveEvent} className="p-5 rounded-xl bg-slate-950 border border-slate-850 space-y-4">
+                <h4 className="text-xs font-bold uppercase text-amber-400">
+                  {editingEventId ? 'Modify Event Details' : 'Create New Event'}
+                </h4>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Event Title (Kreyòl)</label>
+                    <input 
+                      type="text" required value={evTitleHt} onChange={e => setEvTitleHt(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Event Title (English)</label>
+                    <input 
+                      type="text" required value={evTitleEn} onChange={e => setEvTitleEn(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Date</label>
+                    <input 
+                      type="date" required value={evDate} onChange={e => setEvDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Time</label>
+                    <input 
+                      type="text" required placeholder="e.g. 6:00 PM" value={evTime} onChange={e => setEvTime(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Location (Kreyòl)</label>
+                    <input 
+                      type="text" required value={evLocHt} onChange={e => setEvLocHt(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Location (English)</label>
+                    <input 
+                      type="text" required value={evLocEn} onChange={e => setEvLocEn(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Kreyòl)</label>
+                    <textarea 
+                      rows={2} value={evDescHt} onChange={e => setEvDescHt(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (English)</label>
+                    <textarea 
+                      rows={2} value={evDescEn} onChange={e => setEvDescEn(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  {editingEventId && (
+                    <button type="button" onClick={resetEventForm} className="px-4 py-2 rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-xs text-slate-300">
+                      {t.btnCancel}
+                    </button>
+                  )}
+                  <button type="submit" className="px-4 py-2 rounded bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs">
+                    {t.btnSave}
+                  </button>
+                </div>
+              </form>
+
+              {/* List */}
+              <div className="space-y-4">
+                {events.map(ev => (
+                  <div key={ev.id} className="p-4 rounded-xl border border-slate-800 bg-slate-950/20 flex justify-between items-center">
+                    <div>
+                      <h4 className="text-sm font-bold text-white">{ev.title_kreyol} <span className="text-slate-500">|</span> {ev.title_english}</h4>
+                      <p className="text-xs text-slate-400 mt-1">{ev.date} at {ev.time} | {ev.location_kreyol}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleEditEventClick(ev)} className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-500 transition-colors cursor-pointer">
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDeleteEvent(ev.id)} className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: EVENT REGISTRATIONS VIEWER */}
+          {activeTab === 'registrations' && (
+            <div className="space-y-6">
+              <h3 className="text-xl font-bold text-white border-b border-slate-800 pb-3 font-serif">
+                {t.adminRegistrationsTitle}
+              </h3>
+
+              {registrations.length === 0 ? (
+                <div className="text-center py-12 text-slate-500 text-sm">
+                  Pa gen moun ki enskri pou evènman yo ankò. / No registrations yet.
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/20">
+                  <table className="w-full border-collapse text-left text-xs font-semibold">
+                    <thead className="bg-slate-950 text-slate-400 border-b border-slate-800">
+                      <tr>
+                        <th className="p-4 uppercase tracking-wider">Registrant</th>
+                        <th className="p-4 uppercase tracking-wider">Contact</th>
+                        <th className="p-4 uppercase tracking-wider">Event Details</th>
+                        <th className="p-4 uppercase tracking-wider">Notes</th>
+                        <th className="p-4 uppercase tracking-wider text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-850/80">
+                      {registrations.map(reg => (
+                        <tr key={reg.id} className="hover:bg-slate-900/30 transition-colors">
+                          <td className="p-4">
+                            <span className="font-bold text-white text-sm block">{reg.name}</span>
+                          </td>
+                          <td className="p-4 space-y-0.5 font-medium text-slate-300">
+                            <span className="flex items-center gap-1"><Phone className="w-3 h-3 text-slate-500" /> {reg.phone}</span>
+                            {reg.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3 text-slate-500" /> {reg.email}</span>}
+                          </td>
+                          <td className="p-4 font-medium text-amber-400">
+                            {language === 'fr_ht' ? reg.event_title_kreyol : reg.event_title_english}
+                          </td>
+                          <td className="p-4 max-w-xs truncate font-normal text-slate-400">
+                            {reg.notes || '—'}
+                          </td>
+                          <td className="p-4 text-right">
+                            <button 
+                              onClick={() => handleDeleteRegistration(reg.id)}
+                              className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 7: SERMONS/ARCHIVES MANAGER */}
+          {activeTab === 'sermons' && (
+            <div className="space-y-8">
+              <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 className="text-xl font-bold text-white font-serif">{t.navSermons}</h3>
+                {editingSermonId && (
+                  <button 
+                    onClick={resetSermonForm}
+                    className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-850 text-xs font-bold"
+                  >
+                    {t.btnAddNew}
+                  </button>
+                )}
+              </div>
+
+              {/* YOUTUBE CHANNELS AUTO SYNC AND STREAM INGESTION SETTINGS */}
+              <div className="p-5 rounded-2xl bg-slate-950 border border-slate-850 space-y-4 shadow-xl">
+                <div>
+                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Video className="w-4 h-4 text-amber-500" />
+                    <span>YouTube Channel Auto-Synchronization / Otomatik Senkronizasyon</span>
+                  </h4>
+                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                    Etabli URL kanal ou a pou otomatikman enpòte tout videyo difizyon an dirèk (Live streams) nan bibliyotèk sit la san ou pa bezwen mete yo manyèlman yonn pa yonn.
+                  </p>
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-4 items-end">
+                  <div className="flex-1 w-full">
+                    <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">YouTube Streams Page URL</label>
+                    <input 
+                      type="text" 
+                      value={ytChannelUrl}
+                      onChange={(e) => setYtChannelUrl(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-200 font-mono"
+                      placeholder="e.g. https://www.youtube.com/@parousiabaptistchurch1438/streams"
+                    />
+                  </div>
+                  
+                  <button
+                    type="button"
+                    onClick={handleSyncYoutube}
+                    disabled={isSyncing}
+                    className="px-5 py-2 rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs transition-all h-[36px] flex items-center gap-1.5 cursor-pointer shadow whitespace-nowrap"
+                  >
+                    {isSyncing ? (
+                      <>
+                        <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Y ap Senkronize...</span>
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Senkronize Videyo (Sync Streams)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                
+                <span className="text-[10px] text-slate-500 block">
+                  Enpòtatè a pral vizite paj la, rekipere tout videyo difizyon yo epi sove oswa mete ajou yo dirèkteman nan baz done SQLite la, asire dat ak non pastè yo kòrèk.
+                </span>
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleSaveSermon} className="p-5 rounded-2xl bg-slate-950/40 border border-slate-850 space-y-4">
+                <h4 className="text-sm font-bold text-amber-400 uppercase tracking-wider">
+                  {editingSermonId ? (language === 'fr_ht' ? 'Modifye Mesaj' : 'Edit Sermon') : (language === 'fr_ht' ? 'Ajoute yon Nouvo Mesaj' : 'Add a New Sermon')}
+                </h4>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Kreyòl)</label>
+                    <input 
+                      type="text" required value={sermTitleHt} onChange={e => setSermTitleHt(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (English)</label>
+                    <input 
+                      type="text" required value={sermTitleEn} onChange={e => setSermTitleEn(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">{t.sermonDate} (YYYY-MM-DD)</label>
+                    <input 
+                      type="date" required value={sermDate} onChange={e => setSermDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">{t.sermonSpeaker}</label>
+                    <input 
+                      type="text" required value={sermSpeaker} onChange={e => setSermSpeaker(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">YouTube Video ID</label>
+                    <input 
+                      type="text" required value={sermYoutubeId} onChange={e => setSermYoutubeId(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white font-mono"
+                      placeholder="e.g. dQw4w9WgXcQ"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Kreyòl)</label>
+                    <textarea 
+                      rows={2} value={sermDescHt} onChange={e => setSermDescHt(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (English)</label>
+                    <textarea 
+                      rows={2} value={sermDescEn} onChange={e => setSermDescEn(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  {editingSermonId && (
+                    <button type="button" onClick={resetSermonForm} className="px-4 py-2 rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-xs text-slate-300">
+                      {t.btnCancel}
+                    </button>
+                  )}
+                  <button type="submit" className="px-4 py-2 rounded bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs">
+                    {t.btnSave}
+                  </button>
+                </div>
+              </form>
+
+              {/* List */}
+              <div className="space-y-4">
+                {sermons.map(serm => (
+                  <div key={serm.id} className="p-4 rounded-xl border border-slate-800 bg-slate-950/20 flex justify-between items-center">
+                    <div className="flex gap-4 items-center">
+                      <div className="w-20 aspect-video rounded bg-slate-950 border border-slate-850 overflow-hidden flex items-center justify-center text-[10px] text-slate-500 font-mono relative">
+                        <img 
+                          src={getYouTubeThumbnailUrl(serm.youtube_id)} 
+                          alt="preview" 
+                          className="w-full h-full object-cover opacity-50"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                        <span className="absolute inset-0 flex items-center justify-center bg-black/40 font-mono text-[8px] text-slate-300 truncate px-1">
+                          {serm.youtube_id.length > 11 ? serm.youtube_id.substring(0, 8) + '...' : serm.youtube_id}
+                        </span>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-white">
+                          {language === 'fr_ht' ? serm.title_kreyol : serm.title_english}
+                        </h4>
+                        <p className="text-xs text-slate-400 mt-1">
+                          {serm.date} | {t.sermonSpeaker}: {serm.speaker}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleEditSermonClick(serm)} className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-500 transition-colors cursor-pointer">
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDeleteSermon(serm.id)} className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Subscribers Tab (Framed as Subscribers / Moun ki Abòne yo) */}
+          {activeTab === 'subscribers' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-slate-950/40 border border-slate-850">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Users className="w-5 h-5 text-amber-500" />
+                    <span>Moun ki Abòne yo (Subscribers List)</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Lis moun ki abòne pou resevwa kado espirityèl la, mesaj devosyonèl, oswa lòt enfòmasyon nan men legliz la.
+                  </p>
+                </div>
+                
+                <div className="flex gap-2 shrink-0">
+                  <button
+                    onClick={handleCopySubscribersEmails}
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs font-bold text-slate-200 hover:text-white transition-all cursor-pointer"
+                  >
+                    {copiedSubscribers ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-500" />
+                        <span className="text-emerald-400">Tout Imel Kopye!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Kopye Tout Imel</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder={language === 'fr_ht' ? 'Chache pa non, imel oswa telefòn...' : 'Search by name, email, or phone...'}
+                  value={subSearch}
+                  onChange={(e) => setSubSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/50 border border-slate-850 focus:border-amber-500 focus:outline-none text-xs text-slate-200 transition-all"
+                />
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs font-bold">🔍</span>
+                {subSearch && (
+                  <button
+                    onClick={() => setSubSearch('')}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-[10px] font-bold"
+                  >
+                    KLOSE
+                  </button>
+                )}
+              </div>
+
+              {/* Subscribers list display */}
+              {subscriberList.filter(sub => {
+                const term = subSearch.toLowerCase();
+                return (
+                  (sub.name || '').toLowerCase().includes(term) ||
+                  (sub.email || '').toLowerCase().includes(term) ||
+                  (sub.phone || '').toLowerCase().includes(term)
+                );
+              }).length === 0 ? (
+                <div className="p-12 text-center rounded-2xl bg-slate-950/20 border border-slate-850">
+                  <p className="text-sm text-slate-500">
+                    {language === 'fr_ht' ? 'Pa gen okenn abòne ki koresponn ak rechèch sa a.' : 'No subscribers match this search.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-2xl border border-slate-850 bg-slate-950/20">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-850 bg-slate-950/40">
+                        <th className="p-4 text-xs font-bold uppercase tracking-wider text-amber-500">Non (Name)</th>
+                        <th className="p-4 text-xs font-bold uppercase tracking-wider text-amber-500">Imel (Email)</th>
+                        <th className="p-4 text-xs font-bold uppercase tracking-wider text-amber-500">Telefòn (Phone)</th>
+                        <th className="p-4 text-xs font-bold uppercase tracking-wider text-amber-500">Dat (Date Subscribed)</th>
+                        <th className="p-4 text-xs font-bold uppercase tracking-wider text-amber-500 text-right">Aksyon (Action)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-850">
+                      {subscriberList.filter(sub => {
+                        const term = subSearch.toLowerCase();
+                        return (
+                          (sub.name || '').toLowerCase().includes(term) ||
+                          (sub.email || '').toLowerCase().includes(term) ||
+                          (sub.phone || '').toLowerCase().includes(term)
+                        );
+                      }).map((sub) => (
+                        <tr key={sub.id} className="hover:bg-slate-950/40 transition-colors group">
+                          <td className="p-4 text-xs font-bold text-slate-100">{sub.name}</td>
+                          <td className="p-4 text-xs font-mono text-slate-300">{sub.email || '—'}</td>
+                          <td className="p-4 text-xs text-slate-300">{sub.phone || '—'}</td>
+                          <td className="p-4 text-xs text-slate-400">
+                            {sub.created_at ? new Date(sub.created_at).toLocaleDateString(language === 'fr_ht' ? 'fr-FR' : 'en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : '—'}
+                          </td>
+                          <td className="p-4 text-xs text-right">
+                            <button
+                              onClick={() => handleDeleteSubscriber(sub.id)}
+                              className="p-1.5 rounded hover:bg-slate-800 text-slate-500 hover:text-rose-500 transition-all cursor-pointer opacity-40 group-hover:opacity-100"
+                              title={language === 'fr_ht' ? 'Efase Abòne' : 'Delete Subscriber'}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Devotional Tab */}
+          {activeTab === 'devotional' && (
+            <div className="space-y-6">
+              {/* Header card */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-slate-950/40 border border-slate-850">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-amber-500" />
+                    <span>{t.devotionalTitle}</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {t.devotionalSubtitle}
+                  </p>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  {/* Auto-publish toggle */}
+                  <label className="flex items-center gap-2 cursor-pointer bg-slate-900 px-3 py-2 rounded-xl border border-slate-800">
+                    <input 
+                      type="checkbox" 
+                      checked={devotionalAutoPublish === 'true'} 
+                      onChange={handleToggleAutoPublish}
+                      className="rounded border-slate-700 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 bg-slate-950 w-4 h-4 cursor-pointer"
+                    />
+                    <span className="text-xs font-semibold text-slate-300">
+                      {t.devotionalAutoPublish}
+                    </span>
+                  </label>
+
+                  <button
+                    onClick={handleDevotionalGenerate}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 transition-all text-slate-950 text-xs font-bold cursor-pointer"
+                  >
+                    <Wand2 className="w-3.5 h-3.5" />
+                    <span>{t.devotionalBtnGenerate}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Editing Form (if editing) */}
+              {editingDevotionalId !== null && (
+                <form onSubmit={handleDevotionalSave} className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
+                  <div className="flex justify-between items-center border-b border-slate-850 pb-3">
+                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Edit className="w-4 h-4 text-amber-500" />
+                      <span>{language === 'fr_ht' ? 'Modifye Devosyonèl la' : 'Edit Devotional'}</span>
+                    </h4>
+                    <span className="text-xs font-semibold text-slate-400">
+                      ID: #{editingDevotionalId}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* References */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 mb-1">{t.devotionalVerseRefHt}</label>
+                      <input 
+                        type="text"
+                        value={editDevotionalForm.verse_ref_kreyol}
+                        onChange={(e) => setEditDevotionalForm(prev => ({ ...prev, verse_ref_kreyol: e.target.value }))}
+                        className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 mb-1">{t.devotionalVerseRefEn}</label>
+                      <input 
+                        type="text"
+                        value={editDevotionalForm.verse_ref_english}
+                        onChange={(e) => setEditDevotionalForm(prev => ({ ...prev, verse_ref_english: e.target.value }))}
+                        className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                        required
+                      />
+                    </div>
+
+                    {/* Texts */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 mb-1">{t.devotionalVerseTextHt}</label>
+                      <textarea
+                        rows={3}
+                        value={editDevotionalForm.verse_text_kreyol}
+                        onChange={(e) => setEditDevotionalForm(prev => ({ ...prev, verse_text_kreyol: e.target.value }))}
+                        className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 mb-1">{t.devotionalVerseTextEn}</label>
+                      <textarea
+                        rows={3}
+                        value={editDevotionalForm.verse_text_english}
+                        onChange={(e) => setEditDevotionalForm(prev => ({ ...prev, verse_text_english: e.target.value }))}
+                        className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                        required
+                      />
+                    </div>
+
+                    {/* Lessons */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 mb-1">{t.devotionalLessonHt}</label>
+                      <textarea
+                        rows={3}
+                        value={editDevotionalForm.lesson_kreyol}
+                        onChange={(e) => setEditDevotionalForm(prev => ({ ...prev, lesson_kreyol: e.target.value }))}
+                        className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 mb-1">{t.devotionalLessonEn}</label>
+                      <textarea
+                        rows={3}
+                        value={editDevotionalForm.lesson_english}
+                        onChange={(e) => setEditDevotionalForm(prev => ({ ...prev, lesson_english: e.target.value }))}
+                        className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                        required
+                      />
+                    </div>
+
+                    {/* Status */}
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-bold text-slate-400 mb-1">{t.devotionalStatus}</label>
+                      <select
+                        value={editDevotionalForm.status}
+                        onChange={(e) => setEditDevotionalForm(prev => ({ ...prev, status: e.target.value as 'pending' | 'approved' }))}
+                        className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 cursor-pointer"
+                      >
+                        <option value="pending">{t.devotionalPending}</option>
+                        <option value="approved">{t.devotionalApproved}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-850">
+                    <button
+                      type="button"
+                      onClick={() => setEditingDevotionalId(null)}
+                      className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs font-bold text-slate-300 transition-all cursor-pointer"
+                    >
+                      {t.btnCancel}
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold transition-all cursor-pointer"
+                    >
+                      {t.btnSave}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Search Bar */}
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder={language === 'fr_ht' ? 'Chache pa dat oswa referans...' : 'Search by date or reference...'}
+                  value={devotionalSearch}
+                  onChange={(e) => setDevotionalSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/50 border border-slate-850 focus:border-amber-500 focus:outline-none text-xs text-slate-200 transition-all"
+                />
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs font-bold">🔍</span>
+                {devotionalSearch && (
+                  <button
+                    onClick={() => setDevotionalSearch('')}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-[10px] font-bold"
+                  >
+                    KLOSE
+                  </button>
+                )}
+              </div>
+
+              {/* Devotional List */}
+              {devotionalList.filter(d => {
+                const term = devotionalSearch.toLowerCase();
+                return (
+                  (d.date || '').toLowerCase().includes(term) ||
+                  (d.verse_ref_english || '').toLowerCase().includes(term) ||
+                  (d.verse_ref_kreyol || '').toLowerCase().includes(term)
+                );
+              }).length === 0 ? (
+                <div className="p-12 text-center rounded-2xl bg-slate-950/20 border border-slate-850">
+                  <p className="text-sm text-slate-500">
+                    {language === 'fr_ht' ? 'Pa gen okenn devosyonèl ki jwenn.' : 'No devotionals found.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {devotionalList.filter(d => {
+                    const term = devotionalSearch.toLowerCase();
+                    return (
+                      (d.date || '').toLowerCase().includes(term) ||
+                      (d.verse_ref_english || '').toLowerCase().includes(term) ||
+                      (d.verse_ref_kreyol || '').toLowerCase().includes(term)
+                    );
+                  }).map((d) => (
+                    <div 
+                      key={d.id} 
+                      className={`p-5 rounded-2xl border transition-all hover:bg-slate-950/30 ${
+                        d.status === 'approved' 
+                          ? 'bg-slate-950/10 border-slate-850' 
+                          : 'bg-amber-950/5 border-amber-900/30'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-850/50 pb-3 mb-3">
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono text-xs font-bold text-slate-300 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
+                            📅 {d.date}
+                          </span>
+                          <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                            d.status === 'approved' 
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          }`}>
+                            {d.status === 'approved' ? t.devotionalApproved : t.devotionalPending}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          {d.status === 'pending' && (
+                            <button
+                              onClick={() => handleDevotionalApprove(d.id)}
+                              className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 mr-1"
+                              title={t.devotionalBtnApprove}
+                            >
+                              <Check className="w-3 h-3" />
+                              <span>{language === 'fr_ht' ? 'Apwouve' : 'Approve'}</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => startEditDevotional(d)}
+                            className="p-1.5 rounded bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition-all cursor-pointer"
+                            title={language === 'fr_ht' ? 'Modifye' : 'Edit'}
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDevotionalDelete(d.id)}
+                            className="p-1.5 rounded bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-rose-500 transition-all cursor-pointer"
+                            title={language === 'fr_ht' ? 'Siprime' : 'Delete'}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        {/* Kreyol Version */}
+                        <div className="space-y-2 border-r border-slate-850/30 pr-0 md:pr-4">
+                          <div className="text-amber-500 font-extrabold flex items-center gap-1.5">
+                            <span className="text-[10px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded">HT</span>
+                            <span>{d.verse_ref_kreyol}</span>
+                          </div>
+                          <p className="text-slate-200 italic font-medium leading-relaxed">
+                            "{d.verse_text_kreyol}"
+                          </p>
+                          <p className="text-slate-400 leading-relaxed bg-slate-950/20 p-2.5 rounded-lg border border-slate-850/50">
+                            {d.lesson_kreyol}
+                          </p>
+                        </div>
+
+                        {/* English Version */}
+                        <div className="space-y-2">
+                          <div className="text-amber-500 font-extrabold flex items-center gap-1.5">
+                            <span className="text-[10px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded">EN</span>
+                            <span>{d.verse_ref_english}</span>
+                          </div>
+                          <p className="text-slate-200 italic font-medium leading-relaxed">
+                            "{d.verse_text_english}"
+                          </p>
+                          <p className="text-slate-400 leading-relaxed bg-slate-950/20 p-2.5 rounded-lg border border-slate-850/50">
+                            {d.lesson_english}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 10: SECURITY & ADMINS PANEL */}
+          {activeTab === 'admins' && isSuperAdmin && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="p-5 rounded-2xl bg-slate-950/40 border border-slate-850">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <UserCheck className="w-5 h-5 text-amber-500" />
+                  <span>{t.adminAdminsTitle}</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  {language === 'fr_ht' 
+                    ? 'Ajoute oswa siprime imel administratè ki otorize pou yo konekte avèk OTP nan sistèm nan.'
+                    : 'Add or revoke administrator email addresses authorized to log in via 2FA/OTP.'}
+                </p>
+              </div>
+
+              {/* Add Admin Form */}
+              <form onSubmit={handleAddAdminEmail} className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
+                <div className="flex flex-col sm:flex-row items-end gap-3">
+                  <div className="flex-1 w-full">
+                    <label className="block text-xs font-bold text-slate-400 mb-2">
+                      {language === 'fr_ht' ? 'Adrès Imel Administratè a' : 'Administrator Email Address'}
+                    </label>
+                    <input 
+                      type="email"
+                      value={newAdminEmail}
+                      onChange={(e) => setNewAdminEmail(e.target.value)}
+                      placeholder={t.adminAdminsAddPlaceholder}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-amber-500 font-semibold"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full sm:w-auto px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 transition-all text-slate-950 text-xs font-bold cursor-pointer inline-flex items-center justify-center gap-1.5 shrink-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>{t.adminAdminsBtnAdd}</span>
+                  </button>
+                </div>
+              </form>
+
+              {/* Admins Table */}
+              <div className="rounded-2xl border border-slate-850 bg-slate-950/20 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-950/60 border-b border-slate-850 text-slate-400 font-bold uppercase tracking-wider">
+                        <th className="px-5 py-4">{t.adminAdminsColEmail}</th>
+                        <th className="px-5 py-4">{t.adminAdminsColDate}</th>
+                        <th className="px-5 py-4 text-right">{language === 'fr_ht' ? 'Aksyon' : 'Actions'}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-850/40">
+                      {adminList.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="px-5 py-8 text-center text-slate-500">
+                            {t.adminAdminsEmpty}
+                          </td>
+                        </tr>
+                      ) : (
+                        adminList.map((admin) => (
+                          <tr key={admin.id} className="hover:bg-slate-950/20 transition-all">
+                            <td className="px-5 py-4 font-mono font-semibold text-slate-200">
+                              {admin.email}
+                            </td>
+                            <td className="px-5 py-4 text-slate-400">
+                              {admin.created_at ? new Date(admin.created_at).toLocaleDateString() : '-'}
+                            </td>
+                            <td className="px-5 py-4 text-right">
+                              <button
+                                onClick={() => handleDeleteAdminEmail(admin.id)}
+                                className="p-2 rounded hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-all cursor-pointer inline-flex"
+                                title={t.btnDelete}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 11: CONTACT MESSAGES SUBMISSIONS PANEL */}
+          {activeTab === 'contact' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="p-5 rounded-2xl bg-slate-950/40 border border-slate-850 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-amber-500" />
+                    <span>{t.adminContactTitle}</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {language === 'fr_ht' 
+                      ? 'Li nòt ak mesaj ke vizitè sit la voye ba ou yo.'
+                      : 'View care requests, feedback, and messages submitted by website visitors.'}
+                  </p>
+                </div>
+                {contactLogs.length > 0 && (
+                  <button
+                    onClick={() => {
+                      const emails = contactLogs.map(c => c.email).filter(Boolean).join('; ');
+                      navigator.clipboard.writeText(emails);
+                      triggerAlert(language === 'fr_ht' ? 'Adrès imel yo kopye!' : 'Emails copied successfully!', 'success');
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-amber-500" />
+                    <span>{language === 'fr_ht' ? 'Kopye Tout Imel' : 'Copy All Emails'}</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Messages Table/Cards */}
+              {contactLogs.length === 0 ? (
+                <div className="p-12 text-center rounded-2xl bg-slate-950/20 border border-slate-850">
+                  <p className="text-sm text-slate-500">{t.adminContactEmpty}</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {contactLogs.map((log) => (
+                    <div key={log.id} className="p-5 rounded-2xl bg-slate-950/10 border border-slate-850 hover:bg-slate-950/20 transition-all relative group">
+                      <button
+                        onClick={() => handleDeleteContactLog(log.id)}
+                        className="absolute top-4 right-4 p-2 rounded bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-500 hover:text-red-400 transition-all cursor-pointer"
+                        title={t.btnDelete}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+
+                      <div className="flex flex-col md:flex-row md:items-center gap-2 border-b border-slate-850/50 pb-3 mb-3">
+                        <span className="font-bold text-sm text-white">{log.name}</span>
+                        <span className="hidden md:inline text-slate-600">•</span>
+                        <span className="font-mono text-xs text-amber-400 font-semibold">{log.email}</span>
+                        {log.phone && (
+                          <>
+                            <span className="hidden md:inline text-slate-600">•</span>
+                            <span className="text-xs text-slate-400 font-medium">📞 {log.phone}</span>
+                          </>
+                        )}
+                        <span className="md:ml-auto text-[10px] text-slate-500 font-bold bg-slate-900 px-2 py-0.5 rounded-lg border border-slate-800">
+                          {log.created_at ? new Date(log.created_at).toLocaleString() : '-'}
+                        </span>
+                      </div>
+
+                      <p className="text-slate-300 text-xs leading-relaxed whitespace-pre-wrap bg-slate-950/40 p-4 rounded-xl border border-slate-850/50">
+                        {log.message}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 12: PRAYER WALL MODERATION PANEL */}
+          {activeTab === 'prayers' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="p-5 rounded-2xl bg-slate-950/40 border border-slate-850">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <Heart className="w-5 h-5 text-amber-500" />
+                  <span>{t.adminPrayersTitle}</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  {language === 'fr_ht' 
+                    ? 'Kontwole ak siprime demann lapriyè ki pibliye sou miray piblik la.'
+                    : 'Moderate and delete prayer requests posted on the public prayer wall.'}
+                </p>
+              </div>
+
+              {/* Prayers List */}
+              {moderationPrayers.length === 0 ? (
+                <div className="p-12 text-center rounded-2xl bg-slate-950/20 border border-slate-850">
+                  <p className="text-sm text-slate-500">{t.adminPrayersEmpty}</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {moderationPrayers.map((prayer) => (
+                    <div key={prayer.id} className="p-5 rounded-2xl bg-slate-950/10 border border-slate-850 hover:bg-slate-950/20 transition-all flex justify-between items-start gap-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-white">
+                            {prayer.is_anonymous === 1 ? (
+                              <span className="text-amber-500 italic bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/10 text-[10px]">
+                                {t.prayerCardAnonymous}
+                              </span>
+                            ) : (
+                              prayer.requester_name || t.prayerCardAnonymous
+                            )}
+                          </span>
+                          <span className="text-[10px] text-slate-500 bg-slate-900 px-2 py-0.5 rounded-lg border border-slate-850 font-bold">
+                            📅 {prayer.created_at}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300 leading-relaxed font-serif bg-slate-950/30 p-3 rounded-lg border border-slate-850/40">
+                          {prayer.request_text}
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => handleDeletePrayer(prayer.id)}
+                        className="p-2 rounded bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-500 hover:text-red-400 transition-all cursor-pointer shrink-0"
+                        title={t.btnDelete}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 13: BLOG CRUD PANEL */}
+          {activeTab === 'blog' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="p-5 rounded-2xl bg-slate-950/40 border border-slate-850 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-amber-500" />
+                    <span>{t.adminBlogTitle}</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {language === 'fr_ht' 
+                      ? 'Pibliye nòt, refleksyon, ak blòg pastoral pou kominote a.'
+                      : 'Publish weekly thoughts, reflections, and pastoral viewpoints for the church blog.'}
+                  </p>
+                </div>
+                
+                {editingBlogPostId === null && (
+                  <button
+                    onClick={handleStartCreateBlog}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 transition-all text-slate-950 text-xs font-bold cursor-pointer shadow-lg shrink-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>{t.adminBlogBtnCreate}</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Creation / Editing Form overlay / view */}
+              {editingBlogPostId !== null ? (
+                <form onSubmit={handleSaveBlog} className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4 animate-fade-in">
+                  <div className="flex justify-between items-center border-b border-slate-850 pb-3 mb-2">
+                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Edit className="w-4 h-4 text-amber-500" />
+                      <span>{editingBlogPostId === 0 ? t.adminBlogNewTitle : t.adminBlogEditTitle}</span>
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => setEditingBlogPostId(null)}
+                      className="text-xs text-slate-400 hover:text-white transition-all cursor-pointer font-bold"
+                    >
+                      {language === 'fr_ht' ? 'ANILE' : 'CANCEL'}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Dates & Reference */}
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-bold text-slate-400 mb-1.5">{t.adminBlogFieldDate}</label>
+                      <input 
+                        type="date"
+                        value={blogForm.date}
+                        onChange={(e) => setBlogForm(prev => ({ ...prev, date: e.target.value }))}
+                        className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-semibold"
+                        required
+                      />
+                    </div>
+
+                    {/* Titles */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 mb-1.5">{t.adminBlogFieldTitleHt}</label>
+                      <input 
+                        type="text"
+                        value={blogForm.title_kreyol}
+                        onChange={(e) => setBlogForm(prev => ({ ...prev, title_kreyol: e.target.value }))}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-semibold"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 mb-1.5">{t.adminBlogFieldTitleEn}</label>
+                      <input 
+                        type="text"
+                        value={blogForm.title_english}
+                        onChange={(e) => setBlogForm(prev => ({ ...prev, title_english: e.target.value }))}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-semibold"
+                        required
+                      />
+                    </div>
+
+                    {/* Auto-Translate Button */}
+                    <div className="md:col-span-2 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleAutoTranslate}
+                        disabled={isTranslating}
+                        className="px-3.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 hover:border-amber-500/50 hover:bg-amber-500/20 text-amber-400 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-lg disabled:opacity-50 disabled:pointer-events-none hover:-translate-y-0.5 active:translate-y-0"
+                      >
+                        <Wand2 className={`w-3.5 h-3.5 ${isTranslating ? 'animate-spin' : ''}`} />
+                        <span>{isTranslating ? (language === 'fr_ht' ? 'Y ap Tradui...' : 'Translating...') : (language === 'fr_ht' ? '✨ Auto-Tradui' : '✨ Auto-Translate')}</span>
+                      </button>
+                    </div>
+
+                    {/* Contents */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 mb-1.5">{t.adminBlogFieldContentHt}</label>
+                      <textarea
+                        rows={8}
+                        value={blogForm.content_kreyol}
+                        onChange={(e) => setBlogForm(prev => ({ ...prev, content_kreyol: e.target.value }))}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 leading-relaxed font-serif"
+                        placeholder="Mete kontni refleksyon an an kreyòl..."
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 mb-1.5">{t.adminBlogFieldContentEn}</label>
+                      <textarea
+                        rows={8}
+                        value={blogForm.content_english}
+                        onChange={(e) => setBlogForm(prev => ({ ...prev, content_english: e.target.value }))}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 leading-relaxed font-serif"
+                        placeholder="Enter the post content in English..."
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-850">
+                    <button
+                      type="button"
+                      onClick={() => setEditingBlogPostId(null)}
+                      className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs font-bold text-slate-300 transition-all cursor-pointer"
+                    >
+                      {t.btnCancel}
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>{t.adminBlogSaveBtn}</span>
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                /* Post List Display */
+                <div className="rounded-2xl border border-slate-850 bg-slate-950/20 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-slate-950/60 border-b border-slate-850 text-slate-400 font-bold uppercase tracking-wider">
+                          <th className="px-5 py-4">{t.adminBlogColTitle}</th>
+                          <th className="px-5 py-4">{t.adminBlogColDate}</th>
+                          <th className="px-5 py-4 text-right">{language === 'fr_ht' ? 'Aksyon' : 'Actions'}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-850/40">
+                        {blogPostsList.length === 0 ? (
+                          <tr>
+                            <td colSpan={3} className="px-5 py-8 text-center text-slate-500">
+                              {t.adminBlogEmpty}
+                            </td>
+                          </tr>
+                        ) : (
+                          blogPostsList.map((post) => (
+                            <tr key={post.id} className="hover:bg-slate-950/20 transition-all">
+                              <td className="px-5 py-4 text-slate-200 font-medium">
+                                {language === 'fr_ht' ? post.title_kreyol : post.title_english}
+                              </td>
+                              <td className="px-5 py-4 text-slate-400 font-mono">
+                                {post.date}
+                              </td>
+                              <td className="px-5 py-4 text-right">
+                                <div className="inline-flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleStartEditBlog(post)}
+                                    className="p-1.5 rounded bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition-all cursor-pointer"
+                                    title={t.btnEdit}
+                                  >
+                                    <Edit className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteBlog(post.id)}
+                                    className="p-1.5 rounded bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-500 hover:text-red-400 transition-all cursor-pointer"
+                                    title={t.btnDelete}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 14: MINISTRIES MANAGER */}
+          {activeTab === 'ministries' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="p-5 rounded-2xl bg-slate-950/40 border border-slate-850 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Users className="w-5 h-5 text-amber-500" />
+                    <span>{language === 'en' ? 'Core Ministries Configuration' : 'Konfigirasyon Ministè yo'}</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {language === 'en'
+                      ? 'Configure images, descriptions, titles, and events for the Women, Men, and Children ministries.'
+                      : 'Konfigirasyon imaj, deskripsyon, tit, ak evènman pou ministè fanm, gason, ak timoun yo.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Ministry Selector Tabs */}
+              <div className="flex gap-2 border-b border-slate-850 pb-px">
+                {['women', 'men', 'children'].map((slug) => {
+                  const label = slug === 'women' 
+                    ? (language === 'en' ? "Women's Ministry" : "Ministè Dam yo")
+                    : slug === 'men'
+                    ? (language === 'en' ? "Men's Ministry" : "Ministè Gason yo")
+                    : (language === 'en' ? "Children & Youth" : "Ministè Timoun yo");
+                  return (
+                    <button
+                      key={slug}
+                      onClick={() => setSelectedMinistrySlug(slug)}
+                      type="button"
+                      className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+                        selectedMinistrySlug === slug
+                          ? 'border-amber-500 text-amber-400 bg-slate-950/20'
+                          : 'border-transparent text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleSaveMinistry} className="p-5 rounded-2xl bg-slate-950/30 border border-slate-850 space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+                      {language === 'en' ? 'Ministry Title (English)' : 'Tit Ministè a (Angle)'}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={minForm.title_english}
+                      onChange={(e) => setMinForm(prev => ({ ...prev, title_english: e.target.value }))}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+                      {language === 'en' ? 'Ministry Title (Creole)' : 'Tit Ministè a (Kreyòl)'}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={minForm.title_kreyol}
+                      onChange={(e) => setMinForm(prev => ({ ...prev, title_kreyol: e.target.value }))}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-semibold"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+                      {language === 'en' ? 'Description (English)' : 'Deskripsyon (Angle)'}
+                    </label>
+                    <textarea
+                      rows={4}
+                      required
+                      value={minForm.description_english}
+                      onChange={(e) => setMinForm(prev => ({ ...prev, description_english: e.target.value }))}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 leading-relaxed font-serif"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+                      {language === 'en' ? 'Description (Creole)' : 'Deskripsyon (Kreyòl)'}
+                    </label>
+                    <textarea
+                      rows={4}
+                      required
+                      value={minForm.description_kreyol}
+                      onChange={(e) => setMinForm(prev => ({ ...prev, description_kreyol: e.target.value }))}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 leading-relaxed font-serif"
+                    />
+                  </div>
+                </div>
+
+                {/* Visual Image Dropzone / Clipboard Paste / File Browse */}
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold uppercase text-slate-400">
+                    {language === 'en' ? 'Ministry Image' : 'Imaj Ministè a'}
+                  </label>
+                  
+                  <div 
+                    onClick={() => document.getElementById('min-file-input')?.click()}
+                    onPaste={handlePasteMin}
+                    onDragOver={(e) => { e.preventDefault(); setIsDraggingMin(true); }}
+                    onDragLeave={() => setIsDraggingMin(false)}
+                    onDrop={handleDropMin}
+                    className={`relative border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all min-h-[120px] group overflow-hidden ${
+                      isDraggingMin 
+                        ? 'border-amber-500 bg-amber-500/10 scale-[1.01]' 
+                        : 'border-slate-800 hover:border-amber-500/50 bg-slate-900/50 hover:bg-slate-900/85'
+                    }`}
+                  >
+                    <input 
+                      type="file" 
+                      id="min-file-input" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={(e) => handleMinFile(e.target.files?.[0])} 
+                    />
+                    
+                    {minForm.image_url ? (
+                      <div className="flex items-center gap-4 z-10 w-full">
+                        <div className="w-16 h-16 rounded-lg bg-slate-950 border border-slate-800 overflow-hidden p-0.5 flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-all">
+                          <img src={minForm.image_url} alt="Ministry preview" className="w-full h-full object-cover rounded" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <span className="text-xs font-bold text-slate-200 block truncate">
+                            {language === 'en' ? 'Ministry_Image.png' : 'Imaj_Ministè.png'}
+                          </span>
+                          <span className="text-[10px] text-slate-400 mt-1 block">
+                            {language === 'en' 
+                              ? 'Click to change, drag another image, or copy-paste here' 
+                              : 'Klike pou chanje, trennen yon lòt imaj, oswa kòpye-kole la a'}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMinForm(prev => ({ ...prev, image_url: '' }));
+                          }}
+                          className="p-1.5 rounded-lg bg-slate-950 border border-slate-850 hover:bg-rose-950 hover:border-rose-900 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
+                          title={language === 'en' ? 'Remove image' : 'Retire imaj'}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1.5 text-slate-400">
+                        <UploadCloud className="w-7 h-7 group-hover:text-amber-400 transition-all animate-bounce" />
+                        <span className="text-xs font-bold text-center">
+                          {language === 'en' 
+                            ? 'Browse, Drag, or Paste an Image' 
+                            : 'Chwazi, Trennen oswa Kole yon Imaj'}
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          {language === 'en' 
+                            ? 'Supports PNG, JPG (Will be auto-compressed)' 
+                            : 'Sipòte PNG, JPG (Y ap konprime otomatikman)'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-2">
+                    <label className="block text-[9px] font-bold uppercase text-slate-400 mb-1">
+                      {language === 'en' ? 'Direct URL Input (Required)' : 'URL Dirèk pou Imaj (Obligatwa)'}
+                    </label>
+                    <input 
+                      type="text" 
+                      required
+                      value={minForm.image_url}
+                      onChange={(e) => setMinForm(prev => ({ ...prev, image_url: e.target.value }))}
+                      className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-[10px] text-slate-100 transition-all font-mono"
+                      placeholder={language === 'en' ? "Or paste any image URL here..." : "Oswa kòpye yon URL imaj isit la..."}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[10px] font-bold uppercase text-slate-400">
+                        {language === 'en' ? 'Bullet Points / Key Events (English)' : 'Evènman ak Pwen Kle (Angle)'}
+                      </label>
+                      <span className="text-[9px] text-slate-500 font-bold uppercase">{language === 'en' ? 'One per line' : 'Youn pa liy'}</span>
+                    </div>
+                    <textarea
+                      rows={6}
+                      value={minForm.bullets_english}
+                      onChange={(e) => setMinForm(prev => ({ ...prev, bullets_english: e.target.value }))}
+                      placeholder={language === 'en' ? "Weekly Prayer Meeting\nMonthly Fellowship Brunch\nAnnual Retreat" : "Weekly Prayer Meeting\nMonthly Fellowship Brunch\nAnnual Retreat"}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[10px] font-bold uppercase text-slate-400">
+                        {language === 'en' ? 'Bullet Points / Key Events (Creole)' : 'Evènman ak Pwen Kle (Kreyòl)'}
+                      </label>
+                      <span className="text-[9px] text-slate-500 font-bold uppercase">{language === 'en' ? 'One per line' : 'Youn pa liy'}</span>
+                    </div>
+                    <textarea
+                      rows={6}
+                      value={minForm.bullets_kreyol}
+                      onChange={(e) => setMinForm(prev => ({ ...prev, bullets_kreyol: e.target.value }))}
+                      placeholder={language === 'en' ? "Reyinyon Lapriyè Chak Semèn\nDejene Kominote Chak Mwa\nRetrèt Anyèl" : "Reyinyon Lapriyè Chak Semèn\nDejene Kominote Chak Mwa\nRetrèt Anyèl"}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-3 border-t border-slate-850">
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{language === 'en' ? 'Save Ministry Settings' : 'Sove Anviwònman Ministè a'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+        </section>
+
+      </main>
+    </div>
+  );
+}
