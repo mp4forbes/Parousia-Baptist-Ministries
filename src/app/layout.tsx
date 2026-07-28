@@ -20,6 +20,14 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: "Eglise Baptiste de la Parousie",
   description: "Eglise Baptiste de la Parousie - Kominote kwayan k'ap sèvi Seyè a epi k'ap tann retou li. Defaulting in Haitian Creole with English fallback.",
+  icons: {
+    icon: [
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
 };
 
 export default async function RootLayout({
@@ -43,6 +51,26 @@ export default async function RootLayout({
       className={`${outfit.variable} ${playfair.variable} h-full antialiased scroll-smooth`}
     >
       <body className="min-h-full bg-slate-950 text-slate-100 font-sans flex flex-col selection:bg-amber-500 selection:text-slate-950">
+        {process.env.NODE_ENV === 'development' && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+(function () {
+  function isExtensionNoise(err, filename) {
+    var blob = [err && err.message, err && err.stack, filename].filter(Boolean).join(' ');
+    return /-extension:\\/\\//.test(blob) || /Failed to connect to MetaMask/i.test(blob);
+  }
+  window.addEventListener('unhandledrejection', function (e) {
+    if (isExtensionNoise(e.reason)) e.preventDefault();
+  }, true);
+  window.addEventListener('error', function (e) {
+    if (isExtensionNoise(e.error, e.filename)) e.preventDefault();
+  }, true);
+})();
+              `.trim(),
+            }}
+          />
+        )}
         <LanguageProvider defaultLanguage={defaultLanguage}>
           {children}
         </LanguageProvider>

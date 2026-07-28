@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { checkAdminAuth } from '@/lib/actions';
+import { getAssetDir } from '@/lib/paths';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const assetDir = '/Users/mpforbes/GoogleCloud/Straight-Line-Churches/Parousie/assets';
+    const assetDir = getAssetDir();
     if (!fs.existsSync(assetDir)) {
       fs.mkdirSync(assetDir, { recursive: true });
     }

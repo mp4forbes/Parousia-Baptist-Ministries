@@ -1,0 +1,41 @@
+# Dependencies and build output
+node_modules
+.next
+out
+build
+coverage
+
+# Local data (mount a volume or restore backups in production)
+*.db
+*.db-wal
+*.db-shm
+
+# Git and editor metadata
+.git
+.gitignore
+.github
+.vscode
+.cursor
+*.md
+!README.md
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs and OS files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.DS_Store
+*.pem
+
+# Local scratch scripts and test artifacts
+scratch
+
+# Vercel / misc
+.vercel
+*.tsbuildinfo
+next-env.d.ts

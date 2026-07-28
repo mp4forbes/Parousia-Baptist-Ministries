@@ -7,12 +7,13 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import crypto from 'crypto';
+import { getAssetDir, getBackupDir } from './paths';
 
 // HELPERS TO GET DATA (Server Components will call these directly)
 
 export async function getServiceSchedules(): Promise<ServiceSchedule[]> {
   try {
-    return db.prepare('SELECT * FROM service_schedules ORDER BY id ASC').all() as ServiceSchedule[];
+    return await db.prepare('SELECT * FROM service_schedules ORDER BY id ASC').all() as ServiceSchedule[];
   } catch (error) {
     console.error('Error fetching service schedules:', error);
     return [];
@@ -21,7 +22,7 @@ export async function getServiceSchedules(): Promise<ServiceSchedule[]> {
 
 export async function getMinistries(): Promise<Ministry[]> {
   try {
-    return db.prepare('SELECT * FROM ministries').all() as Ministry[];
+    return await db.prepare('SELECT * FROM ministries').all() as Ministry[];
   } catch (error) {
     console.error('Error fetching ministries:', error);
     return [];
@@ -44,7 +45,7 @@ export async function saveMinistry(
     params.push(slug);
 
     const query = `UPDATE ministries SET ${sets} WHERE slug = ?`;
-    db.prepare(query).run(...params);
+    await db.prepare(query).run(...params);
 
     revalidatePath('/');
     revalidatePath('/admin/dashboard');
@@ -57,7 +58,7 @@ export async function saveMinistry(
 
 export async function getHaitiMissions(): Promise<HaitiMission[]> {
   try {
-    return db.prepare('SELECT * FROM haiti_missions ORDER BY id ASC').all() as HaitiMission[];
+    return await db.prepare('SELECT * FROM haiti_missions ORDER BY id ASC').all() as HaitiMission[];
   } catch (error) {
     console.error('Error fetching Haiti missions:', error);
     return [];
@@ -66,7 +67,7 @@ export async function getHaitiMissions(): Promise<HaitiMission[]> {
 
 export async function getLocalOutreaches(): Promise<LocalOutreach[]> {
   try {
-    return db.prepare('SELECT * FROM local_outreach ORDER BY id ASC').all() as LocalOutreach[];
+    return await db.prepare('SELECT * FROM local_outreach ORDER BY id ASC').all() as LocalOutreach[];
   } catch (error) {
     console.error('Error fetching local outreaches:', error);
     return [];
@@ -75,7 +76,7 @@ export async function getLocalOutreaches(): Promise<LocalOutreach[]> {
 
 export async function getEvents(): Promise<EventRecord[]> {
   try {
-    return db.prepare('SELECT * FROM events ORDER BY date ASC').all() as EventRecord[];
+    return await db.prepare('SELECT * FROM events ORDER BY date ASC').all() as EventRecord[];
   } catch (error) {
     console.error('Error fetching events:', error);
     return [];
@@ -84,7 +85,7 @@ export async function getEvents(): Promise<EventRecord[]> {
 
 export async function getSettings(): Promise<Record<string, string>> {
   try {
-    const rows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
+    const rows = await db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
     const settingsMap: Record<string, string> = {};
     rows.forEach(row => {
       settingsMap[row.key] = row.value;
@@ -98,7 +99,7 @@ export async function getSettings(): Promise<Record<string, string>> {
 
 export async function getKnowledgeBaseItems(): Promise<KnowledgeBaseItem[]> {
   try {
-    return db.prepare('SELECT * FROM knowledge_base ORDER BY id DESC').all() as KnowledgeBaseItem[];
+    return await db.prepare('SELECT * FROM knowledge_base ORDER BY id DESC').all() as KnowledgeBaseItem[];
   } catch (error) {
     console.error('Error fetching knowledge base items:', error);
     return [];
@@ -115,11 +116,11 @@ export async function addKnowledgeBaseItem(
 
   try {
     const createdAt = new Date().toISOString().split('T')[0];
-    const insert = db.prepare(`
+    const insert = await db.prepare(`
       INSERT INTO knowledge_base (title, type, url, created_at)
       VALUES (?, ?, ?, ?)
     `);
-    insert.run(title, type, url, createdAt);
+    await insert.run(title, type, url, createdAt);
     
     // Automatically trigger site backup on schema modifications/data changes
     await backupWebsite();
@@ -138,7 +139,7 @@ export async function deleteKnowledgeBaseItem(id: number): Promise<{ success: bo
 
   try {
     // Optionally delete from disk if it was an uploaded PDF file
-    const item = db.prepare('SELECT url FROM knowledge_base WHERE id = ?').get(id) as { url: string } | undefined;
+    const item = await db.prepare('SELECT url FROM knowledge_base WHERE id = ?').get(id) as { url: string } | undefined;
     if (item && item.url.startsWith('/api/assets/')) {
       const fileName = item.url.replace('/api/assets/', '');
       const filePath = path.join('/Users/mpforbes/GoogleCloud/Straight-Line-Churches/Parousie/assets', fileName);
@@ -151,7 +152,7 @@ export async function deleteKnowledgeBaseItem(id: number): Promise<{ success: bo
       }
     }
 
-    db.prepare('DELETE FROM knowledge_base WHERE id = ?').run(id);
+    await db.prepare('DELETE FROM knowledge_base WHERE id = ?').run(id);
     
     await backupWebsite();
     
@@ -173,11 +174,11 @@ export async function registerForEvent(
   notes: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const insert = db.prepare(`
+    const insert = await db.prepare(`
       INSERT INTO registrations (event_id, name, email, phone, notes)
       VALUES (?, ?, ?, ?, ?)
     `);
-    insert.run(eventId, name, email, phone, notes);
+    await insert.run(eventId, name, email, phone, notes);
     revalidatePath('/');
     revalidatePath('/admin/dashboard');
     return { success: true };
@@ -200,10 +201,10 @@ export async function simulateOffering(
     
     if (fund === 'Haiti Missions' || fund === 'missions') {
       // Find the first Haiti mission and add some funds as a simulation
-      const firstMission = db.prepare('SELECT id, funds_raised FROM haiti_missions LIMIT 1').get() as { id: number; funds_raised: number } | undefined;
+      const firstMission = await db.prepare('SELECT id, funds_raised FROM haiti_missions LIMIT 1').get() as { id: number; funds_raised: number } | undefined;
       if (firstMission) {
-        const update = db.prepare('UPDATE haiti_missions SET funds_raised = funds_raised + ? WHERE id = ?');
-        update.run(amount, firstMission.id);
+        const update = await db.prepare('UPDATE haiti_missions SET funds_raised = funds_raised + ? WHERE id = ?');
+        await update.run(amount, firstMission.id);
       }
     }
     
@@ -219,7 +220,7 @@ export async function simulateOffering(
 
 export async function verifyAdminPassword(password: string): Promise<{ success: boolean }> {
   try {
-    const stored = db.prepare('SELECT value FROM settings WHERE key = ?').get('admin_password') as { value: string } | undefined;
+    const stored = await db.prepare('SELECT value FROM settings WHERE key = ?').get('admin_password') as { value: string } | undefined;
     if (stored && stored.value === password) {
       const cookieStore = await cookies();
       cookieStore.set('admin_auth', 'authenticated', {
@@ -318,23 +319,18 @@ export async function updateGlobalSettings(settingsMap: Record<string, string>):
     }
 
     const update = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
-    const updateTransaction = db.transaction((map: Record<string, string>) => {
-      for (const [key, value] of Object.entries(map)) {
-        if (key === 'admin_password') {
-          if (!value || value.trim() === '') {
-            // Do not update the password if it's empty
-            continue;
-          }
-          // Hash the password securely with SHA-256
-          const hashed = crypto.createHash('sha256').update(value).digest('hex');
-          update.run(key, hashed);
-        } else {
-          update.run(key, value);
+    for (const [key, value] of Object.entries(settingsMap)) {
+      if (key === 'admin_password') {
+        if (!value || value.trim() === '') {
+          continue;
         }
+        const hashed = crypto.createHash('sha256').update(value).digest('hex');
+        await update.run(key, hashed);
+      } else {
+        await update.run(key, value);
       }
-    });
+    }
 
-    updateTransaction(settingsMap);
     revalidatePath('/');
     revalidatePath('/admin/dashboard');
     return { success: true };
@@ -357,13 +353,13 @@ export async function saveServiceSchedule(id: number | null, data: Partial<Servi
         SET day_kreyol = ?, day_english = ?, time = ?, title_kreyol = ?, title_english = ?, description_kreyol = ?, description_english = ?, image_url = ?, is_livestreamed = ?
         WHERE id = ?
       `);
-      update.run(data.day_kreyol, data.day_english, data.time, data.title_kreyol, data.title_english, data.description_kreyol, data.description_english, data.image_url || null, isLiveVal, id);
+      await update.run(data.day_kreyol, data.day_english, data.time, data.title_kreyol, data.title_english, data.description_kreyol, data.description_english, data.image_url || null, isLiveVal, id);
     } else {
       const insert = db.prepare(`
         INSERT INTO service_schedules (day_kreyol, day_english, time, title_kreyol, title_english, description_kreyol, description_english, image_url, is_livestreamed)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      insert.run(data.day_kreyol, data.day_english, data.time, data.title_kreyol, data.title_english, data.description_kreyol, data.description_english, data.image_url || null, isLiveVal);
+      await insert.run(data.day_kreyol, data.day_english, data.time, data.title_kreyol, data.title_english, data.description_kreyol, data.description_english, data.image_url || null, isLiveVal);
     }
     revalidatePath('/');
     return { success: true };
@@ -378,7 +374,7 @@ export async function deleteServiceSchedule(id: number): Promise<{ success: bool
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
-    db.prepare('DELETE FROM service_schedules WHERE id = ?').run(id);
+    await db.prepare('DELETE FROM service_schedules WHERE id = ?').run(id);
     revalidatePath('/');
     return { success: true };
   } catch (error: any) {
@@ -398,13 +394,13 @@ export async function saveHaitiMission(id: number | null, data: Partial<HaitiMis
         SET title_kreyol = ?, title_english = ?, date = ?, description_kreyol = ?, description_english = ?, image_url = ?, funds_raised = ?, funds_goal = ?
         WHERE id = ?
       `);
-      update.run(data.title_kreyol, data.title_english, data.date, data.description_kreyol, data.description_english, data.image_url, data.funds_raised || 0, data.funds_goal || 0, id);
+      await update.run(data.title_kreyol, data.title_english, data.date, data.description_kreyol, data.description_english, data.image_url, data.funds_raised || 0, data.funds_goal || 0, id);
     } else {
       const insert = db.prepare(`
         INSERT INTO haiti_missions (title_kreyol, title_english, date, description_kreyol, description_english, image_url, funds_raised, funds_goal)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      insert.run(data.title_kreyol, data.title_english, data.date || new Date().toISOString().split('T')[0], data.description_kreyol, data.description_english, data.image_url, data.funds_raised || 0, data.funds_goal || 0);
+      await insert.run(data.title_kreyol, data.title_english, data.date || new Date().toISOString().split('T')[0], data.description_kreyol, data.description_english, data.image_url, data.funds_raised || 0, data.funds_goal || 0);
     }
     revalidatePath('/');
     return { success: true };
@@ -419,7 +415,7 @@ export async function deleteHaitiMission(id: number): Promise<{ success: boolean
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
-    db.prepare('DELETE FROM haiti_missions WHERE id = ?').run(id);
+    await db.prepare('DELETE FROM haiti_missions WHERE id = ?').run(id);
     revalidatePath('/');
     return { success: true };
   } catch (error: any) {
@@ -439,13 +435,13 @@ export async function saveLocalOutreach(id: number | null, data: Partial<LocalOu
         SET title_kreyol = ?, title_english = ?, description_kreyol = ?, description_english = ?, schedule_kreyol = ?, schedule_english = ?
         WHERE id = ?
       `);
-      update.run(data.title_kreyol, data.title_english, data.description_kreyol, data.description_english, data.schedule_kreyol, data.schedule_english, id);
+      await update.run(data.title_kreyol, data.title_english, data.description_kreyol, data.description_english, data.schedule_kreyol, data.schedule_english, id);
     } else {
       const insert = db.prepare(`
         INSERT INTO local_outreach (title_kreyol, title_english, description_kreyol, description_english, schedule_kreyol, schedule_english)
         VALUES (?, ?, ?, ?, ?, ?)
       `);
-      insert.run(data.title_kreyol, data.title_english, data.description_kreyol, data.description_english, data.schedule_kreyol, data.schedule_english);
+      await insert.run(data.title_kreyol, data.title_english, data.description_kreyol, data.description_english, data.schedule_kreyol, data.schedule_english);
     }
     revalidatePath('/');
     return { success: true };
@@ -460,7 +456,7 @@ export async function deleteLocalOutreach(id: number): Promise<{ success: boolea
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
-    db.prepare('DELETE FROM local_outreach WHERE id = ?').run(id);
+    await db.prepare('DELETE FROM local_outreach WHERE id = ?').run(id);
     revalidatePath('/');
     return { success: true };
   } catch (error: any) {
@@ -480,13 +476,13 @@ export async function saveEvent(id: number | null, data: Partial<EventRecord>): 
         SET title_kreyol = ?, title_english = ?, date = ?, time = ?, location_kreyol = ?, location_english = ?, description_kreyol = ?, description_english = ?
         WHERE id = ?
       `);
-      update.run(data.title_kreyol, data.title_english, data.date, data.time, data.location_kreyol, data.location_english, data.description_kreyol, data.description_english, id);
+      await update.run(data.title_kreyol, data.title_english, data.date, data.time, data.location_kreyol, data.location_english, data.description_kreyol, data.description_english, id);
     } else {
       const insert = db.prepare(`
         INSERT INTO events (title_kreyol, title_english, date, time, location_kreyol, location_english, description_kreyol, description_english)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      insert.run(data.title_kreyol, data.title_english, data.date, data.time, data.location_kreyol, data.location_english, data.description_kreyol, data.description_english);
+      await insert.run(data.title_kreyol, data.title_english, data.date, data.time, data.location_kreyol, data.location_english, data.description_kreyol, data.description_english);
     }
     revalidatePath('/');
     revalidatePath('/admin/dashboard');
@@ -502,7 +498,7 @@ export async function deleteEvent(id: number): Promise<{ success: boolean; error
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
-    db.prepare('DELETE FROM events WHERE id = ?').run(id);
+    await db.prepare('DELETE FROM events WHERE id = ?').run(id);
     revalidatePath('/');
     revalidatePath('/admin/dashboard');
     return { success: true };
@@ -517,7 +513,7 @@ export async function getRegistrations(): Promise<Registration[]> {
   if (!isAuthed) return [];
 
   try {
-    return db.prepare(`
+    return await db.prepare(`
       SELECT r.*, e.title_kreyol as event_title_kreyol, e.title_english as event_title_english
       FROM registrations r
       JOIN events e ON r.event_id = e.id
@@ -534,7 +530,7 @@ export async function deleteRegistration(id: number): Promise<{ success: boolean
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
-    db.prepare('DELETE FROM registrations WHERE id = ?').run(id);
+    await db.prepare('DELETE FROM registrations WHERE id = ?').run(id);
     revalidatePath('/admin/dashboard');
     return { success: true };
   } catch (error: any) {
@@ -550,11 +546,11 @@ export async function submitLead(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const createdAt = new Date().toISOString();
-    const insert = db.prepare(`
+    const insert = await db.prepare(`
       INSERT INTO leads (name, email, phone, created_at)
       VALUES (?, ?, ?, ?)
     `);
-    insert.run(name, email, phone, createdAt);
+    await insert.run(name, email, phone, createdAt);
     revalidatePath('/');
     revalidatePath('/admin/dashboard');
     return { success: true };
@@ -569,7 +565,7 @@ export async function getLeads(): Promise<Lead[]> {
   if (!isAuthed) return [];
 
   try {
-    return db.prepare('SELECT * FROM leads ORDER BY id DESC').all() as Lead[];
+    return await db.prepare('SELECT * FROM leads ORDER BY id DESC').all() as Lead[];
   } catch (error) {
     console.error('Error fetching leads:', error);
     return [];
@@ -581,7 +577,7 @@ export async function deleteLead(id: number): Promise<{ success: boolean; error?
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
-    db.prepare('DELETE FROM leads WHERE id = ?').run(id);
+    await db.prepare('DELETE FROM leads WHERE id = ?').run(id);
     revalidatePath('/admin/dashboard');
     return { success: true };
   } catch (error: any) {
@@ -592,7 +588,7 @@ export async function deleteLead(id: number): Promise<{ success: boolean; error?
 // Sermons actions
 export async function getSermons(): Promise<Sermon[]> {
   try {
-    return db.prepare('SELECT * FROM sermons ORDER BY date DESC').all() as Sermon[];
+    return await db.prepare('SELECT * FROM sermons ORDER BY date DESC').all() as Sermon[];
   } catch (error) {
     console.error('Error fetching sermons:', error);
     return [];
@@ -605,18 +601,18 @@ export async function saveSermon(id: number | null, data: Partial<Sermon>): Prom
 
   try {
     if (id) {
-      const update = db.prepare(`
+      const update = await db.prepare(`
         UPDATE sermons
         SET title_kreyol = ?, title_english = ?, date = ?, speaker = ?, youtube_id = ?, description_kreyol = ?, description_english = ?
         WHERE id = ?
       `);
-      update.run(data.title_kreyol, data.title_english, data.date, data.speaker, data.youtube_id, data.description_kreyol, data.description_english, id);
+      await update.run(data.title_kreyol, data.title_english, data.date, data.speaker, data.youtube_id, data.description_kreyol, data.description_english, id);
     } else {
       const insert = db.prepare(`
         INSERT INTO sermons (title_kreyol, title_english, date, speaker, youtube_id, description_kreyol, description_english)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
-      insert.run(data.title_kreyol, data.title_english, data.date || new Date().toISOString().split('T')[0], data.speaker, data.youtube_id, data.description_kreyol, data.description_english);
+      await insert.run(data.title_kreyol, data.title_english, data.date || new Date().toISOString().split('T')[0], data.speaker, data.youtube_id, data.description_kreyol, data.description_english);
     }
     revalidatePath('/');
     revalidatePath('/admin/dashboard');
@@ -632,7 +628,7 @@ export async function deleteSermon(id: number): Promise<{ success: boolean; erro
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
-    db.prepare('DELETE FROM sermons WHERE id = ?').run(id);
+    await db.prepare('DELETE FROM sermons WHERE id = ?').run(id);
     revalidatePath('/');
     revalidatePath('/admin/dashboard');
     return { success: true };
@@ -648,7 +644,7 @@ export async function uploadAsset(fileName: string, base64Data: string): Promise
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
-    const assetDir = '/Users/mpforbes/GoogleCloud/Straight-Line-Churches/Parousie/assets';
+    const assetDir = getAssetDir();
     if (!fs.existsSync(assetDir)) {
       fs.mkdirSync(assetDir, { recursive: true });
     }
@@ -680,7 +676,7 @@ export async function backupWebsite(): Promise<{ success: boolean; error?: strin
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
-    const backupBaseDir = '/Users/mpforbes/GoogleCloud/Straight-Line-Churches/Parousie/backups';
+    const backupBaseDir = getBackupDir();
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupDir = path.join(backupBaseDir, `backup_${timestamp}`);
 
@@ -688,13 +684,9 @@ export async function backupWebsite(): Promise<{ success: boolean; error?: strin
       fs.mkdirSync(backupDir, { recursive: true });
     }
 
-    // 1. Copy SQLite church.db
-    const dbPath = path.join(process.cwd(), 'church.db');
-    if (fs.existsSync(dbPath)) {
-      fs.copyFileSync(dbPath, path.join(backupDir, 'church.db'));
-    }
+    // Database is managed by Cloud SQL PostgreSQL in production.
 
-    // 2. Copy source code recursively (skipping heavy build/dependency folders)
+    // Copy source code recursively (skipping heavy build/dependency folders)
     const backupSourceDir = path.join(backupDir, 'source-code');
     fs.mkdirSync(backupSourceDir, { recursive: true });
 
@@ -711,9 +703,7 @@ export async function backupWebsite(): Promise<{ success: boolean; error?: strin
           if (
             childItemName !== 'node_modules' && 
             childItemName !== '.next' && 
-            childItemName !== '.git' &&
-            childItemName !== 'church.db-wal' &&
-            childItemName !== 'church.db-shm'
+            childItemName !== '.git'
           ) {
             copyRecursiveSync(childSrc, childDest);
           }
@@ -874,7 +864,7 @@ export async function syncSermonsFromYoutube(channelUrl: string): Promise<{ succ
 
   try {
     // Fetch dynamic pastor_name from database settings
-    const pastorNameRow = db.prepare("SELECT value FROM settings WHERE key = 'pastor_name'").get() as { value: string } | undefined;
+    const pastorNameRow = await db.prepare("SELECT value FROM settings WHERE key = 'pastor_name'").get() as { value: string } | undefined;
     const pastorName = pastorNameRow ? pastorNameRow.value : 'Pasteur Jean-Claude';
 
     // Standardize URL to always point to streams if not specified
@@ -1116,37 +1106,34 @@ export async function syncSermonsFromYoutube(channelUrl: string): Promise<{ succ
       WHERE youtube_id = ?
     `);
 
-    db.transaction(() => {
-      for (const video of resultsWithExactDates) {
-        const exist = checkExist.get(video.videoId);
-        const parsedDate = (video as any).exactDate || parsePublishedTime(video.publishedTime || '');
-        const desc = video.description || 'Sèvis an dirèk achive sou YouTube.';
-        const englishTitle = translateTitleToEnglish(video.title);
+    for (const video of resultsWithExactDates) {
+      const exist = await checkExist.get(video.videoId);
+      const parsedDate = (video as any).exactDate || parsePublishedTime(video.publishedTime || '');
+      const desc = video.description || 'Sèvis an dirèk achive sou YouTube.';
+      const englishTitle = translateTitleToEnglish(video.title);
 
-        if (!exist) {
-          insertSermon.run(
-            video.title,
-            englishTitle,
-            parsedDate,
-            pastorName,
-            video.videoId,
-            desc,
-            desc
-          );
-          importCount++;
-        } else {
-          // Re-sync and overwrite existing entries to ensure pastor's name and dates are correct
-          updateSermon.run(
-            pastorName,
-            parsedDate,
-            video.title,
-            englishTitle,
-            video.videoId
-          );
-          importCount++;
-        }
+      if (!exist) {
+        await insertSermon.run(
+          video.title,
+          englishTitle,
+          parsedDate,
+          pastorName,
+          video.videoId,
+          desc,
+          desc
+        );
+        importCount++;
+      } else {
+        await updateSermon.run(
+          pastorName,
+          parsedDate,
+          video.title,
+          englishTitle,
+          video.videoId
+        );
+        importCount++;
       }
-    })();
+    }
 
     revalidatePath('/');
     revalidatePath('/admin/dashboard');
@@ -1329,98 +1316,92 @@ Be extremely thorough and accurate. Only include fields that are explicitly foun
 
     const extracted = JSON.parse(resultText);
 
-    // 4. Update the database in a transaction
+    // 4. Update the database
     let changesMade: string[] = [];
 
-    db.transaction(() => {
-      // Update schedules
-      if (extracted.service_schedules && Array.isArray(extracted.service_schedules) && extracted.service_schedules.length > 0) {
-        db.prepare('DELETE FROM service_schedules').run();
-        const insertSched = db.prepare(`
-          INSERT INTO service_schedules (day_kreyol, day_english, time, title_kreyol, title_english, description_kreyol, description_english)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-        `);
-        for (const s of extracted.service_schedules) {
-          insertSched.run(
-            s.day_kreyol,
-            s.day_english,
-            s.time,
-            s.title_kreyol,
-            s.title_english,
-            s.description_kreyol || '',
-            s.description_english || ''
-          );
-        }
-        changesMade.push(`${extracted.service_schedules.length} sèvis (service schedules)`);
+    if (extracted.service_schedules && Array.isArray(extracted.service_schedules) && extracted.service_schedules.length > 0) {
+      await db.prepare('DELETE FROM service_schedules').run();
+      const insertSched = db.prepare(`
+        INSERT INTO service_schedules (day_kreyol, day_english, time, title_kreyol, title_english, description_kreyol, description_english)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      for (const s of extracted.service_schedules) {
+        await insertSched.run(
+          s.day_kreyol,
+          s.day_english,
+          s.time,
+          s.title_kreyol,
+          s.title_english,
+          s.description_kreyol || '',
+          s.description_english || ''
+        );
       }
+      changesMade.push(`${extracted.service_schedules.length} sèvis (service schedules)`);
+    }
 
-      // Update outreach
-      if (extracted.local_outreaches && Array.isArray(extracted.local_outreaches) && extracted.local_outreaches.length > 0) {
-        db.prepare('DELETE FROM local_outreach').run();
-        const insertOutreach = db.prepare(`
-          INSERT INTO local_outreach (title_kreyol, title_english, description_kreyol, description_english, schedule_kreyol, schedule_english)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `);
-        for (const o of extracted.local_outreaches) {
-          insertOutreach.run(
-            o.title_kreyol,
-            o.title_english,
-            o.description_kreyol,
-            o.description_english,
-            o.schedule_kreyol || '',
-            o.schedule_english || ''
-          );
-        }
-        changesMade.push(`${extracted.local_outreaches.length} pwojè kominote (outreach projects)`);
+    if (extracted.local_outreaches && Array.isArray(extracted.local_outreaches) && extracted.local_outreaches.length > 0) {
+      await db.prepare('DELETE FROM local_outreach').run();
+      const insertOutreach = db.prepare(`
+        INSERT INTO local_outreach (title_kreyol, title_english, description_kreyol, description_english, schedule_kreyol, schedule_english)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      for (const o of extracted.local_outreaches) {
+        await insertOutreach.run(
+          o.title_kreyol,
+          o.title_english,
+          o.description_kreyol,
+          o.description_english,
+          o.schedule_kreyol || '',
+          o.schedule_english || ''
+        );
       }
+      changesMade.push(`${extracted.local_outreaches.length} pwojè kominote (outreach projects)`);
+    }
 
-      // Update events
-      if (extracted.events && Array.isArray(extracted.events) && extracted.events.length > 0) {
-        db.prepare('DELETE FROM events').run();
-        const insertEvent = db.prepare(`
-          INSERT INTO events (title_kreyol, title_english, date, time, location_kreyol, location_english, description_kreyol, description_english)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-        for (const e of extracted.events) {
-          insertEvent.run(
-            e.title_kreyol,
-            e.title_english,
-            e.date,
-            e.time || '',
-            e.location_kreyol || '',
-            e.location_english || '',
-            e.description_kreyol || '',
-            e.description_english || ''
-          );
-        }
-        changesMade.push(`${extracted.events.length} evènman (events)`);
+    if (extracted.events && Array.isArray(extracted.events) && extracted.events.length > 0) {
+      await db.prepare('DELETE FROM events').run();
+      const insertEvent = db.prepare(`
+        INSERT INTO events (title_kreyol, title_english, date, time, location_kreyol, location_english, description_kreyol, description_english)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      for (const e of extracted.events) {
+        await insertEvent.run(
+          e.title_kreyol,
+          e.title_english,
+          e.date,
+          e.time || '',
+          e.location_kreyol || '',
+          e.location_english || '',
+          e.description_kreyol || '',
+          e.description_english || ''
+        );
       }
+      changesMade.push(`${extracted.events.length} evènman (events)`);
+    }
 
-      // Update settings
-      const settingsToUpdate: Record<string, string> = {};
-      if (extracted.pastor_name) {
-        settingsToUpdate.pastor_name = extracted.pastor_name;
-      }
-      if (extracted.church_phone) {
-        settingsToUpdate.church_phone = extracted.church_phone;
-      }
-      if (extracted.church_email) {
-        settingsToUpdate.church_email = extracted.church_email;
-      }
-      if (extracted.church_address) {
-        settingsToUpdate.church_address = extracted.church_address;
-      }
+    const settingsToUpdate: Record<string, string> = {};
+    if (extracted.pastor_name) {
+      settingsToUpdate.pastor_name = extracted.pastor_name;
+    }
+    if (extracted.church_phone) {
+      settingsToUpdate.church_phone = extracted.church_phone;
+    }
+    if (extracted.church_email) {
+      settingsToUpdate.church_email = extracted.church_email;
+    }
+    if (extracted.church_address) {
+      settingsToUpdate.church_address = extracted.church_address;
+    }
 
-      const updateSetting = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
-      for (const [k, v] of Object.entries(settingsToUpdate)) {
-        updateSetting.run(k, v);
-      }
-      
-      const keys = Object.keys(settingsToUpdate);
-      if (keys.length > 0) {
-        changesMade.push(`${keys.length} paramèt global: ${keys.join(', ')}`);
-      }
-    })();
+    const updateSetting = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
+    for (const [k, v] of Object.entries(settingsToUpdate)) {
+      await updateSetting.run(k, v);
+    }
+
+    const keys = Object.keys(settingsToUpdate);
+    if (keys.length > 0) {
+      changesMade.push(`${keys.length} paramèt global: ${keys.join(', ')}`);
+    }
 
     // 5. Trigger backup
     await backupWebsite();
@@ -1540,7 +1521,7 @@ const DEVOTIONAL_PRESETS = [
 
 export async function getDailyDevotional(dateStr: string): Promise<DailyDevotional | null> {
   try {
-    const row = db.prepare('SELECT * FROM daily_devotionals WHERE date = ?').get(dateStr) as DailyDevotional | undefined;
+    const row = await db.prepare('SELECT * FROM daily_devotionals WHERE date = ?').get(dateStr) as DailyDevotional | undefined;
     if (row) return row;
 
     // Auto-generate if missing for that date (no revalidatePath — called during render)
@@ -1553,7 +1534,7 @@ export async function getDailyDevotional(dateStr: string): Promise<DailyDevotion
 
 export async function getDevotionals(): Promise<DailyDevotional[]> {
   try {
-    return db.prepare('SELECT * FROM daily_devotionals ORDER BY date DESC').all() as DailyDevotional[];
+    return await db.prepare('SELECT * FROM daily_devotionals ORDER BY date DESC').all() as DailyDevotional[];
   } catch (error) {
     console.error('Error fetching devotionals list:', error);
     return [];
@@ -1574,7 +1555,7 @@ export async function saveDailyDevotional(
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
-    db.prepare(`
+    await db.prepare(`
       UPDATE daily_devotionals
       SET verse_ref_english = ?,
           verse_ref_kreyol = ?,
@@ -1600,7 +1581,7 @@ export async function approveDailyDevotional(id: number): Promise<{ success: boo
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
-    db.prepare("UPDATE daily_devotionals SET status = 'approved' WHERE id = ?").run(id);
+    await db.prepare("UPDATE daily_devotionals SET status = 'approved' WHERE id = ?").run(id);
     revalidatePath('/');
     revalidatePath('/admin/dashboard');
     return { success: true };
@@ -1615,7 +1596,7 @@ export async function deleteDailyDevotional(id: number): Promise<{ success: bool
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
-    db.prepare("DELETE FROM daily_devotionals WHERE id = ?").run(id);
+    await db.prepare("DELETE FROM daily_devotionals WHERE id = ?").run(id);
     revalidatePath('/');
     revalidatePath('/admin/dashboard');
     return { success: true };
@@ -1723,7 +1704,7 @@ Return a JSON object conforming to this exact structure:
 
 async function generateDailyDevotionalRecord(dateStr: string): Promise<DailyDevotional | null> {
   // 1. Fetch devotional_theme from settings
-  const themeRow = db.prepare("SELECT value FROM settings WHERE key = 'devotional_theme'").get() as { value: string } | undefined;
+  const themeRow = await db.prepare("SELECT value FROM settings WHERE key = 'devotional_theme'").get() as { value: string } | undefined;
   const currentTheme = (themeRow?.value || 'none').toLowerCase().trim();
 
   let preset: any = null;
@@ -1765,17 +1746,17 @@ async function generateDailyDevotionalRecord(dateStr: string): Promise<DailyDevo
   }
 
   // Check if auto-publish is active
-  const autoPublishRow = db.prepare("SELECT value FROM settings WHERE key = 'devotional_auto_publish'").get() as { value: string } | undefined;
+  const autoPublishRow = await db.prepare("SELECT value FROM settings WHERE key = 'devotional_auto_publish'").get() as { value: string } | undefined;
   const isAutoPublish = autoPublishRow?.value === 'true';
   const status = isAutoPublish ? 'approved' : 'pending';
 
-  const insert = db.prepare(`
+  const insert = await db.prepare(`
     INSERT OR REPLACE INTO daily_devotionals 
     (date, verse_ref_english, verse_ref_kreyol, verse_text_english, verse_text_kreyol, lesson_english, lesson_kreyol, status)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  insert.run(
+  await insert.run(
     dateStr,
     preset.refEn,
     preset.refHt,
@@ -1786,7 +1767,7 @@ async function generateDailyDevotionalRecord(dateStr: string): Promise<DailyDevo
     status
   );
 
-  return db.prepare('SELECT * FROM daily_devotionals WHERE date = ?').get(dateStr) as DailyDevotional;
+  return await db.prepare('SELECT * FROM daily_devotionals WHERE date = ?').get(dateStr) as DailyDevotional;
 }
 
 export async function generateDevotionalAction(dateStr: string): Promise<{ success: boolean; devotional?: DailyDevotional; error?: string }> {
@@ -1808,13 +1789,13 @@ export async function generateDevotionalAction(dateStr: string): Promise<{ succe
 export async function getActiveDevotional(dateStr: string): Promise<DailyDevotional | null> {
   try {
     // 1. Try to get today's devotional
-    const row = db.prepare('SELECT * FROM daily_devotionals WHERE date = ?').get(dateStr) as DailyDevotional | undefined;
+    const row = await db.prepare('SELECT * FROM daily_devotionals WHERE date = ?').get(dateStr) as DailyDevotional | undefined;
     if (row && row.status === 'approved') {
       return row;
     }
     
     // 2. If not approved or not found, find the most recent approved devotional
-    const latestApproved = db.prepare("SELECT * FROM daily_devotionals WHERE status = 'approved' AND date <= ? ORDER BY date DESC LIMIT 1").get(dateStr) as DailyDevotional | undefined;
+    const latestApproved = await db.prepare("SELECT * FROM daily_devotionals WHERE status = 'approved' AND date <= ? ORDER BY date DESC LIMIT 1").get(dateStr) as DailyDevotional | undefined;
     if (latestApproved) {
       return latestApproved;
     }
@@ -1835,7 +1816,7 @@ export async function requestAdminOtp(
 ): Promise<{ success: boolean; otpRequired?: boolean; error?: string }> {
   try {
     // 1. Verify access code (matches stored admin_password hash or env fallback)
-    const stored = db.prepare("SELECT value FROM settings WHERE key = 'admin_password'").get() as { value: string } | undefined;
+    const stored = await db.prepare("SELECT value FROM settings WHERE key = 'admin_password'").get() as { value: string } | undefined;
     const inputHash = crypto.createHash('sha256').update(accessCode).digest('hex');
     
     const envCode = process.env.ADMIN_ACCESS_CODE || 'parousie2026';
@@ -1846,7 +1827,7 @@ export async function requestAdminOtp(
       isAccessCodeValid = true;
       // Proactively migrate plain-text stored passwords to SHA-256
       if (stored.value === accessCode && !/^[a-f0-9]{64}$/i.test(accessCode)) {
-        db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('admin_password', ?)").run(inputHash);
+        await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('admin_password', ?)").run(inputHash);
       }
     } else if (inputHash === envHash || accessCode === envCode) {
       isAccessCodeValid = true;
@@ -1864,7 +1845,7 @@ export async function requestAdminOtp(
     if (isSuperAdmin) {
       adminExists = { email: normalizedEmail, created_at: new Date().toISOString() };
     } else {
-      adminExists = db.prepare('SELECT * FROM admins WHERE LOWER(email) = ?').get(normalizedEmail) as AdminRecord | undefined;
+      adminExists = await db.prepare('SELECT * FROM admins WHERE LOWER(email) = ?').get(normalizedEmail) as AdminRecord | undefined;
     }
 
     if (!adminExists) {
@@ -1872,7 +1853,7 @@ export async function requestAdminOtp(
     }
 
     // 3. Check if this device is already verified
-    const device = db.prepare('SELECT * FROM admin_devices WHERE LOWER(email) = ? AND device_hash = ?').get(normalizedEmail, deviceHash) as AdminDevice | undefined;
+    const device = await db.prepare('SELECT * FROM admin_devices WHERE LOWER(email) = ? AND device_hash = ?').get(normalizedEmail, deviceHash) as AdminDevice | undefined;
     if (device && device.verified === 1) {
       // Set authenticated session cookie directly
       const cookieStore = await cookies();
@@ -1894,7 +1875,7 @@ export async function requestAdminOtp(
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 mins expiry
 
     // Save OTP to DB
-    db.prepare('INSERT OR REPLACE INTO admin_otps (email, code, expires_at) VALUES (?, ?, ?)').run(normalizedEmail, otpCode, expiresAt);
+    await db.prepare('INSERT OR REPLACE INTO admin_otps (email, code, expires_at) VALUES (?, ?, ?)').run(normalizedEmail, otpCode, expiresAt);
 
     // Write to terminal
     console.log(`\n======================================================`);
@@ -1935,7 +1916,7 @@ export async function verifyAdminOtp(
     const cleanCode = otpCode.trim();
 
     // Fetch OTP record
-    const otpRecord = db.prepare('SELECT * FROM admin_otps WHERE LOWER(email) = ?').get(normalizedEmail) as { email: string; code: string; expires_at: string } | undefined;
+    const otpRecord = await db.prepare('SELECT * FROM admin_otps WHERE LOWER(email) = ?').get(normalizedEmail) as { email: string; code: string; expires_at: string } | undefined;
     if (!otpRecord) {
       return { success: false, error: 'No active OTP request found for this email' };
     }
@@ -1951,10 +1932,10 @@ export async function verifyAdminOtp(
     }
 
     // Consume OTP (delete so it cannot be reused)
-    db.prepare('DELETE FROM admin_otps WHERE LOWER(email) = ?').run(normalizedEmail);
+    await db.prepare('DELETE FROM admin_otps WHERE LOWER(email) = ?').run(normalizedEmail);
 
     // Record verified device
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO admin_devices (email, device_hash, verified, created_at)
       VALUES (?, ?, 1, ?)
       ON CONFLICT(email, device_hash) DO UPDATE SET verified = 1
@@ -1994,7 +1975,7 @@ export async function getAdmins(): Promise<AdminRecord[]> {
   }
 
   try {
-    return db.prepare('SELECT * FROM admins ORDER BY id ASC').all() as AdminRecord[];
+    return await db.prepare('SELECT * FROM admins ORDER BY id ASC').all() as AdminRecord[];
   } catch (error) {
     console.error('Error getting admins list:', error);
     return [];
@@ -2018,7 +1999,7 @@ export async function addAdminEmail(email: string): Promise<{ success: boolean; 
       return { success: false, error: 'Email cannot be empty' };
     }
 
-    db.prepare('INSERT INTO admins (email, created_at) VALUES (?, ?)').run(normalizedEmail, new Date().toISOString().split('T')[0]);
+    await db.prepare('INSERT INTO admins (email, created_at) VALUES (?, ?)').run(normalizedEmail, new Date().toISOString().split('T')[0]);
     revalidatePath('/admin/dashboard');
     return { success: true };
   } catch (error: any) {
@@ -2043,7 +2024,7 @@ export async function deleteAdminEmail(id: number): Promise<{ success: boolean; 
 
   try {
     // Prevent removing the super administrator
-    const adminToDelete = db.prepare('SELECT email FROM admins WHERE id = ?').get(id) as { email: string } | undefined;
+    const adminToDelete = await db.prepare('SELECT email FROM admins WHERE id = ?').get(id) as { email: string } | undefined;
     if (adminToDelete) {
       const emailToDelete = adminToDelete.email.toLowerCase().trim();
       if (emailToDelete === superAdminEmail) {
@@ -2052,12 +2033,12 @@ export async function deleteAdminEmail(id: number): Promise<{ success: boolean; 
     }
 
     // Prevent removing the last admin
-    const countRow = db.prepare('SELECT COUNT(*) as count FROM admins').get() as { count: number };
+    const countRow = await db.prepare('SELECT COUNT(*) as count FROM admins').get() as { count: number };
     if (countRow.count <= 1) {
       return { success: false, error: 'Cannot delete the last remaining administrator.' };
     }
 
-    db.prepare('DELETE FROM admins WHERE id = ?').run(id);
+    await db.prepare('DELETE FROM admins WHERE id = ?').run(id);
     revalidatePath('/admin/dashboard');
     return { success: true };
   } catch (error: any) {
@@ -2072,7 +2053,7 @@ export async function getContactSubmissions(): Promise<ContactSubmission[]> {
   const isAuthed = await checkAdminAuth();
   if (!isAuthed) return [];
   try {
-    return db.prepare('SELECT * FROM contact_submissions ORDER BY id DESC').all() as ContactSubmission[];
+    return await db.prepare('SELECT * FROM contact_submissions ORDER BY id DESC').all() as ContactSubmission[];
   } catch (error) {
     console.error('Error getting contact submissions:', error);
     return [];
@@ -2090,7 +2071,7 @@ export async function submitContactForm(
       return { success: false, error: 'Name, email, and message are required fields.' };
     }
 
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO contact_submissions (name, email, phone, message, created_at)
       VALUES (?, ?, ?, ?, ?)
     `).run(name.trim(), email.toLowerCase().trim(), phone ? phone.trim() : null, message.trim(), new Date().toISOString());
@@ -2108,7 +2089,7 @@ export async function deleteContactSubmission(id: number): Promise<{ success: bo
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
-    db.prepare('DELETE FROM contact_submissions WHERE id = ?').run(id);
+    await db.prepare('DELETE FROM contact_submissions WHERE id = ?').run(id);
     revalidatePath('/admin/dashboard');
     return { success: true };
   } catch (error: any) {
@@ -2121,7 +2102,7 @@ export async function deleteContactSubmission(id: number): Promise<{ success: bo
 
 export async function getPrayerRequests(): Promise<PrayerRequest[]> {
   try {
-    return db.prepare('SELECT * FROM prayer_requests ORDER BY id DESC').all() as PrayerRequest[];
+    return await db.prepare('SELECT * FROM prayer_requests ORDER BY id DESC').all() as PrayerRequest[];
   } catch (error) {
     console.error('Error getting prayer requests:', error);
     return [];
@@ -2141,7 +2122,7 @@ export async function submitPrayerRequest(
     const anonymousInt = isAnonymous ? 1 : 0;
     const cleanName = isAnonymous ? null : (requesterName ? requesterName.trim() : null);
 
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO prayer_requests (requester_name, request_text, is_anonymous, created_at)
       VALUES (?, ?, ?, ?)
     `).run(cleanName, requestText.trim(), anonymousInt, new Date().toISOString().split('T')[0]);
@@ -2160,7 +2141,7 @@ export async function deletePrayerRequest(id: number): Promise<{ success: boolea
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
-    db.prepare('DELETE FROM prayer_requests WHERE id = ?').run(id);
+    await db.prepare('DELETE FROM prayer_requests WHERE id = ?').run(id);
     revalidatePath('/');
     revalidatePath('/admin/dashboard');
     return { success: true };
@@ -2174,7 +2155,7 @@ export async function deletePrayerRequest(id: number): Promise<{ success: boolea
 
 export async function getBlogPosts(): Promise<BlogPost[]> {
   try {
-    return db.prepare('SELECT * FROM blog_posts ORDER BY date DESC, id DESC').all() as BlogPost[];
+    return await db.prepare('SELECT * FROM blog_posts ORDER BY date DESC, id DESC').all() as BlogPost[];
   } catch (error) {
     console.error('Error getting blog posts:', error);
     return [];
@@ -2200,12 +2181,12 @@ export async function saveBlogPost(
     const today = new Date().toISOString().split('T')[0];
 
     if (id === null || id === undefined || id === 0) {
-      db.prepare(`
+      await db.prepare(`
         INSERT INTO blog_posts (title_kreyol, title_english, content_kreyol, content_english, date, created_at)
         VALUES (?, ?, ?, ?, ?, ?)
       `).run(titleKreyol.trim(), titleEnglish.trim(), contentKreyol.trim(), contentEnglish.trim(), date.trim(), today);
     } else {
-      db.prepare(`
+      await db.prepare(`
         UPDATE blog_posts
         SET title_kreyol = ?,
             title_english = ?,
@@ -2230,7 +2211,7 @@ export async function deleteBlogPost(id: number): Promise<{ success: boolean; er
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
-    db.prepare('DELETE FROM blog_posts WHERE id = ?').run(id);
+    await db.prepare('DELETE FROM blog_posts WHERE id = ?').run(id);
     revalidatePath('/');
     revalidatePath('/admin/dashboard');
     return { success: true };

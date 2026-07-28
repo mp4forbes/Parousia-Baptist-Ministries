@@ -1,0 +1,148 @@
+export interface AdminRecord {
+  id: number;
+  email: string;
+  created_at: string;
+}
+
+export interface AdminDevice {
+  id: number;
+  email: string;
+  device_hash: string;
+  verified: number;
+  created_at: string;
+}
+
+export interface PrayerRequest {
+  id: number;
+  requester_name: string | null;
+  request_text: string;
+  is_anonymous: number;
+  created_at: string;
+}
+
+export interface ContactSubmission {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  message: string;
+  created_at: string;
+}
+
+export interface BlogPost {
+  id: number;
+  title_kreyol: string;
+  title_english: string;
+  content_kreyol: string;
+  content_english: string;
+  date: string;
+  created_at: string;
+}
+
+export interface ServiceSchedule {
+  id: number;
+  day_kreyol: string;
+  day_english: string;
+  time: string;
+  title_kreyol: string;
+  title_english: string;
+  description_kreyol: string;
+  description_english: string;
+  image_url?: string;
+  is_livestreamed?: number;
+}
+
+export interface HaitiMission {
+  id: number;
+  title_kreyol: string;
+  title_english: string;
+  date: string;
+  description_kreyol: string;
+  description_english: string;
+  image_url: string;
+  funds_raised: number;
+  funds_goal: number;
+}
+
+export interface LocalOutreach {
+  id: number;
+  title_kreyol: string;
+  title_english: string;
+  description_kreyol: string;
+  description_english: string;
+  schedule_kreyol: string;
+  schedule_english: string;
+}
+
+export interface EventRecord {
+  id: number;
+  title_kreyol: string;
+  title_english: string;
+  date: string;
+  time: string;
+  location_kreyol: string;
+  location_english: string;
+  description_kreyol: string;
+  description_english: string;
+}
+
+export interface Registration {
+  id: number;
+  event_id: number;
+  event_title_kreyol?: string;
+  event_title_english?: string;
+  name: string;
+  email: string;
+  phone: string;
+  notes: string;
+}
+
+export interface Lead {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  created_at: string;
+}
+
+export interface DailyDevotional {
+  id: number;
+  date: string;
+  verse_ref_english: string;
+  verse_ref_kreyol: string;
+  verse_text_english: string;
+  verse_text_kreyol: string;
+  lesson_english: string;
+  lesson_kreyol: string;
+  status: 'pending' | 'approved';
+}
+
+export interface Sermon {
+  id: number;
+  title_kreyol: string;
+  title_english: string;
+  date: string;
+  speaker: string;
+  youtube_id: string;
+  description_kreyol: string;
+  description_english: string;
+}
+
+export interface KnowledgeBaseItem {
+  id: number;
+  title: string;
+  type: string;
+  url: string;
+  created_at: string;
+}
+
+export interface Ministry {
+  slug: string;
+  title_kreyol: string;
+  title_english: string;
+  description_kreyol: string;
+  description_english: string;
+  image_url: string;
+  bullets_kreyol: string;
+  bullets_english: string;
+}

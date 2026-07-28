@@ -1,0 +1,65 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-east1
+  SERVICE: parousia-baptist-ministries
+  REPOSITORY: parousia-baptist-ministries
+  IMAGE: ${{ secrets.GCP_PROJECT_ID }}/parousia-baptist-ministries/parousia-baptist-ministries
+  CLOUDSQL_INSTANCE: ${{ secrets.GCP_CLOUDSQL_INSTANCE }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${{ env.REGION }}-docker.pkg.dev" --quiet
+
+      - name: Build and push image
+        run: |
+          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.IMAGE }}:${{ github.sha }}"
+          docker build -t "${IMAGE_URI}" .
+          docker push "${IMAGE_URI}"
+          echo "IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV"
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE }}
+          region: ${{ env.REGION }}
+          image: ${{ env.IMAGE_URI }}
+          flags: >-
+            --platform=managed
+            --execution-environment=gen2
+            --port=8080
+            --memory=1Gi
+            --cpu=1
+            --min-instances=1
+            --max-instances=3
+            --timeout=300
+            --concurrency=80
+            --allow-unauthenticated
+            --add-cloudsql-instances=${{ env.CLOUDSQL_INSTANCE }}
+            --set-env-vars=NODE_ENV=production,DATA_DIR=/data
+            --set-secrets=DATABASE_URL=DATABASE_URL:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest,SESSION_SECRET=SESSION_SECRET:latest,ADMIN_ACCESS_CODE=ADMIN_ACCESS_CODE:latest,SUPER_ADMIN_EMAIL=SUPER_ADMIN_EMAIL:latest

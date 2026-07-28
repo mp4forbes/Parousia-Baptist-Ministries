@@ -1,0 +1,2 @@
+# Keep image assets in git for reproducible Cloud Run deploys.
+# PDFs and other large uploads can stay outside the repo.

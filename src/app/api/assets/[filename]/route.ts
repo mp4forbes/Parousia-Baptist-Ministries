@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { getAssetDir } from '@/lib/paths';
 
 export async function GET(
   request: NextRequest,
@@ -8,7 +9,7 @@ export async function GET(
 ) {
   try {
     const { filename } = await params;
-    const assetDir = '/Users/mpforbes/GoogleCloud/Straight-Line-Churches/Parousie/assets';
+    const assetDir = getAssetDir();
     const filePath = path.join(assetDir, filename);
 
     // Prevent directory traversal
