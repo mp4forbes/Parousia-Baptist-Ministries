@@ -726,6 +726,12 @@ export default function PublicHome({
   };
 
   const logoUrl = settings.logo_url || '/logo.png';
+  const heroBgUrl =
+    settings.home_background_url ||
+    'https://images.unsplash.com/photo-1438032005730-c779502df39b?q=80&w=1920&auto=format&fit=crop';
+  const hasCustomHeroArt = Boolean(settings.home_background_url?.trim());
+  /** Matches the off-white in the custom hero artwork so logo and page blend */
+  const heroArtBg = '#ebebeb';
   const themePrimary = settings.theme_primary || '#f59e0b';
   const themeHover = settings.theme_hover || '#d97706';
   const themeAccent = settings.theme_accent || '#3b82f6';
@@ -1024,53 +1030,89 @@ export default function PublicHome({
       )}
 
       {/* 2. HERO SECTION */}
-      <section id="home" className="relative min-h-[90vh] flex items-center justify-center overflow-hidden py-24">
-        {/* Glowing Ambient Background Elements */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
-        
-        {/* Dark Grid Overlay Pattern */}
-        <div className={`absolute inset-0 bg-[linear-gradient(to_right,#020617_1px,transparent_1px),linear-gradient(to_bottom,#020617_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-30 ${isLight ? 'invert' : ''}`} />
-
-        {/* Hero Background image (styled and dark overlay) */}
-        <div className="absolute inset-0 z-0">
-          <img 
-            src={settings.home_background_url || "https://images.unsplash.com/photo-1438032005730-c779502df39b?q=80&w=1920&auto=format&fit=crop"} 
-            alt="Sanctuary" 
-            className="w-full h-full object-cover object-center transition-all duration-300"
-            style={{ opacity: heroBgOpacity }}
-          />
-          <div className={`absolute inset-0 ${bgHeroOverlay}`} />
+      <section
+        id="home"
+        className="relative min-h-[90vh] flex items-center justify-center py-24 overflow-hidden"
+        style={hasCustomHeroArt && isLight ? { backgroundColor: heroArtBg } : undefined}
+      >
+        <div className="absolute inset-0 pointer-events-none">
+          {hasCustomHeroArt && isLight ? (
+            /* Florals only — masked so the logo in the image file does not bleed through */
+            <img
+              src={heroBgUrl}
+              alt=""
+              aria-hidden="true"
+              className="absolute bottom-0 left-0 w-full h-[50%] object-cover object-bottom"
+              style={{
+                opacity: heroBgOpacity,
+                maskImage: 'linear-gradient(to top, black 55%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to top, black 55%, transparent 100%)',
+              }}
+            />
+          ) : (
+            <>
+              <div className="absolute inset-0 overflow-hidden">
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
+                <div className={`absolute inset-0 bg-[linear-gradient(to_right,#020617_1px,transparent_1px),linear-gradient(to_bottom,#020617_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-30 ${isLight ? 'invert' : ''}`} />
+                <img
+                  src={heroBgUrl}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 w-full h-full object-cover object-center"
+                  style={{ opacity: heroBgOpacity }}
+                />
+                <div className={`absolute inset-0 ${bgHeroOverlay}`} />
+              </div>
+            </>
+          )}
         </div>
 
-        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center">
+        <div className="relative z-10 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center">
           
-          {/* Glassmorphic Text Shield */}
           <div className={`w-full max-w-4xl rounded-3xl ${
-            softenHeroTextBg
-              ? `${isLight ? 'bg-white/80 border-white/60 shadow-xl shadow-slate-200/40' : 'bg-slate-950/70 border-slate-900/50 shadow-2xl shadow-black/50'} border backdrop-blur-md p-8 md:p-12`
-              : 'bg-transparent border-transparent p-4'
+            softenHeroTextBg && !(hasCustomHeroArt && isLight)
+              ? `${isLight ? 'bg-white border-slate-200/80 shadow-xl shadow-slate-200/40' : 'bg-slate-950/70 border-slate-900/50 shadow-2xl shadow-black/50'} border backdrop-blur-md p-8 md:p-12`
+              : 'bg-transparent border-transparent shadow-none p-4 md:p-6'
           } mb-10 flex flex-col items-center transition-all duration-500 animate-fade-in`}>
             
-            {/* Micro-badge */}
-            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${isLight ? 'bg-slate-200/80 border-slate-300 text-amber-800' : 'bg-slate-900 border-slate-800 text-amber-400'} border text-xs font-semibold mb-6 shadow-md shadow-black/10`}>
+            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${isLight ? 'bg-slate-200/80 text-amber-800' : 'bg-slate-900 text-amber-400'} text-xs font-semibold mb-6`}>
               <Sparkles className="w-3.5 h-3.5 animate-pulse" />
               <span>{language === 'fr_ht' ? 'Parousie - Paske l\'ap retounen' : 'Parousie - For He Is Returning'}</span>
             </div>
 
-            {/* Main heading */}
-            <h2 className={`text-4xl sm:text-5xl md:text-6xl font-extrabold font-serif tracking-tight ${textTitle} mb-6 max-w-4xl leading-tight`}>
-              {language === 'fr_ht' ? 'Ministè Batis' : 'Parousia Baptist'}{' '}
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600">
-                {language === 'fr_ht' ? 'Parousia' : 'Ministries'}
-              </span>
+            {/* Uploaded logo — multiply removes the white PNG box on the matching hero background */}
+            <div
+              className="mb-6 flex w-full justify-center"
+              style={hasCustomHeroArt && isLight ? { backgroundColor: heroArtBg } : undefined}
+            >
+              <img
+                src={logoUrl}
+                alt="Église Baptiste Parousie"
+                className={`h-32 sm:h-40 md:h-48 w-auto max-w-[min(100%,400px)] object-contain ${
+                  hasCustomHeroArt && isLight ? 'mix-blend-multiply' : ''
+                }`}
+              />
+            </div>
+
+            <h2 className={`text-4xl sm:text-5xl md:text-6xl font-extrabold font-serif tracking-tight mb-4 max-w-4xl leading-tight text-center ${textTitle}`}>
+              {language === 'fr_ht' ? (
+                <>
+                  <span>Ministè Batis </span>
+                  <span className="text-blue-500">Parousia</span>
+                </>
+              ) : (
+                <>
+                  <span>Parousia Baptist </span>
+                  <span className="text-blue-500">Ministries</span>
+                </>
+              )}
             </h2>
 
-            <p className={`text-lg md:text-xl ${isLight ? 'text-slate-700' : 'text-slate-300'} font-medium max-w-2xl leading-relaxed italic mb-0`}>
+            <p className={`text-base md:text-lg ${isLight ? 'text-slate-600' : 'text-slate-300'} font-normal max-w-2xl leading-relaxed mb-0`}>
               &ldquo;{t.churchTagline}&rdquo;
             </p>
           </div>
-
           {/* SCRIPTURE VERSE BLOCK (GLASSMORPHISM) WITH DAILY DEVOTIONAL LINK */}
           <div className={`w-full max-w-3xl rounded-2xl ${isLight ? 'bg-white border-slate-200' : 'bg-slate-900/50 border-slate-800'} border p-6 md:p-8 mb-12 shadow-2xl relative overflow-hidden group hover:border-amber-500/20 transition-all duration-350`}>
             <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-amber-500 to-blue-600" />

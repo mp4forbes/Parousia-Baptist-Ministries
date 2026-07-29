@@ -1824,6 +1824,26 @@ export default function AdminDashboardClient({
 
   // Automated client-side canvas color extraction
   const extractColorsFromLogo = (base64Image: string) => {
+    const getLuminance = (r: number, g: number, b: number) => 0.299 * r + 0.587 * g + 0.114 * b;
+
+    const lightenForButtons = (r: number, g: number, b: number, minLuminance = 95): [number, number, number] => {
+      let nr = r;
+      let ng = g;
+      let nb = b;
+      let lum = getLuminance(nr, ng, nb);
+
+      while (lum < minLuminance && lum < 255) {
+        nr = Math.min(255, Math.round(nr + (255 - nr) * 0.2));
+        ng = Math.min(255, Math.round(ng + (255 - ng) * 0.2));
+        nb = Math.min(255, Math.round(nb + (255 - nb) * 0.2));
+        const nextLum = getLuminance(nr, ng, nb);
+        if (nextLum <= lum) break;
+        lum = nextLum;
+      }
+
+      return [nr, ng, nb];
+    };
+
     const img = new Image();
     img.crossOrigin = "Anonymous";
     img.onload = () => {
@@ -1852,8 +1872,8 @@ export default function AdminDashboardClient({
         
         if (diff < 20) continue; // Skip neutral grays/blacks/whites
         
-        const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-        if (luminance < 40 || luminance > 220) continue; // Skip too dark/too bright
+        const luminance = getLuminance(r, g, b);
+        if (luminance < 70 || luminance > 220) continue; // Skip too dark/too bright for buttons
         
         const rgbKey = `${r},${g},${b}`;
         colorMap[rgbKey] = (colorMap[rgbKey] || 0) + 1;
@@ -1863,6 +1883,7 @@ export default function AdminDashboardClient({
       
       if (sortedColors.length > 0) {
         const [domR, domG, domB] = sortedColors[0][0].split(',').map(Number);
+        const [btnR, btnG, btnB] = lightenForButtons(domR, domG, domB);
         
         const rgbToHex = (r: number, g: number, b: number) => 
           "#" + [r, g, b].map(x => {
@@ -1870,12 +1891,12 @@ export default function AdminDashboardClient({
             return hex.length === 1 ? "0" + hex : hex;
           }).join("");
           
-        const primaryHex = rgbToHex(domR, domG, domB);
+        const primaryHex = rgbToHex(btnR, btnG, btnB);
         
         // Hover is a slightly darker version
-        const hoverR = Math.max(0, Math.floor(domR * 0.85));
-        const hoverG = Math.max(0, Math.floor(domG * 0.85));
-        const hoverB = Math.max(0, Math.floor(domB * 0.85));
+        const hoverR = Math.max(0, Math.floor(btnR * 0.85));
+        const hoverG = Math.max(0, Math.floor(btnG * 0.85));
+        const hoverB = Math.max(0, Math.floor(btnB * 0.85));
         const hoverHex = rgbToHex(hoverR, hoverG, hoverB);
         
         // Find a distinct secondary accent color from top 10 dominant colors
@@ -1884,9 +1905,9 @@ export default function AdminDashboardClient({
         for (let j = 1; j < Math.min(10, sortedColors.length); j++) {
           const [secR, secG, secB] = sortedColors[j][0].split(',').map(Number);
           const distance = Math.sqrt(
-            Math.pow(secR - domR, 2) + 
-            Math.pow(secG - domG, 2) + 
-            Math.pow(secB - domB, 2)
+            Math.pow(secR - btnR, 2) + 
+            Math.pow(secG - btnG, 2) + 
+            Math.pow(secB - btnB, 2)
           );
           if (distance > 70) {
             accentHex = rgbToHex(secR, secG, secB);
@@ -1895,13 +1916,13 @@ export default function AdminDashboardClient({
           }
         }
         if (!foundDistinct) {
-          accentHex = rgbToHex(255 - domR, 255 - domG, 255 - domB);
+          accentHex = rgbToHex(255 - btnR, 255 - btnG, 255 - btnB);
         }
         
         setThemePrimary(primaryHex);
         setThemeHover(hoverHex);
         setThemeAccent(accentHex);
-        triggerAlert(language === 'fr_ht' ? 'Palèt koulè detekte epi aplike!' : 'Color palette detected and applied!', 'success');
+        triggerAlert(t.adminColorPaletteDetected, 'success');
       }
     };
     img.src = base64Image;
@@ -2808,10 +2829,10 @@ export default function AdminDashboardClient({
                   <div>
                     <h3 className="text-sm font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-2">
                       <Palette className="w-4 h-4" />
-                      <span>Logo Egliz la (Church Logo)</span>
+                      <span>{t.adminLogoTitle}</span>
                     </h3>
                     <p className="text-xs text-slate-400 mb-4">
-                      Trennen oswa kole logo a la a, oswa klike pou w chwazi yon nouvo imaj. (Drag, paste, or click to upload new logo).
+                      {t.adminLogoDesc}
                     </p>
                   </div>
 
@@ -2841,21 +2862,21 @@ export default function AdminDashboardClient({
                           <img src={logoUrl} alt="Logo preview" className="w-full h-full object-contain" />
                         </div>
                         <div className="flex-1 text-left">
-                          <span className="text-xs font-bold text-slate-200 block truncate">Logo_Aktif.png</span>
-                          <span className="text-[10px] text-slate-400 mt-1 block">Klike pou chanje, trennen yon lòt imaj, oswa kòpye-kole la a</span>
+                          <span className="text-xs font-bold text-slate-200 block truncate">{t.adminLogoActive}</span>
+                          <span className="text-[10px] text-slate-400 mt-1 block">{t.adminLogoChangeHint}</span>
                         </div>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center gap-2 text-slate-400">
                         <UploadCloud className="w-8 h-8 group-hover:text-amber-400 transition-all animate-bounce" />
-                        <span className="text-xs font-bold">Chwazi, Trennen oswa Kole Logo a</span>
-                        <span className="text-[10px] text-slate-500">Imaj PNG oswa JPG</span>
+                        <span className="text-xs font-bold">{t.adminLogoUpload}</span>
+                        <span className="text-[10px] text-slate-500">{t.adminLogoFormats}</span>
                       </div>
                     )}
                   </div>
                   
                   <div className="mt-2 text-[10px] text-slate-500">
-                    * Koulè sit la ap chanje otomatikman pou koresponn ak logo sa a apre ou fin uploade li.
+                    {t.adminLogoAutoColorNote}
                   </div>
                 </div>
 
@@ -2864,16 +2885,16 @@ export default function AdminDashboardClient({
                   <div>
                     <h3 className="text-sm font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-2">
                       <Settings className="w-4 h-4" />
-                      <span>Koulè Sit la (Color Adjuster)</span>
+                      <span>{t.adminColorTitle}</span>
                     </h3>
                     <p className="text-xs text-slate-400 mb-4">
-                      Sistèm nan detekte koulè otomatikman. Ou ka chanje koulè prensipal ak segondè yo la a.
+                      {t.adminColorDesc}
                     </p>
                   </div>
 
                   <div className="grid grid-cols-3 gap-4 mb-4">
                     <div className="p-3 rounded-lg bg-slate-950 border border-slate-850">
-                      <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Prensipal (Primary)</label>
+                      <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">{t.adminColorPrimary}</label>
                       <div className="flex items-center gap-2">
                         <input 
                           type="color" 
@@ -2891,7 +2912,7 @@ export default function AdminDashboardClient({
                     </div>
 
                     <div className="p-3 rounded-lg bg-slate-950 border border-slate-850">
-                      <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Mete Sou Li (Hover)</label>
+                      <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">{t.adminColorHover}</label>
                       <div className="flex items-center gap-2">
                         <input 
                           type="color" 
@@ -2909,7 +2930,7 @@ export default function AdminDashboardClient({
                     </div>
 
                     <div className="p-3 rounded-lg bg-slate-950 border border-slate-850">
-                      <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">Aksan (Accent)</label>
+                      <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">{t.adminColorAccent}</label>
                       <div className="flex items-center gap-2">
                         <input 
                           type="color" 
@@ -2929,7 +2950,7 @@ export default function AdminDashboardClient({
 
                   {/* Theme Mode Selector */}
                   <div className="mb-4 p-3 rounded-lg bg-slate-950 border border-slate-850">
-                    <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-wider">Tèm Background la (Background Theme Mode)</label>
+                    <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-wider">{t.adminColorThemeMode}</label>
                     <div className="grid grid-cols-2 gap-3">
                       <button
                         type="button"
@@ -2941,7 +2962,7 @@ export default function AdminDashboardClient({
                         }`}
                       >
                         <span className="w-2.5 h-2.5 rounded-full bg-slate-950 border border-slate-850" />
-                        <span>Tèm Nwa (Dark Mode)</span>
+                        <span>{t.adminColorDarkMode}</span>
                       </button>
                       <button
                         type="button"
@@ -2953,20 +2974,20 @@ export default function AdminDashboardClient({
                         }`}
                       >
                         <span className="w-2.5 h-2.5 rounded-full bg-white border border-slate-300" />
-                        <span>Tèm Klè (Light Mode)</span>
+                        <span>{t.adminColorLightMode}</span>
                       </button>
                     </div>
                   </div>
 
                   {/* Hero Background Opacity Settings */}
                   <div className="mb-4 p-3 rounded-lg bg-slate-950 border border-slate-850 space-y-4">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Klète Foto Dèyè a (Hero Background Opacity)</label>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t.adminColorHeroOpacity}</label>
                     
                     <div className="space-y-3">
                       <div>
                         <div className="flex justify-between items-center mb-1">
-                          <span className="text-[10px] text-slate-400 font-semibold">Tèm Klè (Light Mode): {heroBgOpacityLight}%</span>
-                          <span className="text-[10px] text-amber-500 font-bold">{Number(heroBgOpacityLight) < 20 ? 'Crisp & Soft' : 'High Visibility'}</span>
+                          <span className="text-[10px] text-slate-400 font-semibold">{t.adminColorOpacityLight}: {heroBgOpacityLight}%</span>
+                          <span className="text-[10px] text-amber-500 font-bold">{Number(heroBgOpacityLight) < 20 ? t.adminColorOpacityCrisp : t.adminColorOpacityHigh}</span>
                         </div>
                         <div className="flex items-center gap-3">
                           <input 
@@ -2982,8 +3003,8 @@ export default function AdminDashboardClient({
 
                       <div>
                         <div className="flex justify-between items-center mb-1">
-                          <span className="text-[10px] text-slate-400 font-semibold">Tèm Nwa (Dark Mode): {heroBgOpacityDark}%</span>
-                          <span className="text-[10px] text-amber-500 font-bold">{Number(heroBgOpacityDark) < 30 ? 'Cinematic' : 'High Visibility'}</span>
+                          <span className="text-[10px] text-slate-400 font-semibold">{t.adminColorOpacityDark}: {heroBgOpacityDark}%</span>
+                          <span className="text-[10px] text-amber-500 font-bold">{Number(heroBgOpacityDark) < 30 ? t.adminColorOpacityCinematic : t.adminColorOpacityHigh}</span>
                         </div>
                         <div className="flex items-center gap-3">
                           <input 
@@ -3002,11 +3023,9 @@ export default function AdminDashboardClient({
                   {/* Glassmorphic Text Shield Toggle */}
                   <div className="mb-4 p-3 rounded-lg bg-slate-950 border border-slate-850 flex items-center justify-between">
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Adousi Dèyè Tèks (Soften Text Backdrop)</label>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{t.adminColorSoftenBackdrop}</label>
                       <span className="text-[10px] text-slate-500 font-medium">
-                        {language === 'fr_ht' 
-                          ? 'Aktive yon bèl kouch semi-transparan ak backdrop-blur dèyè tèks la pou rann li fasil pou li.' 
-                          : 'Activates a beautiful semi-transparent layer with backdrop-blur behind the hero text for readability.'}
+                        {t.adminColorSoftenDesc}
                       </span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer flex-shrink-0 ml-4">
@@ -3022,7 +3041,7 @@ export default function AdminDashboardClient({
 
                   {/* Interactive Live Preview Component */}
                   <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-850 flex items-center justify-between gap-4">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Aparans (Live Demo)</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.adminColorLiveDemo}</span>
                     <div className="flex items-center gap-3">
                       {/* Button styled dynamically */}
                       <button 
@@ -3030,14 +3049,14 @@ export default function AdminDashboardClient({
                         style={{ backgroundColor: themePrimary }}
                         className="px-3 py-1.5 rounded-lg text-slate-950 text-xs font-bold shadow-md opacity-90 hover:opacity-100 transition-all pointer-events-none"
                       >
-                        Sèvis nou yo
+                        {t.adminColorDemoBtn}
                       </button>
                       {/* Accent color dot/badge */}
                       <span 
                         style={{ backgroundColor: themeAccent }}
                         className="px-2 py-0.5 rounded-full text-white text-[9px] font-bold uppercase animate-pulse pointer-events-none"
                       >
-                        En Dirèk
+                        {t.sermonLiveNow}
                       </span>
                     </div>
                   </div>
