@@ -12,6 +12,8 @@ import {
   submitPrayerRequest, 
   submitContactForm 
 } from '@/lib/actions';
+import MinistrySignupForm from '@/components/MinistrySignupForm';
+import { MinistrySignupSlug } from '@/lib/ministry-signup-fields';
 import { getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from '@/lib/youtube';
 import { 
   Church, 
@@ -1771,37 +1773,52 @@ export default function PublicHome({
               const bullets = bulletsStr.split('\n').filter(b => b.trim());
               
               return (
-                <div className={`grid md:grid-cols-2 gap-12 items-center p-8 rounded-3xl ${bgCard} animate-fade-in`}>
-                  <div>
-                    <h5 className={`text-2xl font-bold font-serif ${textTitle} mb-4`}>
-                      {title}
-                    </h5>
-                    <p className={`${textBody} text-base leading-relaxed mb-6`}>
-                      {desc}
-                    </p>
-                    <ul className="space-y-3 mb-6">
-                      {bullets.map((bullet, idx) => (
-                        <li key={idx} className="flex items-center gap-2 text-sm font-medium">
-                          <CheckCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                          <span className={textBody}>{bullet}</span>
-                        </li>
-                      ))}
-                    </ul>
+                <>
+                  <div className={`grid md:grid-cols-2 gap-12 items-center p-8 rounded-3xl ${bgCard} animate-fade-in`}>
+                    <div>
+                      <h5 className={`text-2xl font-bold font-serif ${textTitle} mb-4`}>
+                        {title}
+                      </h5>
+                      <p className={`${textBody} text-base leading-relaxed mb-6`}>
+                        {desc}
+                      </p>
+                      <ul className="space-y-3 mb-6">
+                        {bullets.map((bullet, idx) => (
+                          <li key={idx} className="flex items-center gap-2 text-sm font-medium">
+                            <CheckCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                            <span className={textBody}>{bullet}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <MinistrySignupForm
+                        slug={activeMinistryTab as MinistrySignupSlug}
+                        ministry={m}
+                        language={language}
+                        isLight={isLight}
+                        textTitle={textTitle}
+                        textBody={textBody}
+                        textMuted={textMuted}
+                        bgCard={bgCard}
+                        bgInput={bgInput}
+                        registerLabel={t.btnRegister}
+                        cancelLabel={t.btnCancel}
+                        submitLabel={t.btnSubmit}
+                      />
+                    </div>
+                    <div className="h-80 rounded-2xl overflow-hidden shadow-lg shadow-black/20">
+                      <img 
+                        src={m.image_url} 
+                        alt={title} 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                   </div>
-                  <div className="h-80 rounded-2xl overflow-hidden shadow-lg shadow-black/20">
-                    <img 
-                      src={m.image_url} 
-                      alt={title} 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                </div>
+                </>
               );
             })()}
 
             {activeMinistryTab === 'missions' && (
               <div className="animate-fade-in">
-                {/* Dynamically renders Haiti Missions from the database */}
                 <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-8 pb-4 border-b border-slate-800">
                   <div className="max-w-xl">
                     <h5 className={`text-2xl font-bold font-serif ${textTitle} mb-2`}>{t.missionsTitle}</h5>
@@ -1863,6 +1880,23 @@ export default function PublicHome({
                       </div>
                     );
                   })}
+                </div>
+
+                <div className="mt-8 flex justify-start">
+                  <MinistrySignupForm
+                    slug="missions"
+                    ministry={ministries.find((item) => item.slug === 'missions')}
+                    language={language}
+                    isLight={isLight}
+                    textTitle={textTitle}
+                    textBody={textBody}
+                    textMuted={textMuted}
+                    bgCard={bgCard}
+                    bgInput={bgInput}
+                    registerLabel={t.btnRegister}
+                    cancelLabel={t.btnCancel}
+                    submitLabel={t.btnSubmit}
+                  />
                 </div>
               </div>
             )}

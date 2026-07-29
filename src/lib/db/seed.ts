@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import type { Pool } from 'pg';
+import { getSuperAdminEmails } from '../super-admin';
 
 async function countRows(pool: Pool, table: string): Promise<number> {
   const result = await pool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM ${table}`);
@@ -74,6 +75,7 @@ export async function seedDatabase(pool: Pool): Promise<void> {
     ['zelle_phone', '929 599 8809'],
     ['zelle_name', 'Parousia Baptist Ministries', true],
     ['devotional_theme', 'none'],
+    ['devotional_theme_enabled', 'false'],
     ['devotional_auto_publish', 'false'],
   ];
 
@@ -85,12 +87,13 @@ export async function seedDatabase(pool: Pool): Promise<void> {
     "UPDATE service_schedules SET is_livestreamed = 1 WHERE LOWER(day_english) = 'sunday' OR LOWER(day_kreyol) = 'dimanch'"
   );
 
-  const superAdminEmail = 'straightlineaffiliate@gmail.com';
-  await pool.query(
-    `INSERT INTO admins (email, created_at) VALUES ($1, $2)
-     ON CONFLICT (email) DO NOTHING`,
-    [superAdminEmail, new Date().toISOString().split('T')[0]]
-  );
+  for (const superAdminEmail of getSuperAdminEmails()) {
+    await pool.query(
+      `INSERT INTO admins (email, created_at, is_super_admin) VALUES ($1, $2, 1)
+       ON CONFLICT (email) DO UPDATE SET is_super_admin = 1`,
+      [superAdminEmail, new Date().toISOString().split('T')[0]]
+    );
+  }
 
   await pool.query("DELETE FROM admins WHERE LOWER(email) = 'pastor@parousiabaptist.org'");
   await pool.query("DELETE FROM admins WHERE LOWER(email) = 'it@parousiabaptist.org'");
@@ -271,4 +274,21 @@ export async function seedDatabase(pool: Pool): Promise<void> {
       ]
     );
   }
+
+  await pool.query(
+    `INSERT INTO ministries
+     (slug, title_kreyol, title_english, description_kreyol, description_english, image_url, bullets_kreyol, bullets_english, contact_name, contact_email, contact_phone, notification_emails, google_sheet_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, '', '', '', '', '')
+     ON CONFLICT (slug) DO NOTHING`,
+    [
+      'missions',
+      'Misyon ak Evanjelizasyon',
+      'Missions & Outreach',
+      'Rejwenn misyon nou an pou sipòte travay evanjelizasyon ak sèvis kominotè an Ayiti ak nan kominote lokal la.',
+      'Join our missions ministry to support evangelism and community service work in Haiti and in our local community.',
+      'https://images.unsplash.com/photo-1547082299-de196ea013d6?q=80&w=800&auto=format&fit=crop',
+      'Pwojè lekòl ak swen sante an Ayiti\nSipò pou evanjelizasyon lokal\nVolontè pou aktivite kominotè',
+      'School and healthcare projects in Haiti\nLocal evangelism support\nVolunteer opportunities for community outreach',
+    ]
+  );
 }

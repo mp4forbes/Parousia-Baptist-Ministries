@@ -1,4 +1,5 @@
-import { checkAdminAuth, getServiceSchedules, getHaitiMissions, getLocalOutreaches, getEvents, getSettings, getRegistrations, getSermons, getKnowledgeBaseItems, getLeads, getDevotionals, getLoggedInAdminEmail, getMinistries } from "@/lib/actions";
+import { checkAdminAuth, getServiceSchedules, getHaitiMissions, getLocalOutreaches, getEvents, getSettings, getRegistrations, getSermons, getKnowledgeBaseItems, getLeads, getDevotionals, getLoggedInAdminEmail, getMinistries, getAdmins, checkIsSuperAdmin } from "@/lib/actions";
+import { getSuperAdminEmails } from "@/lib/super-admin";
 import { redirect } from "next/navigation";
 import AdminDashboardClient from "@/components/AdminDashboardClient";
 
@@ -13,11 +14,11 @@ export default async function AdminDashboardPage() {
   }
 
   const loggedInEmail = await getLoggedInAdminEmail();
-  const superAdminEmail = (process.env.SUPER_ADMIN_EMAIL || 'straightlineaffiliate@gmail.com').toLowerCase().trim();
-  const isSuperAdmin = loggedInEmail?.toLowerCase().trim() === superAdminEmail;
+  const isSuperAdmin = await checkIsSuperAdmin(loggedInEmail);
+  const envSuperAdminEmails = getSuperAdminEmails();
 
   // Fetch all existing data to manage
-  const [schedules, missions, outreaches, events, registrations, settings, sermons, knowledgeBaseItems, leads, devotionals, ministries] = await Promise.all([
+  const [schedules, missions, outreaches, events, registrations, settings, sermons, knowledgeBaseItems, leads, devotionals, ministries, admins] = await Promise.all([
     getServiceSchedules(),
     getHaitiMissions(),
     getLocalOutreaches(),
@@ -28,7 +29,8 @@ export default async function AdminDashboardPage() {
     getKnowledgeBaseItems(),
     getLeads(),
     getDevotionals(),
-    getMinistries()
+    getMinistries(),
+    isSuperAdmin ? getAdmins() : Promise.resolve([]),
   ]);
 
   return (
@@ -45,6 +47,8 @@ export default async function AdminDashboardPage() {
       initialDevotionals={devotionals}
       isSuperAdmin={isSuperAdmin}
       initialMinistries={ministries}
+      initialAdmins={admins}
+      envSuperAdminEmails={envSuperAdminEmails}
     />
   );
 }

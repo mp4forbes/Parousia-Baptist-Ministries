@@ -101,7 +101,9 @@ CREATE TABLE IF NOT EXISTS daily_devotionals (
 CREATE TABLE IF NOT EXISTS admins (
   id SERIAL PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  password_hash TEXT,
+  is_super_admin INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS admin_devices (
@@ -154,8 +156,39 @@ CREATE TABLE IF NOT EXISTS ministries (
   description_english TEXT NOT NULL,
   image_url TEXT NOT NULL,
   bullets_kreyol TEXT NOT NULL,
-  bullets_english TEXT NOT NULL
+  bullets_english TEXT NOT NULL,
+  contact_name TEXT DEFAULT '',
+  contact_email TEXT DEFAULT '',
+  contact_phone TEXT DEFAULT '',
+  notification_emails TEXT DEFAULT '',
+  google_sheet_id TEXT DEFAULT ''
 );
+
+CREATE TABLE IF NOT EXISTS ministry_signups (
+  id SERIAL PRIMARY KEY,
+  ministry_slug TEXT NOT NULL,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT,
+  responses TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS admin_section_configs (
+  section_slug TEXT PRIMARY KEY,
+  contact_name TEXT DEFAULT '',
+  contact_email TEXT DEFAULT '',
+  contact_phone TEXT DEFAULT '',
+  notification_emails TEXT DEFAULT ''
+);
+
+ALTER TABLE ministries ADD COLUMN IF NOT EXISTS contact_name TEXT DEFAULT '';
+ALTER TABLE ministries ADD COLUMN IF NOT EXISTS contact_email TEXT DEFAULT '';
+ALTER TABLE ministries ADD COLUMN IF NOT EXISTS contact_phone TEXT DEFAULT '';
+ALTER TABLE ministries ADD COLUMN IF NOT EXISTS notification_emails TEXT DEFAULT '';
+ALTER TABLE ministries ADD COLUMN IF NOT EXISTS google_sheet_id TEXT DEFAULT '';
 
 ALTER TABLE service_schedules ADD COLUMN IF NOT EXISTS image_url TEXT;
 ALTER TABLE service_schedules ADD COLUMN IF NOT EXISTS is_livestreamed INTEGER DEFAULT 0;
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS password_hash TEXT;
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS is_super_admin INTEGER NOT NULL DEFAULT 0;

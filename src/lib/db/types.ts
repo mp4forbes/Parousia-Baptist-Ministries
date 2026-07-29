@@ -2,6 +2,8 @@ export interface AdminRecord {
   id: number;
   email: string;
   created_at: string;
+  password_hash?: string | null;
+  is_super_admin?: number;
 }
 
 export interface AdminDevice {
@@ -145,4 +147,27 @@ export interface Ministry {
   image_url: string;
   bullets_kreyol: string;
   bullets_english: string;
+  contact_name?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  notification_emails?: string;
+  google_sheet_id?: string;
+}
+
+export interface MinistrySignup {
+  id: number;
+  ministry_slug: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  responses: string;
+  created_at: string;
+}
+
+export interface AdminSectionConfig {
+  section_slug: string;
+  contact_name: string;
+  contact_email: string;
+  contact_phone: string;
+  notification_emails: string;
 }

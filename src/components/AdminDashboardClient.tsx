@@ -16,7 +16,8 @@ import {
   PrayerRequest,
   ContactSubmission,
   BlogPost,
-  Ministry
+  Ministry,
+  MinistrySignup
 } from '@/lib/db';
 import { 
   logoutAdmin, 
@@ -45,6 +46,7 @@ import {
   getAdmins,
   addAdminEmail,
   deleteAdminEmail,
+  setAdminSuperAdminStatus,
   getContactSubmissions,
   deleteContactSubmission,
   getPrayerRequests,
@@ -53,8 +55,13 @@ import {
   saveBlogPost,
   deleteBlogPost,
   saveMinistry,
-  translateBlogContentAction
+  translateBlogContentAction,
+  getMinistrySignups,
+  deleteMinistrySignup,
+  exportMinistrySignupsSpreadsheet
 } from '@/lib/actions';
+import AdminSectionContactExport from '@/components/AdminSectionContactExport';
+import { MINISTRY_SIGNUP_FIELDS, MinistrySignupSlug } from '@/lib/ministry-signup-fields';
 import { useRouter } from 'next/navigation';
 import { getYouTubeThumbnailUrl } from '@/lib/youtube';
 import { 
@@ -107,6 +114,8 @@ interface AdminDashboardProps {
   initialDevotionals?: DailyDevotional[];
   isSuperAdmin?: boolean;
   initialMinistries?: Ministry[];
+  initialAdmins?: AdminRecord[];
+  envSuperAdminEmails?: string[];
 }
 
 type TabType = 'settings' | 'hometabs' | 'schedules' | 'missions' | 'outreach' | 'events' | 'registrations' | 'sermons' | 'subscribers' | 'devotional' | 'admins' | 'contact' | 'prayers' | 'blog' | 'ministries';
@@ -134,7 +143,9 @@ export default function AdminDashboardClient({
   leads = [],
   initialDevotionals = [],
   isSuperAdmin = false,
-  initialMinistries = []
+  initialMinistries = [],
+  initialAdmins = [],
+  envSuperAdminEmails = []
 }: AdminDashboardProps) {
   const { language, setLanguage, t } = useLanguage();
   const router = useRouter();
@@ -144,8 +155,12 @@ export default function AdminDashboardClient({
   const [activeTab, setActiveTab] = useState<TabType>('settings');
 
   // Parousia Baptist Ministries new state variables
-  const [devotionalTheme, setDevotionalTheme] = useState(settings.devotional_theme || 'none');
-  const [adminList, setAdminList] = useState<AdminRecord[]>([]);
+  const [devotionalThemeEnabled, setDevotionalThemeEnabled] = useState(settings.devotional_theme_enabled === 'true');
+  const [devotionalThemePrompt, setDevotionalThemePrompt] = useState(() => {
+    const theme = settings.devotional_theme || '';
+    return theme === 'none' ? '' : theme;
+  });
+  const [adminList, setAdminList] = useState<AdminRecord[]>(initialAdmins);
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [contactLogs, setContactLogs] = useState<ContactSubmission[]>([]);
   const [moderationPrayers, setModerationPrayers] = useState<PrayerRequest[]>([]);
@@ -170,8 +185,15 @@ export default function AdminDashboardClient({
     description_kreyol: '',
     image_url: '',
     bullets_english: '',
-    bullets_kreyol: ''
+    bullets_kreyol: '',
+    contact_name: '',
+    contact_email: '',
+    contact_phone: '',
+    notification_emails: ''
   });
+  const [ministrySignups, setMinistrySignups] = useState<MinistrySignup[]>([]);
+  const [loadingMinistrySignups, setLoadingMinistrySignups] = useState(false);
+  const [exportingMinistrySignups, setExportingMinistrySignups] = useState(false);
 
   useEffect(() => {
     setMinistriesList(initialMinistries);
@@ -187,10 +209,33 @@ export default function AdminDashboardClient({
         description_kreyol: current.description_kreyol || '',
         image_url: current.image_url || '',
         bullets_english: current.bullets_english || '',
-        bullets_kreyol: current.bullets_kreyol || ''
+        bullets_kreyol: current.bullets_kreyol || '',
+        contact_name: current.contact_name || '',
+        contact_email: current.contact_email || '',
+        contact_phone: current.contact_phone || '',
+        notification_emails: current.notification_emails || ''
       });
     }
   }, [selectedMinistrySlug, ministriesList]);
+
+  const loadMinistrySignups = async (slug: string) => {
+    setLoadingMinistrySignups(true);
+    try {
+      const rows = await getMinistrySignups(slug);
+      setMinistrySignups(rows);
+    } catch (err) {
+      console.error(err);
+      setMinistrySignups([]);
+    } finally {
+      setLoadingMinistrySignups(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'ministries') {
+      loadMinistrySignups(selectedMinistrySlug);
+    }
+  }, [activeTab, selectedMinistrySlug]);
 
   
   // Flash alert message
@@ -325,6 +370,10 @@ export default function AdminDashboardClient({
     setDevotionalList(initialDevotionals);
   }, [initialDevotionals]);
 
+  useEffect(() => {
+    setAdminList(initialAdmins);
+  }, [initialAdmins]);
+
   // Fetch lists based on active tab
   useEffect(() => {
     async function loadTabSpecificData() {
@@ -360,6 +409,7 @@ export default function AdminDashboardClient({
         setNewAdminEmail('');
         const list = await getAdmins();
         setAdminList(list);
+        router.refresh();
       } else {
         triggerAlert(res.error || 'Failed to add admin', 'error');
       }
@@ -376,6 +426,7 @@ export default function AdminDashboardClient({
         triggerAlert(language === 'fr_ht' ? 'Admin siprime avèk siksè!' : 'Admin revoked successfully!', 'success');
         const list = await getAdmins();
         setAdminList(list);
+        router.refresh();
       } else {
         triggerAlert(res.error || 'Failed to delete admin', 'error');
       }
@@ -383,6 +434,30 @@ export default function AdminDashboardClient({
       triggerAlert(err.message || 'Error occurred', 'error');
     }
   };
+
+  const handleToggleAdminSuperAdmin = async (admin: AdminRecord, checked: boolean) => {
+    try {
+      const res = await setAdminSuperAdminStatus(admin.id, checked);
+      if (res.success) {
+        const list = await getAdmins();
+        setAdminList(list);
+        router.refresh();
+        triggerAlert(
+          checked
+            ? (language === 'fr_ht' ? 'Aksè super admin aktive.' : 'Super-admin access enabled.')
+            : (language === 'fr_ht' ? 'Aksè super admin retire.' : 'Super-admin access removed.'),
+          'success'
+        );
+      } else {
+        triggerAlert(res.error || 'Failed to update super-admin access', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error occurred', 'error');
+    }
+  };
+
+  const isEnvSuperAdmin = (email: string) => envSuperAdminEmails.includes(email.toLowerCase().trim());
+  const isAdminSuperAdmin = (admin: AdminRecord) => admin.is_super_admin === 1 || isEnvSuperAdmin(admin.email);
 
   const handleSaveMinistry = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -412,6 +487,53 @@ export default function AdminDashboardClient({
     } catch (err: any) {
       console.error(err);
       triggerAlert(err.message || 'Error occurred while saving ministry', 'error');
+    }
+  };
+
+  const handleDeleteMinistrySignup = async (id: number) => {
+    if (!confirm(language === 'fr_ht' ? 'Siprime enskripsyon sa a?' : 'Delete this signup?')) return;
+    try {
+      const res = await deleteMinistrySignup(id);
+      if (res.success) {
+        setMinistrySignups((prev) => prev.filter((row) => row.id !== id));
+        triggerAlert(language === 'en' ? 'Signup deleted.' : 'Enskripsyon siprime.', 'success');
+      } else {
+        triggerAlert(res.error || 'Failed to delete signup', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error occurred', 'error');
+    }
+  };
+
+  const handleExportMinistrySignupsSpreadsheet = async () => {
+    setExportingMinistrySignups(true);
+    try {
+      const res = await exportMinistrySignupsSpreadsheet(selectedMinistrySlug);
+      if (!res.success || !res.data) {
+        triggerAlert(res.error || 'Failed to export spreadsheet', 'error');
+        return;
+      }
+
+      const bytes = Uint8Array.from(atob(res.data), (char) => char.charCodeAt(0));
+      const blob = new Blob([bytes], {
+        type: res.mimeType || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = res.filename || `${selectedMinistrySlug}-signups.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+      triggerAlert(
+        language === 'en'
+          ? 'Spreadsheet downloaded. Open it in Excel or Google Sheets.'
+          : 'Fichye telechaje. Ou ka louvri li nan Excel oswa Google Sheets.',
+        'success'
+      );
+    } catch (err: any) {
+      triggerAlert(err.message || 'Error occurred', 'error');
+    } finally {
+      setExportingMinistrySignups(false);
     }
   };
 
@@ -1466,19 +1588,33 @@ export default function AdminDashboardClient({
   };
 
   const handleDevotionalGenerate = async () => {
+    if (devotionalThemeEnabled && !devotionalThemePrompt.trim()) {
+      triggerAlert(t.devotionalThemeWarning, 'error');
+      return;
+    }
+
     // Generate for today's date in local system timezone (YYYY-MM-DD format)
     const today = new Date();
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
     const dateStr = `${yyyy}-${mm}-${dd}`;
+    const trimmedPrompt = devotionalThemePrompt.trim();
 
     try {
+      await updateGlobalSettings({
+        devotional_theme_enabled: devotionalThemeEnabled ? 'true' : 'false',
+        devotional_theme: devotionalThemeEnabled ? trimmedPrompt : 'none',
+      });
+
       triggerAlert(
         language === 'fr_ht' ? 'Y ap jenere nouvo devosyonèl...' : 'Generating new devotional...',
         'success'
       );
-      const res = await generateDevotionalAction(dateStr);
+      const res = await generateDevotionalAction(dateStr, {
+        useTheme: devotionalThemeEnabled,
+        themePrompt: devotionalThemeEnabled ? trimmedPrompt : undefined,
+      });
       if (res.success && res.devotional) {
         // Since we might already have this date, insert or replace it in the local state
         setDevotionalList(prev => {
@@ -1870,8 +2006,7 @@ export default function AdminDashboardClient({
       free_gift_desc_kreyol: giftDescHt,
       free_gift_desc_english: giftDescEn,
       free_gift_file_url: finalGiftFileUrl,
-      free_gift_admin_notes: giftAdminNotes,
-      devotional_theme: devotionalTheme
+      free_gift_admin_notes: giftAdminNotes
     });
 
     if (res.success) {
@@ -3451,37 +3586,6 @@ export default function AdminDashboardClient({
                   </div>
                 </div>
               )}
-
-              {/* DEVOTIONAL THEME SELECTOR */}
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-850 space-y-2">
-                <label className="block text-xs font-bold uppercase text-slate-400">
-                  {t.adminSettingsThemeLabel}
-                </label>
-                <p className="text-xs text-slate-500">
-                  {t.adminSettingsThemeDesc}
-                </p>
-                <input 
-                  type="text" 
-                  list="devotional-themes" 
-                  value={devotionalTheme} 
-                  onChange={(e) => setDevotionalTheme(e.target.value)} 
-                  placeholder={language === 'en' ? "Type or select a theme (e.g. Easter, Christmas, Forgiveness, none)..." : "Tape oswa chwazi yon tèm (egz. Pak, Nwèl, Padon, okenn)..."}
-                  className="mt-2 w-full max-w-sm px-4 py-2.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-200 transition-all font-semibold" 
-                />
-                <datalist id="devotional-themes">
-                  <option value="none" />
-                  <option value="faith" />
-                  <option value="love" />
-                  <option value="hope" />
-                  <option value="strength" />
-                  <option value="peace" />
-                  <option value="grace" />
-                  <option value="easter" />
-                  <option value="christmas" />
-                  <option value="thanksgiving" />
-                  <option value="forgiveness" />
-                </datalist>
-              </div>
 
               <div className="flex justify-between items-center pt-4">
                 <button 
@@ -5070,6 +5174,20 @@ export default function AdminDashboardClient({
                   </div>
                 ))}
               </div>
+
+              <AdminSectionContactExport
+                section="haiti_missions"
+                exportSlug="haiti_missions"
+                language={language === 'fr_ht' ? 'fr_ht' : 'en'}
+                listTitle={language === 'en' ? 'Haiti Missions Export' : 'Ekspòtasyon Misyon Ayiti'}
+                listDescription={
+                  language === 'en'
+                    ? 'Download an Excel-compatible spreadsheet you can open in Excel or Google Sheets.'
+                    : 'Telechaje yon fichye Excel ou ka louvri nan Excel oswa Google Sheets.'
+                }
+                recordCount={missions.length}
+                emptyMessage={language === 'en' ? 'No Haiti mission projects to export yet.' : 'Pa gen pwojè misyon Ayiti pou ekspòte ankò.'}
+              />
             </div>
           )}
 
@@ -5173,6 +5291,20 @@ export default function AdminDashboardClient({
                   </div>
                 ))}
               </div>
+
+              <AdminSectionContactExport
+                section="local_outreach"
+                exportSlug="local_outreach"
+                language={language === 'fr_ht' ? 'fr_ht' : 'en'}
+                listTitle={language === 'en' ? 'Local Outreach Export' : 'Ekspòtasyon Evanjelizasyon Lokal'}
+                listDescription={
+                  language === 'en'
+                    ? 'Download an Excel-compatible spreadsheet you can open in Excel or Google Sheets.'
+                    : 'Telechaje yon fichye Excel ou ka louvri nan Excel oswa Google Sheets.'
+                }
+                recordCount={outreaches.length}
+                emptyMessage={language === 'en' ? 'No local outreach projects to export yet.' : 'Pa gen pwojè evanjelizasyon lokal pou ekspòte ankò.'}
+              />
             </div>
           )}
 
@@ -5290,6 +5422,20 @@ export default function AdminDashboardClient({
                   </div>
                 ))}
               </div>
+
+              <AdminSectionContactExport
+                section="events_signups"
+                exportSlug="events"
+                language={language === 'fr_ht' ? 'fr_ht' : 'en'}
+                listTitle={language === 'en' ? 'Events Export' : 'Ekspòtasyon Evènman yo'}
+                listDescription={
+                  language === 'en'
+                    ? 'Download an Excel-compatible spreadsheet you can open in Excel or Google Sheets.'
+                    : 'Telechaje yon fichye Excel ou ka louvri nan Excel oswa Google Sheets.'
+                }
+                recordCount={events.length}
+                emptyMessage={language === 'en' ? 'No events to export yet.' : 'Pa gen evènman pou ekspòte ankò.'}
+              />
             </div>
           )}
 
@@ -5299,6 +5445,21 @@ export default function AdminDashboardClient({
               <h3 className="text-xl font-bold text-white border-b border-slate-800 pb-3 font-serif">
                 {t.adminRegistrationsTitle}
               </h3>
+
+              <AdminSectionContactExport
+                section="events_signups"
+                exportSlug="event_registrations"
+                language={language === 'fr_ht' ? 'fr_ht' : 'en'}
+                listTitle={language === 'en' ? 'Event Registrations Export' : 'Ekspòtasyon Enskripsyon Evènman'}
+                listDescription={
+                  language === 'en'
+                    ? 'Download an Excel-compatible spreadsheet you can open in Excel or Google Sheets.'
+                    : 'Telechaje yon fichye Excel ou ka louvri nan Excel oswa Google Sheets.'
+                }
+                recordCount={registrations.length}
+                emptyMessage={language === 'en' ? 'No event registrations to export yet.' : 'Pa gen enskripsyon evènman pou ekspòte ankò.'}
+                showContactConfig={false}
+              />
 
               {registrations.length === 0 ? (
                 <div className="text-center py-12 text-slate-500 text-sm">
@@ -5565,6 +5726,20 @@ export default function AdminDashboardClient({
                 </div>
               </div>
 
+              <AdminSectionContactExport
+                section="ebook_subscribers"
+                exportSlug="ebook_subscribers"
+                language={language === 'fr_ht' ? 'fr_ht' : 'en'}
+                listTitle={language === 'en' ? 'Ebook Subscribers Export' : 'Ekspòtasyon Abòne Ebook'}
+                listDescription={
+                  language === 'en'
+                    ? 'Download an Excel-compatible spreadsheet you can open in Excel or Google Sheets.'
+                    : 'Telechaje yon fichye Excel ou ka louvri nan Excel oswa Google Sheets.'
+                }
+                recordCount={subscriberList.length}
+                emptyMessage={t.adminSubscribersEmpty}
+              />
+
               {/* Search Bar */}
               <div className="relative">
                 <input
@@ -5688,6 +5863,58 @@ export default function AdminDashboardClient({
                     <span>{t.devotionalBtnGenerate}</span>
                   </button>
                 </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950/40 border border-slate-850 space-y-3">
+                <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer bg-slate-900 px-3 py-2 rounded-xl border border-slate-800 shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={devotionalThemeEnabled}
+                      onChange={(e) => setDevotionalThemeEnabled(e.target.checked)}
+                      className="rounded border-slate-700 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 bg-slate-950 w-4 h-4 cursor-pointer"
+                    />
+                    <span className="text-xs font-semibold text-slate-300">
+                      {t.devotionalThemeUse}
+                    </span>
+                  </label>
+
+                  <div className="flex-1 w-full">
+                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1.5">
+                      {t.devotionalThemePrompt}
+                    </label>
+                    <input
+                      type="text"
+                      list="devotional-theme-suggestions"
+                      value={devotionalThemePrompt}
+                      onChange={(e) => setDevotionalThemePrompt(e.target.value)}
+                      disabled={!devotionalThemeEnabled}
+                      placeholder={t.devotionalThemePlaceholder}
+                      className={`w-full px-4 py-2.5 rounded-xl border text-xs transition-all font-semibold ${
+                        devotionalThemeEnabled
+                          ? 'bg-slate-900 border-slate-800 text-slate-200 focus:border-amber-500 focus:outline-none'
+                          : 'bg-slate-950 border-slate-850 text-slate-500 cursor-not-allowed'
+                      }`}
+                    />
+                    <datalist id="devotional-theme-suggestions">
+                      <option value="Forgiveness" />
+                      <option value="Easter" />
+                      <option value="Christmas" />
+                      <option value="Miracles" />
+                      <option value="Compassion" />
+                      <option value="Faith" />
+                      <option value="Love" />
+                      <option value="Hope" />
+                      <option value="Peace" />
+                      <option value="Grace" />
+                      <option value="Strength" />
+                      <option value="Thanksgiving" />
+                    </datalist>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  {t.devotionalThemeHint}
+                </p>
               </div>
 
               {/* Editing Form (if editing) */}
@@ -5980,6 +6207,7 @@ export default function AdminDashboardClient({
                     <thead>
                       <tr className="bg-slate-950/60 border-b border-slate-850 text-slate-400 font-bold uppercase tracking-wider">
                         <th className="px-5 py-4">{t.adminAdminsColEmail}</th>
+                        <th className="px-5 py-4">{t.adminAdminsColSuperAdmin}</th>
                         <th className="px-5 py-4">{t.adminAdminsColDate}</th>
                         <th className="px-5 py-4 text-right">{language === 'fr_ht' ? 'Aksyon' : 'Actions'}</th>
                       </tr>
@@ -5987,7 +6215,7 @@ export default function AdminDashboardClient({
                     <tbody className="divide-y divide-slate-850/40">
                       {adminList.length === 0 ? (
                         <tr>
-                          <td colSpan={3} className="px-5 py-8 text-center text-slate-500">
+                          <td colSpan={4} className="px-5 py-8 text-center text-slate-500">
                             {t.adminAdminsEmpty}
                           </td>
                         </tr>
@@ -5996,6 +6224,29 @@ export default function AdminDashboardClient({
                           <tr key={admin.id} className="hover:bg-slate-950/20 transition-all">
                             <td className="px-5 py-4 font-mono font-semibold text-slate-200">
                               {admin.email}
+                            </td>
+                            <td className="px-5 py-4">
+                              <label className="inline-flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={isAdminSuperAdmin(admin)}
+                                  disabled={isEnvSuperAdmin(admin.email)}
+                                  onChange={(e) => handleToggleAdminSuperAdmin(admin, e.target.checked)}
+                                  className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-amber-500 focus:ring-amber-500/40 disabled:opacity-60 disabled:cursor-not-allowed"
+                                  title={
+                                    isEnvSuperAdmin(admin.email)
+                                      ? (language === 'fr_ht'
+                                        ? 'Super admin pèmanan nan konfigirasyon anviwònman an'
+                                        : 'Permanent super-admin configured in environment')
+                                      : undefined
+                                  }
+                                />
+                                <span className="text-slate-400 text-[11px]">
+                                  {isAdminSuperAdmin(admin)
+                                    ? (language === 'fr_ht' ? 'Wi' : 'Yes')
+                                    : (language === 'fr_ht' ? 'Non' : 'No')}
+                                </span>
+                              </label>
                             </td>
                             <td className="px-5 py-4 text-slate-400">
                               {admin.created_at ? new Date(admin.created_at).toLocaleDateString() : '-'}
@@ -6034,20 +6285,21 @@ export default function AdminDashboardClient({
                       : 'View care requests, feedback, and messages submitted by website visitors.'}
                   </p>
                 </div>
-                {contactLogs.length > 0 && (
-                  <button
-                    onClick={() => {
-                      const emails = contactLogs.map(c => c.email).filter(Boolean).join('; ');
-                      navigator.clipboard.writeText(emails);
-                      triggerAlert(language === 'fr_ht' ? 'Adrès imel yo kopye!' : 'Emails copied successfully!', 'success');
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 text-xs font-bold transition-all cursor-pointer"
-                  >
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-amber-500" />
-                    <span>{language === 'fr_ht' ? 'Kopye Tout Imel' : 'Copy All Emails'}</span>
-                  </button>
-                )}
               </div>
+
+              <AdminSectionContactExport
+                section="contact_submissions"
+                exportSlug="contact_submissions"
+                language={language === 'fr_ht' ? 'fr_ht' : 'en'}
+                listTitle={language === 'en' ? 'Contact Submissions Export' : 'Ekspòtasyon Mesaj Kontakte'}
+                listDescription={
+                  language === 'en'
+                    ? 'Download an Excel-compatible spreadsheet you can open in Excel or Google Sheets.'
+                    : 'Telechaje yon fichye Excel ou ka louvri nan Excel oswa Google Sheets.'
+                }
+                recordCount={contactLogs.length}
+                emptyMessage={t.adminContactEmpty}
+              />
 
               {/* Messages Table/Cards */}
               {contactLogs.length === 0 ? (
@@ -6105,6 +6357,20 @@ export default function AdminDashboardClient({
                     : 'Moderate and delete prayer requests posted on the public prayer wall.'}
                 </p>
               </div>
+
+              <AdminSectionContactExport
+                section="prayer_moderation"
+                exportSlug="prayer_moderation"
+                language={language === 'fr_ht' ? 'fr_ht' : 'en'}
+                listTitle={language === 'en' ? 'Prayer Requests Export' : 'Ekspòtasyon Demann Lapriyè'}
+                listDescription={
+                  language === 'en'
+                    ? 'Download an Excel-compatible spreadsheet you can open in Excel or Google Sheets.'
+                    : 'Telechaje yon fichye Excel ou ka louvri nan Excel oswa Google Sheets.'
+                }
+                recordCount={moderationPrayers.length}
+                emptyMessage={t.adminPrayersEmpty}
+              />
 
               {/* Prayers List */}
               {moderationPrayers.length === 0 ? (
@@ -6351,20 +6617,22 @@ export default function AdminDashboardClient({
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
                     {language === 'en'
-                      ? 'Configure images, descriptions, titles, and events for the Women, Men, and Children ministries.'
-                      : 'Konfigirasyon imaj, deskripsyon, tit, ak evènman pou ministè fanm, gason, ak timoun yo.'}
+                      ? 'Configure images, descriptions, committee contacts, notifications, and signup lists for each ministry.'
+                      : 'Konfigirasyon imaj, deskripsyon, kontak komite, notifikasyon, ak lis enskripsyon pou chak ministè.'}
                   </p>
                 </div>
               </div>
 
               {/* Ministry Selector Tabs */}
               <div className="flex gap-2 border-b border-slate-850 pb-px">
-                {['women', 'men', 'children'].map((slug) => {
+                {['women', 'men', 'children', 'missions'].map((slug) => {
                   const label = slug === 'women' 
                     ? (language === 'en' ? "Women's Ministry" : "Ministè Dam yo")
                     : slug === 'men'
                     ? (language === 'en' ? "Men's Ministry" : "Ministè Gason yo")
-                    : (language === 'en' ? "Children & Youth" : "Ministè Timoun yo");
+                    : slug === 'children'
+                    ? (language === 'en' ? "Children & Youth" : "Ministè Timoun yo")
+                    : (language === 'en' ? 'Missions' : 'Misyon');
                   return (
                     <button
                       key={slug}
@@ -6556,6 +6824,64 @@ export default function AdminDashboardClient({
                   </div>
                 </div>
 
+                <div className="pt-2 border-t border-slate-850">
+                  <h4 className="text-sm font-bold text-white mb-3">
+                    {language === 'en' ? 'Committee Contact & Notifications' : 'Kontak Komite ak Notifikasyon'}
+                  </h4>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+                        {language === 'en' ? 'Contact Name' : 'Non Kontak'}
+                      </label>
+                      <input
+                        type="text"
+                        value={minForm.contact_name}
+                        onChange={(e) => setMinForm(prev => ({ ...prev, contact_name: e.target.value }))}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+                        {language === 'en' ? 'Contact Email' : 'Imel Kontak'}
+                      </label>
+                      <input
+                        type="email"
+                        value={minForm.contact_email}
+                        onChange={(e) => setMinForm(prev => ({ ...prev, contact_email: e.target.value }))}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+                        {language === 'en' ? 'Contact Phone' : 'Telefòn Kontak'}
+                      </label>
+                      <input
+                        type="text"
+                        value={minForm.contact_phone}
+                        onChange={(e) => setMinForm(prev => ({ ...prev, contact_phone: e.target.value }))}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-1 gap-4 mt-4">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+                        {language === 'en' ? 'Notification Recipients' : 'Resevè Notifikasyon'}
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={minForm.notification_emails}
+                        onChange={(e) => setMinForm(prev => ({ ...prev, notification_emails: e.target.value }))}
+                        placeholder={language === 'en' ? 'leader@church.org, committee@church.org' : 'lidè@legliz.org, komite@legliz.org'}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
+                      />
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        {language === 'en' ? 'Comma or line-separated emails notified on each new signup.' : 'Imel separe pa vigil oswa liy ki resevwa notifikasyon pou chak nouvo enskripsyon.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex justify-end pt-3 border-t border-slate-850">
                   <button
                     type="submit"
@@ -6566,6 +6892,97 @@ export default function AdminDashboardClient({
                   </button>
                 </div>
               </form>
+
+              <div className="p-5 rounded-2xl bg-slate-950/30 border border-slate-850 space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                      <FileSpreadsheet className="w-4 h-4 text-amber-500" />
+                      <span>{language === 'en' ? 'Ministry Signups' : 'Enskripsyon Ministè'}</span>
+                    </h4>
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      {language === 'en'
+                        ? 'Download an Excel-compatible spreadsheet you can open in Excel or Google Sheets.'
+                        : 'Telechaje yon fichye Excel ou ka louvri nan Excel oswa Google Sheets.'}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => loadMinistrySignups(selectedMinistrySlug)}
+                      className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-amber-500/50 text-xs font-bold text-slate-200 inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${loadingMinistrySignups ? 'animate-spin' : ''}`} />
+                      <span>{language === 'en' ? 'Refresh' : 'Rafrechi'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={exportingMinistrySignups}
+                      onClick={handleExportMinistrySignupsSpreadsheet}
+                      className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5" />
+                      <span>{language === 'en' ? 'Download Spreadsheet (.xlsx)' : 'Telechaje Fichye (.xlsx)'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {loadingMinistrySignups ? (
+                  <p className="text-xs text-slate-400">{language === 'en' ? 'Loading signups...' : 'Y ap chaje enskripsyon yo...'}</p>
+                ) : ministrySignups.length === 0 ? (
+                  <p className="text-xs text-slate-500">{language === 'en' ? 'No signups yet for this ministry.' : 'Pa gen enskripsyon pou ministè sa a ankò.'}</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="text-slate-400 border-b border-slate-850">
+                          <th className="py-2 pr-3 font-bold uppercase">{language === 'en' ? 'Date' : 'Dat'}</th>
+                          <th className="py-2 pr-3 font-bold uppercase">{language === 'en' ? 'Name' : 'Non'}</th>
+                          <th className="py-2 pr-3 font-bold uppercase">{language === 'en' ? 'Email' : 'Imel'}</th>
+                          <th className="py-2 pr-3 font-bold uppercase">{language === 'en' ? 'Phone' : 'Telefòn'}</th>
+                          {MINISTRY_SIGNUP_FIELDS[selectedMinistrySlug as MinistrySignupSlug]?.map((field) => (
+                            <th key={field.key} className="py-2 pr-3 font-bold uppercase">{field.label_en}</th>
+                          ))}
+                          <th className="py-2 font-bold uppercase">{language === 'en' ? 'Actions' : 'Aksyon'}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ministrySignups.map((signup) => {
+                          let responses: Record<string, string> = {};
+                          try {
+                            responses = JSON.parse(signup.responses || '{}');
+                          } catch {
+                            responses = {};
+                          }
+                          return (
+                            <tr key={signup.id} className="border-b border-slate-900/80 text-slate-200">
+                              <td className="py-2 pr-3 whitespace-nowrap">{new Date(signup.created_at).toLocaleString()}</td>
+                              <td className="py-2 pr-3">{signup.name}</td>
+                              <td className="py-2 pr-3">{signup.email}</td>
+                              <td className="py-2 pr-3">{signup.phone || '—'}</td>
+                              {MINISTRY_SIGNUP_FIELDS[selectedMinistrySlug as MinistrySignupSlug]?.map((field) => (
+                                <td key={field.key} className="py-2 pr-3 max-w-[180px] truncate" title={responses[field.key] || ''}>
+                                  {responses[field.key] || '—'}
+                                </td>
+                              ))}
+                              <td className="py-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteMinistrySignup(signup.id)}
+                                  className="p-1.5 rounded-lg bg-slate-950 border border-slate-850 hover:bg-rose-950 hover:border-rose-900 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
+                                  title={language === 'en' ? 'Delete signup' : 'Siprime enskripsyon'}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

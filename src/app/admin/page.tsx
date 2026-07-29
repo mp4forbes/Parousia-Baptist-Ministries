@@ -1,4 +1,4 @@
-import { checkAdminAuth, getSettings } from "@/lib/actions";
+import { checkAdminAuth, getSettings, isPendingPasswordSetup, isPendingPasswordReset, getLoggedInAdminEmail } from "@/lib/actions";
 import { redirect } from "next/navigation";
 import AdminLoginClient from "@/components/AdminLoginClient";
 
@@ -6,8 +6,10 @@ export const revalidate = 0;
 
 export default async function AdminLoginPage() {
   const isAuthed = await checkAdminAuth();
+  const pendingSetup = await isPendingPasswordSetup();
+  const pendingReset = await isPendingPasswordReset();
+  const pendingSetupEmail = pendingSetup ? await getLoggedInAdminEmail() : '';
   
-  // If already authenticated, redirect straight to the admin dashboard
   if (isAuthed) {
     redirect('/admin/dashboard');
   }
@@ -23,7 +25,10 @@ export default async function AdminLoginPage() {
       logoUrl={logoUrl} 
       themePrimary={themePrimary} 
       themeHover={themeHover} 
-      themeAccent={themeAccent} 
+      themeAccent={themeAccent}
+      initialStep={pendingSetup ? 3 : 1}
+      pendingSetupEmail={pendingSetupEmail || ''}
+      pendingPasswordReset={pendingReset}
     />
   );
 }

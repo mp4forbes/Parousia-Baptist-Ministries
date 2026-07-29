@@ -1,13 +1,19 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { db, ServiceSchedule, HaitiMission, LocalOutreach, EventRecord, Registration, Sermon, KnowledgeBaseItem, Lead, DailyDevotional, AdminRecord, AdminDevice, PrayerRequest, ContactSubmission, BlogPost, Ministry } from './db';
+import { db, ServiceSchedule, HaitiMission, LocalOutreach, EventRecord, Registration, Sermon, KnowledgeBaseItem, Lead, DailyDevotional, AdminRecord, AdminDevice, PrayerRequest, ContactSubmission, BlogPost, Ministry, MinistrySignup, AdminSectionConfig } from './db';
+import { sendEmail, sendAdminOtpEmail } from './notify';
+import { buildMinistrySignupSpreadsheet } from './ministry-signup-spreadsheet';
+import { buildAdminSpreadsheet } from './admin-spreadsheet';
+import { AdminExportSlug, isAdminExportSlug, isAdminSectionSlug } from './admin-sections';
+import { MINISTRY_SIGNUP_FIELDS, MINISTRY_SIGNUP_SLUGS, MinistrySignupSlug } from './ministry-signup-fields';
 import { cookies } from 'next/headers';
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import crypto from 'crypto';
 import { getAssetDir, getBackupDir } from './paths';
+import { formatSuperAdminEmailsForDisplay, getPrimarySuperAdminEmail, getSuperAdminEmails, isSuperAdminEmail } from './super-admin';
 
 // HELPERS TO GET DATA (Server Components will call these directly)
 
@@ -52,6 +58,362 @@ export async function saveMinistry(
     return { success: true };
   } catch (error: any) {
     console.error(`Error saving ministry ${slug}:`, error);
+    return { success: false, error: error.message };
+  }
+}
+
+function parseNotificationEmails(value?: string | null): string[] {
+  if (!value?.trim()) return [];
+  return value
+    .split(/[,;\n]+/)
+    .map((email) => email.trim().toLowerCase())
+    .filter((email) => email.includes('@'));
+}
+
+export async function submitMinistrySignup(
+  slug: string,
+  data: {
+    name: string;
+    email: string;
+    phone?: string;
+    responses: Record<string, string>;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!MINISTRY_SIGNUP_SLUGS.includes(slug as MinistrySignupSlug)) {
+      return { success: false, error: 'Invalid ministry.' };
+    }
+
+    const ministrySlug = slug as MinistrySignupSlug;
+    if (!data.name.trim() || !data.email.trim()) {
+      return { success: false, error: 'Name and email are required.' };
+    }
+
+    for (const field of MINISTRY_SIGNUP_FIELDS[ministrySlug]) {
+      if (field.required && !data.responses[field.key]?.trim()) {
+        return { success: false, error: `Missing required field: ${field.label_en}` };
+      }
+    }
+
+    const createdAt = new Date().toISOString();
+    await db.prepare(`
+      INSERT INTO ministry_signups (ministry_slug, name, email, phone, responses, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      ministrySlug,
+      data.name.trim(),
+      data.email.toLowerCase().trim(),
+      data.phone?.trim() || null,
+      JSON.stringify(data.responses),
+      createdAt
+    );
+
+    const ministry = await db.prepare('SELECT * FROM ministries WHERE slug = ?').get(ministrySlug) as Ministry | undefined;
+    const recipients = parseNotificationEmails(ministry?.notification_emails);
+    if (recipients.length > 0) {
+      const ministryTitle = ministry?.title_english || ministrySlug;
+      const responseLines = MINISTRY_SIGNUP_FIELDS[ministrySlug]
+        .map((field) => {
+          const value = data.responses[field.key]?.trim();
+          if (!value) return null;
+          return `${field.label_en}: ${value}`;
+        })
+        .filter(Boolean)
+        .join('\n');
+
+      await sendEmail({
+        to: recipients,
+        subject: `New ${ministryTitle} signup: ${data.name.trim()}`,
+        text: [
+          `A new member signed up for ${ministryTitle}.`,
+          '',
+          `Name: ${data.name.trim()}`,
+          `Email: ${data.email.trim()}`,
+          data.phone?.trim() ? `Phone: ${data.phone.trim()}` : null,
+          `Registered: ${new Date(createdAt).toLocaleString()}`,
+          responseLines ? `\nAdditional details:\n${responseLines}` : null,
+        ].filter(Boolean).join('\n'),
+      });
+    }
+
+    revalidatePath('/');
+    revalidatePath('/admin/dashboard');
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error submitting ministry signup:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getMinistrySignups(slug?: string): Promise<MinistrySignup[]> {
+  const isAuthed = await checkAdminAuth();
+  if (!isAuthed) return [];
+
+  try {
+    if (slug) {
+      return await db.prepare('SELECT * FROM ministry_signups WHERE ministry_slug = ? ORDER BY created_at DESC').all(slug) as MinistrySignup[];
+    }
+    return await db.prepare('SELECT * FROM ministry_signups ORDER BY created_at DESC').all() as MinistrySignup[];
+  } catch (error) {
+    console.error('Error fetching ministry signups:', error);
+    return [];
+  }
+}
+
+export async function deleteMinistrySignup(id: number): Promise<{ success: boolean; error?: string }> {
+  const isAuthed = await checkAdminAuth();
+  if (!isAuthed) return { success: false, error: 'Unauthorized' };
+
+  try {
+    await db.prepare('DELETE FROM ministry_signups WHERE id = ?').run(id);
+    revalidatePath('/admin/dashboard');
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error deleting ministry signup:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function exportMinistrySignupsSpreadsheet(
+  slug: string
+): Promise<{ success: boolean; data?: string; filename?: string; mimeType?: string; error?: string }> {
+  const isAuthed = await checkAdminAuth();
+  if (!isAuthed) return { success: false, error: 'Unauthorized' };
+
+  if (!MINISTRY_SIGNUP_SLUGS.includes(slug as MinistrySignupSlug)) {
+    return { success: false, error: 'Invalid ministry.' };
+  }
+
+  try {
+    const ministrySlug = slug as MinistrySignupSlug;
+    const ministry = await db.prepare('SELECT * FROM ministries WHERE slug = ?').get(ministrySlug) as Ministry | undefined;
+    const signups = await db.prepare('SELECT * FROM ministry_signups WHERE ministry_slug = ? ORDER BY created_at ASC').all(ministrySlug) as MinistrySignup[];
+    const settings = await getSettings();
+    const buffer = await buildMinistrySignupSpreadsheet({
+      slug: ministrySlug,
+      ministryTitle: ministry?.title_english || ministrySlug,
+      signups,
+      logoUrl: settings.logo_url,
+    });
+
+    return {
+      success: true,
+      data: buffer.toString('base64'),
+      filename: `${ministrySlug}-signups.xlsx`,
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    };
+  } catch (error: any) {
+    console.error('Error exporting ministry signups spreadsheet:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+const DEFAULT_ADMIN_SECTION_CONFIG: Omit<AdminSectionConfig, 'section_slug'> = {
+  contact_name: '',
+  contact_email: '',
+  contact_phone: '',
+  notification_emails: '',
+};
+
+export async function getAdminSectionConfig(sectionSlug: string): Promise<AdminSectionConfig> {
+  if (!isAdminSectionSlug(sectionSlug)) {
+    return { section_slug: sectionSlug, ...DEFAULT_ADMIN_SECTION_CONFIG };
+  }
+
+  try {
+    const row = await db.prepare('SELECT * FROM admin_section_configs WHERE section_slug = ?').get(sectionSlug) as AdminSectionConfig | undefined;
+    if (!row) {
+      return { section_slug: sectionSlug, ...DEFAULT_ADMIN_SECTION_CONFIG };
+    }
+    return row;
+  } catch (error) {
+    console.error('Error fetching admin section config:', error);
+    return { section_slug: sectionSlug, ...DEFAULT_ADMIN_SECTION_CONFIG };
+  }
+}
+
+export async function saveAdminSectionConfig(
+  sectionSlug: string,
+  data: Partial<AdminSectionConfig>
+): Promise<{ success: boolean; error?: string }> {
+  const isAuthed = await checkAdminAuth();
+  if (!isAuthed) return { success: false, error: 'Unauthorized' };
+
+  if (!isAdminSectionSlug(sectionSlug)) {
+    return { success: false, error: 'Invalid section.' };
+  }
+
+  try {
+    await db.prepare(`
+      INSERT INTO admin_section_configs (section_slug, contact_name, contact_email, contact_phone, notification_emails)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT (section_slug) DO UPDATE SET
+        contact_name = EXCLUDED.contact_name,
+        contact_email = EXCLUDED.contact_email,
+        contact_phone = EXCLUDED.contact_phone,
+        notification_emails = EXCLUDED.notification_emails
+    `).run(
+      sectionSlug,
+      data.contact_name || '',
+      data.contact_email || '',
+      data.contact_phone || '',
+      data.notification_emails || ''
+    );
+
+    revalidatePath('/admin/dashboard');
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error saving admin section config:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getAdminSectionNotificationEmails(sectionSlug: string): Promise<string[]> {
+  const config = await getAdminSectionConfig(sectionSlug);
+  return parseNotificationEmails(config.notification_emails);
+}
+
+export async function exportAdminSectionSpreadsheet(
+  exportSlug: string
+): Promise<{ success: boolean; data?: string; filename?: string; mimeType?: string; error?: string }> {
+  const isAuthed = await checkAdminAuth();
+  if (!isAuthed) return { success: false, error: 'Unauthorized' };
+
+  if (!isAdminExportSlug(exportSlug)) {
+    return { success: false, error: 'Invalid export section.' };
+  }
+
+  try {
+    const settings = await getSettings();
+    const logoUrl = settings.logo_url;
+    let sheetTitle = 'Admin Export';
+    let headers: string[] = [];
+    let rows: string[][] = [];
+    let filename = `${exportSlug}.xlsx`;
+
+    switch (exportSlug as AdminExportSlug) {
+      case 'haiti_missions': {
+        const missions = await db.prepare('SELECT * FROM haiti_missions ORDER BY id ASC').all() as HaitiMission[];
+        sheetTitle = 'Haiti Missions';
+        headers = ['ID', 'Title (English)', 'Title (Creole)', 'Date', 'Funds Raised', 'Goal', 'Description (English)'];
+        rows = missions.map((mission) => [
+          String(mission.id),
+          mission.title_english,
+          mission.title_kreyol,
+          mission.date,
+          String(mission.funds_raised),
+          String(mission.funds_goal),
+          mission.description_english,
+        ]);
+        break;
+      }
+      case 'local_outreach': {
+        const outreaches = await db.prepare('SELECT * FROM local_outreach ORDER BY id ASC').all() as LocalOutreach[];
+        sheetTitle = 'Local Outreach';
+        headers = ['ID', 'Title (English)', 'Title (Creole)', 'Schedule (English)', 'Schedule (Creole)', 'Description (English)'];
+        rows = outreaches.map((item) => [
+          String(item.id),
+          item.title_english,
+          item.title_kreyol,
+          item.schedule_english,
+          item.schedule_kreyol,
+          item.description_english,
+        ]);
+        break;
+      }
+      case 'events': {
+        const events = await db.prepare('SELECT * FROM events ORDER BY date ASC').all() as EventRecord[];
+        sheetTitle = 'Events';
+        headers = ['ID', 'Title (English)', 'Title (Creole)', 'Date', 'Time', 'Location (English)', 'Description (English)'];
+        rows = events.map((event) => [
+          String(event.id),
+          event.title_english,
+          event.title_kreyol,
+          event.date,
+          event.time,
+          event.location_english,
+          event.description_english,
+        ]);
+        break;
+      }
+      case 'event_registrations': {
+        const registrations = await db.prepare(`
+          SELECT r.*, e.title_english AS event_title_english, e.title_kreyol AS event_title_kreyol
+          FROM registrations r
+          LEFT JOIN events e ON e.id = r.event_id
+          ORDER BY r.id ASC
+        `).all() as Registration[];
+        sheetTitle = 'Event Registrations';
+        headers = ['ID', 'Event (English)', 'Name', 'Email', 'Phone', 'Notes'];
+        rows = registrations.map((reg) => [
+          String(reg.id),
+          reg.event_title_english || '',
+          reg.name,
+          reg.email || '',
+          reg.phone || '',
+          reg.notes || '',
+        ]);
+        filename = 'event-registrations.xlsx';
+        break;
+      }
+      case 'contact_submissions': {
+        const submissions = await db.prepare('SELECT * FROM contact_submissions ORDER BY created_at DESC').all() as ContactSubmission[];
+        sheetTitle = 'Contact Submissions';
+        headers = ['Submitted', 'Name', 'Email', 'Phone', 'Message'];
+        rows = submissions.map((item) => [
+          item.created_at ? new Date(item.created_at).toLocaleString() : '',
+          item.name,
+          item.email,
+          item.phone || '',
+          item.message,
+        ]);
+        filename = 'contact-submissions.xlsx';
+        break;
+      }
+      case 'prayer_moderation': {
+        const prayers = await db.prepare('SELECT * FROM prayer_requests ORDER BY created_at DESC').all() as PrayerRequest[];
+        sheetTitle = 'Prayer Requests';
+        headers = ['Submitted', 'Requester', 'Anonymous', 'Prayer Request'];
+        rows = prayers.map((item) => [
+          item.created_at ? new Date(item.created_at).toLocaleString() : '',
+          item.requester_name || '',
+          item.is_anonymous === 1 ? 'Yes' : 'No',
+          item.request_text,
+        ]);
+        filename = 'prayer-requests.xlsx';
+        break;
+      }
+      case 'ebook_subscribers': {
+        const subscribers = await db.prepare('SELECT * FROM leads ORDER BY created_at DESC').all() as Lead[];
+        sheetTitle = 'Ebook Subscribers';
+        headers = ['Subscribed', 'Name', 'Email', 'Phone'];
+        rows = subscribers.map((item) => [
+          item.created_at ? new Date(item.created_at).toLocaleString() : '',
+          item.name,
+          item.email || '',
+          item.phone || '',
+        ]);
+        filename = 'ebook-subscribers.xlsx';
+        break;
+      }
+    }
+
+    const buffer = await buildAdminSpreadsheet({
+      sheetTitle,
+      headers,
+      rows,
+      logoUrl,
+      sheetName: 'Export',
+    });
+
+    return {
+      success: true,
+      data: buffer.toString('base64'),
+      filename,
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    };
+  } catch (error: any) {
+    console.error('Error exporting admin section spreadsheet:', error);
     return { success: false, error: error.message };
   }
 }
@@ -179,6 +541,24 @@ export async function registerForEvent(
       VALUES (?, ?, ?, ?, ?)
     `);
     await insert.run(eventId, name, email, phone, notes);
+
+    const event = await db.prepare('SELECT title_english FROM events WHERE id = ?').get(eventId) as { title_english: string } | undefined;
+    const recipients = await getAdminSectionNotificationEmails('events_signups');
+    if (recipients.length > 0) {
+      await sendEmail({
+        to: recipients,
+        subject: `New event registration: ${event?.title_english || `Event #${eventId}`}`,
+        text: [
+          `A new registration was submitted for ${event?.title_english || `event #${eventId}`}.`,
+          '',
+          `Name: ${name}`,
+          `Email: ${email}`,
+          `Phone: ${phone}`,
+          notes?.trim() ? `Notes: ${notes.trim()}` : null,
+        ].filter(Boolean).join('\n'),
+      });
+    }
+
     revalidatePath('/');
     revalidatePath('/admin/dashboard');
     return { success: true };
@@ -226,6 +606,7 @@ export async function verifyAdminPassword(password: string): Promise<{ success: 
       cookieStore.set('admin_auth', 'authenticated', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
         maxAge: 60 * 60 * 2, // 1 hour session
         path: '/'
       });
@@ -268,6 +649,153 @@ function decryptSession(text: string): string | null {
   }
 }
 
+function hashAdminPassword(password: string): string {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
+
+async function verifyGlobalAccessCodeAsync(accessCode: string): Promise<boolean> {
+  const stored = await db.prepare("SELECT value FROM settings WHERE key = 'admin_password'").get() as { value: string } | undefined;
+  const inputHash = hashAdminPassword(accessCode);
+  const envCode = process.env.ADMIN_ACCESS_CODE || 'parousie2026';
+  const envHash = hashAdminPassword(envCode);
+
+  if (stored && (stored.value === inputHash || stored.value === accessCode)) {
+    if (stored.value === accessCode && !/^[a-f0-9]{64}$/i.test(accessCode)) {
+      await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('admin_password', ?)").run(inputHash);
+    }
+    return true;
+  }
+
+  return inputHash === envHash || accessCode === envCode;
+}
+
+function adminHasPersonalPassword(admin: AdminRecord | undefined | null): boolean {
+  return !!admin?.password_hash?.trim();
+}
+
+async function authenticateAdminLogin(
+  normalizedEmail: string,
+  accessCode: string
+): Promise<{ success: boolean; adminRecord?: AdminRecord; usesGlobalPassword?: boolean; error?: string }> {
+  const adminRecord = await db.prepare('SELECT * FROM admins WHERE LOWER(email) = ?').get(normalizedEmail) as AdminRecord | undefined;
+
+  if (adminRecord) {
+    if (adminHasPersonalPassword(adminRecord)) {
+      if (!accessCode.trim()) {
+        return { success: false, error: 'Please enter your password.' };
+      }
+      if (adminRecord.password_hash !== hashAdminPassword(accessCode)) {
+        return { success: false, error: 'Incorrect password.' };
+      }
+    }
+    return { success: true, adminRecord };
+  }
+
+  if (isSuperAdminEmail(normalizedEmail)) {
+    if (!accessCode.trim()) {
+      return { success: false, error: 'Please enter the administrator password.' };
+    }
+    if (!(await verifyGlobalAccessCodeAsync(accessCode))) {
+      return { success: false, error: 'Incorrect password.' };
+    }
+    return { success: true, usesGlobalPassword: true };
+  }
+
+  return { success: false, error: 'This email is not registered as an authorized administrator' };
+}
+
+async function isSuperAdminUser(email: string | null | undefined): Promise<boolean> {
+  if (!email) return false;
+  const normalized = email.toLowerCase().trim();
+  if (isSuperAdminEmail(normalized)) return true;
+
+  const adminRecord = await db.prepare('SELECT is_super_admin FROM admins WHERE LOWER(email) = ?').get(normalized) as { is_super_admin?: number } | undefined;
+  return adminRecord?.is_super_admin === 1;
+}
+
+async function countSuperAdmins(excludeAdminId?: number): Promise<number> {
+  const superEmails = new Set<string>(getSuperAdminEmails());
+
+  try {
+    const admins = await db.prepare('SELECT id, email, is_super_admin FROM admins').all() as AdminRecord[];
+    for (const admin of admins) {
+      if (excludeAdminId && admin.id === excludeAdminId) continue;
+      if (admin.is_super_admin === 1) {
+        superEmails.add(admin.email.toLowerCase().trim());
+      }
+    }
+  } catch (error) {
+    console.error('Error counting super administrators:', error);
+  }
+
+  return superEmails.size;
+}
+
+export async function checkIsSuperAdmin(email: string | null | undefined): Promise<boolean> {
+  return isSuperAdminUser(email);
+}
+
+type AdminSession = {
+  email: string;
+  exp: number;
+  pendingPasswordSetup?: boolean;
+  pendingPasswordReset?: boolean;
+};
+
+async function getAdminSession(): Promise<AdminSession | null> {
+  try {
+    const cookieStore = await cookies();
+    const auth = cookieStore.get('admin_auth');
+    if (!auth?.value || auth.value === 'authenticated') {
+      return null;
+    }
+
+    const decrypted = decryptSession(auth.value);
+    if (!decrypted) return null;
+
+    const session = JSON.parse(decrypted) as AdminSession;
+    if (!session.email || !session.exp || new Date().getTime() > session.exp) {
+      return null;
+    }
+
+    return session;
+  } catch {
+    return null;
+  }
+}
+
+async function setAdminSession(
+  email: string,
+  options?: { pendingPasswordSetup?: boolean; pendingPasswordReset?: boolean; maxAgeSeconds?: number }
+): Promise<void> {
+  const maxAgeSeconds = options?.maxAgeSeconds ?? 60 * 60 * 2;
+  const cookieStore = await cookies();
+  const sessionPayload = JSON.stringify({
+    email: email.toLowerCase().trim(),
+    exp: Date.now() + maxAgeSeconds * 1000,
+    pendingPasswordSetup: options?.pendingPasswordSetup === true,
+    pendingPasswordReset: options?.pendingPasswordReset === true,
+  });
+
+  cookieStore.set('admin_auth', encryptSession(sessionPayload), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: maxAgeSeconds,
+    path: '/',
+  });
+}
+
+export async function isPendingPasswordSetup(): Promise<boolean> {
+  const session = await getAdminSession();
+  return session?.pendingPasswordSetup === true || session?.pendingPasswordReset === true;
+}
+
+export async function isPendingPasswordReset(): Promise<boolean> {
+  const session = await getAdminSession();
+  return session?.pendingPasswordReset === true;
+}
+
 export async function getLoggedInAdminEmail(): Promise<string | null> {
   try {
     const cookieStore = await cookies();
@@ -276,16 +804,11 @@ export async function getLoggedInAdminEmail(): Promise<string | null> {
     
     // Support legacy plaintext authenticated sessions if any, fallback to super-admin
     if (auth.value === 'authenticated') {
-      return (process.env.SUPER_ADMIN_EMAIL || 'straightlineaffiliate@gmail.com').toLowerCase().trim();
+      return getPrimarySuperAdminEmail();
     }
-    
-    const decrypted = decryptSession(auth.value);
-    if (!decrypted) return null;
-    const session = JSON.parse(decrypted);
-    if (new Date().getTime() > session.exp) {
-      return null; // Expired
-    }
-    return session.email;
+
+    const session = await getAdminSession();
+    return session?.email ?? null;
   } catch (e) {
     console.error('Error getting logged in admin email:', e);
     return null;
@@ -294,7 +817,9 @@ export async function getLoggedInAdminEmail(): Promise<string | null> {
 
 export async function checkAdminAuth(): Promise<boolean> {
   const email = await getLoggedInAdminEmail();
-  return !!email;
+  if (!email) return false;
+  if (await isPendingPasswordSetup()) return false;
+  return true;
 }
 
 export async function logoutAdmin(): Promise<void> {
@@ -312,9 +837,8 @@ export async function updateGlobalSettings(settingsMap: Record<string, string>):
     // Check if the user is attempting to modify the admin_password
     if ('admin_password' in settingsMap && settingsMap.admin_password && settingsMap.admin_password.trim() !== '') {
       const loggedInEmail = await getLoggedInAdminEmail();
-      const superAdminEmail = (process.env.SUPER_ADMIN_EMAIL || 'straightlineaffiliate@gmail.com').toLowerCase().trim();
-      if (loggedInEmail?.toLowerCase().trim() !== superAdminEmail) {
-        return { success: false, error: 'Only the Super-Administrator (straightlineaffiliate@gmail.com) can modify the master administrator access code.' };
+      if (!(await isSuperAdminUser(loggedInEmail))) {
+        return { success: false, error: `Only a Super-Administrator (${formatSuperAdminEmailsForDisplay()}) can modify the master administrator access code.` };
       }
     }
 
@@ -551,6 +1075,23 @@ export async function submitLead(
       VALUES (?, ?, ?, ?)
     `);
     await insert.run(name, email, phone, createdAt);
+
+    const recipients = await getAdminSectionNotificationEmails('ebook_subscribers');
+    if (recipients.length > 0) {
+      await sendEmail({
+        to: recipients,
+        subject: `New ebook subscriber: ${name.trim()}`,
+        text: [
+          'A new person subscribed for the spiritual gift / ebook.',
+          '',
+          `Name: ${name.trim()}`,
+          `Email: ${email.trim()}`,
+          phone?.trim() ? `Phone: ${phone.trim()}` : null,
+          `Subscribed: ${new Date(createdAt).toLocaleString()}`,
+        ].filter(Boolean).join('\n'),
+      });
+    }
+
     revalidatePath('/');
     revalidatePath('/admin/dashboard');
     return { success: true };
@@ -1626,9 +2167,10 @@ async function fetchDevotionalFromGemini(theme: string): Promise<GeminiResponse 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     
     const prompt = `You are a pastor preparing a bilingual daily devotional (in English and Haitian Creole) for Parousia Baptist Ministries.
-Generate a spiritual daily devotional aligned with the theme: "${theme}".
+Generate a spiritual daily devotional centered on the theme: "${theme}".
 
-Select an appropriate, encouraging scripture reference and verse from the Bible that perfectly aligns with this theme.
+Choose a real, well-known Bible verse and reference that clearly relates to this theme (for example, forgiveness might use Ephesians 4:32 or Matthew 6:14; Easter might use 1 Corinthians 15:20; Christmas might use Luke 2:11).
+The scripture must be authentic and appropriate for the theme.
 Provide the content in both English and Haitian Creole.
 
 Return a JSON object conforming to this exact structure:
@@ -1637,8 +2179,8 @@ Return a JSON object conforming to this exact structure:
   "verse_ref_kreyol": "The scripture reference in Haitian Creole, e.g. Jan 3:16",
   "verse_text_english": "The exact bible verse text in English",
   "verse_text_kreyol": "The exact bible verse text in Haitian Creole",
-  "lesson_english": "A short, rich pastoral reflection and spiritual lesson in English (2-4 sentences)",
-  "lesson_kreyol": "An equivalent short, rich pastoral reflection and spiritual lesson in Haitian Creole (2-4 sentences)"
+  "lesson_english": "A short, rich pastoral reflection and spiritual lesson in English (2-4 sentences) tied to the theme",
+  "lesson_kreyol": "An equivalent short, rich pastoral reflection and spiritual lesson in Haitian Creole (2-4 sentences) tied to the theme"
 }`;
 
     const response = await fetch(url, {
@@ -1702,14 +2244,41 @@ Return a JSON object conforming to this exact structure:
   }
 }
 
-async function generateDailyDevotionalRecord(dateStr: string): Promise<DailyDevotional | null> {
-  // 1. Fetch devotional_theme from settings
-  const themeRow = await db.prepare("SELECT value FROM settings WHERE key = 'devotional_theme'").get() as { value: string } | undefined;
-  const currentTheme = (themeRow?.value || 'none').toLowerCase().trim();
+function filterDevotionalPresetsByTheme(theme: string) {
+  const normalized = theme.toLowerCase().trim();
+  return DEVOTIONAL_PRESETS.filter((preset) => {
+    const presetTheme = preset.theme.toLowerCase();
+    return (
+      presetTheme === normalized ||
+      normalized.includes(presetTheme) ||
+      presetTheme.includes(normalized)
+    );
+  });
+}
+
+async function generateDailyDevotionalRecord(
+  dateStr: string,
+  options?: { useTheme?: boolean; themePrompt?: string }
+): Promise<DailyDevotional | null> {
+  let useTheme = options?.useTheme;
+  let themePrompt = options?.themePrompt?.trim() || '';
+
+  if (useTheme === undefined) {
+    const enabledRow = await db.prepare("SELECT value FROM settings WHERE key = 'devotional_theme_enabled'").get() as { value: string } | undefined;
+    useTheme = enabledRow?.value === 'true';
+  }
+
+  if (!themePrompt) {
+    const themeRow = await db.prepare("SELECT value FROM settings WHERE key = 'devotional_theme'").get() as { value: string } | undefined;
+    const storedTheme = (themeRow?.value || 'none').trim();
+    themePrompt = storedTheme === 'none' ? '' : storedTheme;
+  }
+
+  const currentTheme = useTheme && themePrompt ? themePrompt : 'none';
 
   let preset: any = null;
 
-  // Try AI generation first if there is a theme and we have an API key
+  // Try AI generation first when a theme is active and we have an API key
   if (currentTheme !== 'none' && process.env.GEMINI_API_KEY) {
     console.log(`Generating devotional for theme "${currentTheme}" using Gemini...`);
     const aiDevotional = await fetchDevotionalFromGemini(currentTheme);
@@ -1725,11 +2294,11 @@ async function generateDailyDevotionalRecord(dateStr: string): Promise<DailyDevo
     }
   }
 
-  // 2. Fallback to local presets if no theme, or if Gemini fails / is missing
+  // Fallback to local presets if no theme, or if Gemini fails / is missing
   if (!preset) {
     let pool = DEVOTIONAL_PRESETS;
     if (currentTheme !== 'none') {
-      const filtered = DEVOTIONAL_PRESETS.filter(p => p.theme === currentTheme);
+      const filtered = filterDevotionalPresetsByTheme(currentTheme);
       if (filtered.length > 0) {
         pool = filtered;
       }
@@ -1770,9 +2339,16 @@ async function generateDailyDevotionalRecord(dateStr: string): Promise<DailyDevo
   return await db.prepare('SELECT * FROM daily_devotionals WHERE date = ?').get(dateStr) as DailyDevotional;
 }
 
-export async function generateDevotionalAction(dateStr: string): Promise<{ success: boolean; devotional?: DailyDevotional; error?: string }> {
+export async function generateDevotionalAction(
+  dateStr: string,
+  options?: { useTheme?: boolean; themePrompt?: string }
+): Promise<{ success: boolean; devotional?: DailyDevotional; error?: string }> {
   try {
-    const created = await generateDailyDevotionalRecord(dateStr);
+    if (options?.useTheme && !options.themePrompt?.trim()) {
+      return { success: false, error: 'Please enter a theme prompt before generating a themed devotional.' };
+    }
+
+    const created = await generateDailyDevotionalRecord(dateStr, options);
     if (!created) {
       return { success: false, error: 'Failed to generate devotional' };
     }
@@ -1809,97 +2385,125 @@ export async function getActiveDevotional(dateStr: string): Promise<DailyDevotio
 
 // TWO-STEP OTP AUTH ACTIONS
 
+async function sendAdminOtpCode(
+  normalizedEmail: string
+): Promise<{ success: boolean; otpRequired?: boolean; fromEmail?: string; error?: string }> {
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+  await db.prepare('INSERT OR REPLACE INTO admin_otps (email, code, expires_at) VALUES (?, ?, ?)').run(normalizedEmail, otpCode, expiresAt);
+
+  const emailResult = await sendAdminOtpEmail(normalizedEmail, otpCode, expiresAt);
+
+  if (!emailResult.success) {
+    const isDev = process.env.NODE_ENV !== 'production';
+
+    if (isDev) {
+      console.log(`\n======================================================`);
+      console.log(`[DEV OTP] Email delivery failed; fallback code for ${normalizedEmail}`);
+      console.log(`CODE: ${otpCode}`);
+      console.log(`Error: ${emailResult.error || 'unknown'}`);
+      console.log(`Expires At: ${expiresAt}`);
+      console.log(`======================================================\n`);
+
+      try {
+        const scratchDir = path.resolve(process.cwd(), 'scratch');
+        if (!fs.existsSync(scratchDir)) {
+          fs.mkdirSync(scratchDir, { recursive: true });
+        }
+        fs.writeFileSync(
+          path.resolve(scratchDir, 'dev_last_otp.json'),
+          JSON.stringify({ email: normalizedEmail, code: otpCode, expiresAt, emailError: emailResult.error }, null, 2),
+          'utf8'
+        );
+      } catch (fsErr) {
+        console.error('Failed to write scratch/dev_last_otp.json:', fsErr);
+      }
+
+      return {
+        success: true,
+        otpRequired: true,
+        fromEmail: emailResult.fromEmail,
+      };
+    }
+
+    await db.prepare('DELETE FROM admin_otps WHERE LOWER(email) = ?').run(normalizedEmail);
+    return {
+      success: false,
+      error: emailResult.error
+        ? `Could not send verification email: ${emailResult.error}`
+        : 'Could not send verification email. Please try again later.',
+    };
+  }
+
+  return { success: true, otpRequired: true, fromEmail: emailResult.fromEmail };
+}
+
+export async function requestAdminForgotPassword(
+  email: string
+): Promise<{ success: boolean; fromEmail?: string; error?: string }> {
+  try {
+    const normalizedEmail = email.toLowerCase().trim();
+    if (!normalizedEmail) {
+      return { success: false, error: 'Email cannot be empty' };
+    }
+
+    if (await isSuperAdminUser(normalizedEmail)) {
+      const adminRecord = await db.prepare('SELECT * FROM admins WHERE LOWER(email) = ?').get(normalizedEmail) as AdminRecord | undefined;
+      if (!adminRecord || !adminHasPersonalPassword(adminRecord)) {
+        return {
+          success: false,
+          error: 'Super-administrator accounts use the global security password. Please contact another super-administrator for assistance.',
+        };
+      }
+    }
+
+    const adminRecord = await db.prepare('SELECT * FROM admins WHERE LOWER(email) = ?').get(normalizedEmail) as AdminRecord | undefined;
+    if (!adminRecord) {
+      return { success: false, error: 'This email is not registered as an authorized administrator' };
+    }
+
+    if (!adminHasPersonalPassword(adminRecord)) {
+      return {
+        success: false,
+        error: 'No password has been set yet. Leave the password field blank on the sign-in page to create one.',
+      };
+    }
+
+    return sendAdminOtpCode(normalizedEmail);
+  } catch (error: any) {
+    console.error('Error requesting admin password reset:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function requestAdminOtp(
   email: string,
   accessCode: string,
   deviceHash: string
-): Promise<{ success: boolean; otpRequired?: boolean; error?: string }> {
+): Promise<{ success: boolean; otpRequired?: boolean; setupPasswordRequired?: boolean; fromEmail?: string; error?: string }> {
   try {
-    // 1. Verify access code (matches stored admin_password hash or env fallback)
-    const stored = await db.prepare("SELECT value FROM settings WHERE key = 'admin_password'").get() as { value: string } | undefined;
-    const inputHash = crypto.createHash('sha256').update(accessCode).digest('hex');
-    
-    const envCode = process.env.ADMIN_ACCESS_CODE || 'parousie2026';
-    const envHash = crypto.createHash('sha256').update(envCode).digest('hex');
-
-    let isAccessCodeValid = false;
-    if (stored && (stored.value === inputHash || stored.value === accessCode)) {
-      isAccessCodeValid = true;
-      // Proactively migrate plain-text stored passwords to SHA-256
-      if (stored.value === accessCode && !/^[a-f0-9]{64}$/i.test(accessCode)) {
-        await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('admin_password', ?)").run(inputHash);
-      }
-    } else if (inputHash === envHash || accessCode === envCode) {
-      isAccessCodeValid = true;
-    }
-
-    if (!isAccessCodeValid) {
-      return { success: false, error: 'Incorrect administrator access code' };
-    }
-
-    // 2. Verify email exists in admins table or is the super-admin
     const normalizedEmail = email.toLowerCase().trim();
-    const isSuperAdmin = normalizedEmail === (process.env.SUPER_ADMIN_EMAIL || 'straightlineaffiliate@gmail.com').toLowerCase().trim();
-    
-    let adminExists = null;
-    if (isSuperAdmin) {
-      adminExists = { email: normalizedEmail, created_at: new Date().toISOString() };
-    } else {
-      adminExists = await db.prepare('SELECT * FROM admins WHERE LOWER(email) = ?').get(normalizedEmail) as AdminRecord | undefined;
+    if (!normalizedEmail) {
+      return { success: false, error: 'Email cannot be empty' };
     }
 
-    if (!adminExists) {
-      return { success: false, error: 'This email is not registered as an authorized administrator' };
+    const auth = await authenticateAdminLogin(normalizedEmail, accessCode);
+    if (!auth.success) {
+      return { success: false, error: auth.error };
     }
 
-    // 3. Check if this device is already verified
+    const adminRecord = auth.adminRecord;
+    const canSkipOtp = adminRecord
+      ? adminHasPersonalPassword(adminRecord)
+      : auth.usesGlobalPassword === true;
     const device = await db.prepare('SELECT * FROM admin_devices WHERE LOWER(email) = ? AND device_hash = ?').get(normalizedEmail, deviceHash) as AdminDevice | undefined;
-    if (device && device.verified === 1) {
-      // Set authenticated session cookie directly
-      const cookieStore = await cookies();
-      const sessionPayload = JSON.stringify({
-        email: normalizedEmail,
-        exp: Date.now() + 2 * 60 * 60 * 1000 // 2 hours
-      });
-      cookieStore.set('admin_auth', encryptSession(sessionPayload), {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 60 * 60 * 2, // 2 hours
-        path: '/'
-      });
+    if (canSkipOtp && device && device.verified === 1) {
+      await setAdminSession(normalizedEmail);
       return { success: true, otpRequired: false };
     }
 
-    // 4. Generate 6-digit OTP
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 mins expiry
-
-    // Save OTP to DB
-    await db.prepare('INSERT OR REPLACE INTO admin_otps (email, code, expires_at) VALUES (?, ?, ?)').run(normalizedEmail, otpCode, expiresAt);
-
-    // Write to terminal
-    console.log(`\n======================================================`);
-    console.log(`[DEV OTP] One-Time Password generated for ${normalizedEmail}`);
-    console.log(`CODE: ${otpCode}`);
-    console.log(`Expires At: ${expiresAt}`);
-    console.log(`======================================================\n`);
-
-    // Write to local scratch file: scratch/dev_last_otp.json
-    try {
-      const scratchDir = path.resolve(process.cwd(), 'scratch');
-      if (!fs.existsSync(scratchDir)) {
-        fs.mkdirSync(scratchDir, { recursive: true });
-      }
-      fs.writeFileSync(
-        path.resolve(scratchDir, 'dev_last_otp.json'),
-        JSON.stringify({ email: normalizedEmail, code: otpCode, expiresAt }, null, 2),
-        'utf8'
-      );
-    } catch (fsErr) {
-      console.error('Failed to write scratch/dev_last_otp.json:', fsErr);
-    }
-
-    return { success: true, otpRequired: true };
+    return sendAdminOtpCode(normalizedEmail);
   } catch (error: any) {
     console.error('Error requesting admin OTP:', error);
     return { success: false, error: error.message };
@@ -1909,51 +2513,57 @@ export async function requestAdminOtp(
 export async function verifyAdminOtp(
   email: string,
   otpCode: string,
-  deviceHash: string
-): Promise<{ success: boolean; error?: string }> {
+  deviceHash: string,
+  options?: { passwordReset?: boolean }
+): Promise<{ success: boolean; setupPasswordRequired?: boolean; resetPasswordRequired?: boolean; error?: string }> {
   try {
     const normalizedEmail = email.toLowerCase().trim();
     const cleanCode = otpCode.trim();
 
-    // Fetch OTP record
     const otpRecord = await db.prepare('SELECT * FROM admin_otps WHERE LOWER(email) = ?').get(normalizedEmail) as { email: string; code: string; expires_at: string } | undefined;
     if (!otpRecord) {
       return { success: false, error: 'No active OTP request found for this email' };
     }
 
-    // Check expiration
     if (new Date() > new Date(otpRecord.expires_at)) {
       return { success: false, error: 'This verification code has expired. Please request a new one.' };
     }
 
-    // Verify code
     if (otpRecord.code !== cleanCode) {
       return { success: false, error: 'Invalid verification code' };
     }
 
-    // Consume OTP (delete so it cannot be reused)
     await db.prepare('DELETE FROM admin_otps WHERE LOWER(email) = ?').run(normalizedEmail);
 
-    // Record verified device
+    const adminRecord = await db.prepare('SELECT * FROM admins WHERE LOWER(email) = ?').get(normalizedEmail) as AdminRecord | undefined;
+    const isEnvOnlySuperAdmin = !adminRecord && isSuperAdminEmail(normalizedEmail);
+
+    if (!adminRecord && !isEnvOnlySuperAdmin) {
+      return { success: false, error: 'This email is not registered as an authorized administrator' };
+    }
+
+    if (options?.passwordReset) {
+      if (!adminRecord || !adminHasPersonalPassword(adminRecord)) {
+        return { success: false, error: 'Password reset is not available for this account.' };
+      }
+
+      await setAdminSession(normalizedEmail, { pendingPasswordReset: true, maxAgeSeconds: 60 * 30 });
+      return { success: true, resetPasswordRequired: true };
+    }
+
+    const needsPasswordSetup = !!adminRecord && !adminHasPersonalPassword(adminRecord);
+    if (needsPasswordSetup) {
+      await setAdminSession(normalizedEmail, { pendingPasswordSetup: true, maxAgeSeconds: 60 * 30 });
+      return { success: true, setupPasswordRequired: true };
+    }
+
     await db.prepare(`
       INSERT INTO admin_devices (email, device_hash, verified, created_at)
       VALUES (?, ?, 1, ?)
       ON CONFLICT(email, device_hash) DO UPDATE SET verified = 1
     `).run(normalizedEmail, deviceHash, new Date().toISOString());
 
-    // Set authenticated session cookie
-    const cookieStore = await cookies();
-    const sessionPayload = JSON.stringify({
-      email: normalizedEmail,
-      exp: Date.now() + 2 * 60 * 60 * 1000 // 2 hours
-    });
-    cookieStore.set('admin_auth', encryptSession(sessionPayload), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 2, // 2 hours
-      path: '/'
-    });
-
+    await setAdminSession(normalizedEmail);
     return { success: true };
   } catch (error: any) {
     console.error('Error verifying admin OTP:', error);
@@ -1961,19 +2571,61 @@ export async function verifyAdminOtp(
   }
 }
 
+export async function completeAdminPasswordSetup(
+  password: string,
+  confirmPassword: string,
+  deviceHash: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getAdminSession();
+    if (!session?.pendingPasswordSetup && !session?.pendingPasswordReset) {
+      return { success: false, error: 'Your setup session has expired. Please sign in again.' };
+    }
+
+    const normalizedEmail = session.email.toLowerCase().trim();
+    const adminRecord = await db.prepare('SELECT * FROM admins WHERE LOWER(email) = ?').get(normalizedEmail) as AdminRecord | undefined;
+    if (!adminRecord) {
+      if (isSuperAdminEmail(normalizedEmail)) {
+        return { success: false, error: 'Super-administrators use the global security password and do not need a personal password.' };
+      }
+      return { success: false, error: 'This email is not registered as an authorized administrator' };
+    }
+
+    if (session.pendingPasswordSetup && adminHasPersonalPassword(adminRecord)) {
+      return { success: false, error: 'A password is already set for this account.' };
+    }
+
+    const trimmedPassword = password.trim();
+    const trimmedConfirm = confirmPassword.trim();
+    if (!trimmedPassword) {
+      return { success: false, error: 'Please enter a password.' };
+    }
+    if (trimmedPassword.length < 8) {
+      return { success: false, error: 'Your password must be at least 8 characters.' };
+    }
+    if (trimmedPassword !== trimmedConfirm) {
+      return { success: false, error: 'Passwords do not match.' };
+    }
+
+    await db.prepare('UPDATE admins SET password_hash = ? WHERE LOWER(email) = ?').run(hashAdminPassword(trimmedPassword), normalizedEmail);
+
+    await db.prepare(`
+      INSERT INTO admin_devices (email, device_hash, verified, created_at)
+      VALUES (?, ?, 1, ?)
+      ON CONFLICT(email, device_hash) DO UPDATE SET verified = 1
+    `).run(normalizedEmail, deviceHash, new Date().toISOString());
+
+    await setAdminSession(normalizedEmail);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error completing admin password setup:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 // ADMINS SECURITY CRUD
 
-export async function getAdmins(): Promise<AdminRecord[]> {
-  const isAuthed = await checkAdminAuth();
-  if (!isAuthed) return [];
-
-  // Restrict to super-admin only
-  const loggedInEmail = await getLoggedInAdminEmail();
-  const superAdminEmail = (process.env.SUPER_ADMIN_EMAIL || 'straightlineaffiliate@gmail.com').toLowerCase().trim();
-  if (loggedInEmail?.toLowerCase().trim() !== superAdminEmail) {
-    return [];
-  }
-
+async function listAdminsFromDb(): Promise<AdminRecord[]> {
   try {
     return await db.prepare('SELECT * FROM admins ORDER BY id ASC').all() as AdminRecord[];
   } catch (error) {
@@ -1982,15 +2634,26 @@ export async function getAdmins(): Promise<AdminRecord[]> {
   }
 }
 
+export async function getAdmins(): Promise<AdminRecord[]> {
+  const isAuthed = await checkAdminAuth();
+  if (!isAuthed) return [];
+
+  const loggedInEmail = await getLoggedInAdminEmail();
+  if (!(await isSuperAdminUser(loggedInEmail))) {
+    return [];
+  }
+
+  return listAdminsFromDb();
+}
+
 export async function addAdminEmail(email: string): Promise<{ success: boolean; error?: string }> {
   const isAuthed = await checkAdminAuth();
-  if (!isAuthed) return { success: false, error: 'Unauthorized' };
+  if (!isAuthed) return { success: false, error: 'Your session has expired. Please sign out and log in again.' };
 
   // Restrict to super-admin only
   const loggedInEmail = await getLoggedInAdminEmail();
-  const superAdminEmail = (process.env.SUPER_ADMIN_EMAIL || 'straightlineaffiliate@gmail.com').toLowerCase().trim();
-  if (loggedInEmail?.toLowerCase().trim() !== superAdminEmail) {
-    return { success: false, error: 'Only the Super-Administrator (straightlineaffiliate@gmail.com) can add other administrators.' };
+  if (!(await isSuperAdminUser(loggedInEmail))) {
+    return { success: false, error: `Only a Super-Administrator (${formatSuperAdminEmailsForDisplay()}) can add other administrators.` };
   }
 
   try {
@@ -2013,13 +2676,12 @@ export async function addAdminEmail(email: string): Promise<{ success: boolean; 
 
 export async function deleteAdminEmail(id: number): Promise<{ success: boolean; error?: string }> {
   const isAuthed = await checkAdminAuth();
-  if (!isAuthed) return { success: false, error: 'Unauthorized' };
+  if (!isAuthed) return { success: false, error: 'Your session has expired. Please sign out and log in again.' };
 
   // Restrict to super-admin only
   const loggedInEmail = await getLoggedInAdminEmail();
-  const superAdminEmail = (process.env.SUPER_ADMIN_EMAIL || 'straightlineaffiliate@gmail.com').toLowerCase().trim();
-  if (loggedInEmail?.toLowerCase().trim() !== superAdminEmail) {
-    return { success: false, error: 'Only the Super-Administrator (straightlineaffiliate@gmail.com) can revoke administrator access.' };
+  if (!(await isSuperAdminUser(loggedInEmail))) {
+    return { success: false, error: `Only a Super-Administrator (${formatSuperAdminEmailsForDisplay()}) can revoke administrator access.` };
   }
 
   try {
@@ -2027,8 +2689,8 @@ export async function deleteAdminEmail(id: number): Promise<{ success: boolean; 
     const adminToDelete = await db.prepare('SELECT email FROM admins WHERE id = ?').get(id) as { email: string } | undefined;
     if (adminToDelete) {
       const emailToDelete = adminToDelete.email.toLowerCase().trim();
-      if (emailToDelete === superAdminEmail) {
-        return { success: false, error: 'Cannot delete the super-administrator (straightlineaffiliate@gmail.com).' };
+      if (await isSuperAdminUser(emailToDelete)) {
+        return { success: false, error: `Cannot delete a super-administrator (${formatSuperAdminEmailsForDisplay()}).` };
       }
     }
 
@@ -2043,6 +2705,45 @@ export async function deleteAdminEmail(id: number): Promise<{ success: boolean; 
     return { success: true };
   } catch (error: any) {
     console.error('Error deleting admin email:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function setAdminSuperAdminStatus(
+  id: number,
+  isSuperAdmin: boolean
+): Promise<{ success: boolean; error?: string }> {
+  const isAuthed = await checkAdminAuth();
+  if (!isAuthed) return { success: false, error: 'Your session has expired. Please sign out and log in again.' };
+
+  const loggedInEmail = await getLoggedInAdminEmail();
+  if (!(await isSuperAdminUser(loggedInEmail))) {
+    return { success: false, error: 'Only a super-administrator can change super-admin access.' };
+  }
+
+  try {
+    const admin = await db.prepare('SELECT * FROM admins WHERE id = ?').get(id) as AdminRecord | undefined;
+    if (!admin) {
+      return { success: false, error: 'Administrator not found.' };
+    }
+
+    const normalizedEmail = admin.email.toLowerCase().trim();
+    if (isSuperAdminEmail(normalizedEmail) && !isSuperAdmin) {
+      return { success: false, error: 'This administrator is permanently configured as a super-administrator in the environment.' };
+    }
+
+    if (!isSuperAdmin && (await isSuperAdminUser(normalizedEmail))) {
+      const remainingSuperAdmins = await countSuperAdmins(id);
+      if (remainingSuperAdmins < 1) {
+        return { success: false, error: 'Cannot remove the last super-administrator.' };
+      }
+    }
+
+    await db.prepare('UPDATE admins SET is_super_admin = ? WHERE id = ?').run(isSuperAdmin ? 1 : 0, id);
+    revalidatePath('/admin/dashboard');
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating super-admin status:', error);
     return { success: false, error: error.message };
   }
 }
@@ -2075,6 +2776,23 @@ export async function submitContactForm(
       INSERT INTO contact_submissions (name, email, phone, message, created_at)
       VALUES (?, ?, ?, ?, ?)
     `).run(name.trim(), email.toLowerCase().trim(), phone ? phone.trim() : null, message.trim(), new Date().toISOString());
+
+    const recipients = await getAdminSectionNotificationEmails('contact_submissions');
+    if (recipients.length > 0) {
+      await sendEmail({
+        to: recipients,
+        subject: `New contact form message from ${name.trim()}`,
+        text: [
+          'A new message was submitted through the website contact form.',
+          '',
+          `Name: ${name.trim()}`,
+          `Email: ${email.trim()}`,
+          phone?.trim() ? `Phone: ${phone.trim()}` : null,
+          '',
+          message.trim(),
+        ].filter(Boolean).join('\n'),
+      });
+    }
 
     revalidatePath('/admin/dashboard');
     return { success: true };
@@ -2126,6 +2844,21 @@ export async function submitPrayerRequest(
       INSERT INTO prayer_requests (requester_name, request_text, is_anonymous, created_at)
       VALUES (?, ?, ?, ?)
     `).run(cleanName, requestText.trim(), anonymousInt, new Date().toISOString().split('T')[0]);
+
+    const recipients = await getAdminSectionNotificationEmails('prayer_moderation');
+    if (recipients.length > 0) {
+      await sendEmail({
+        to: recipients,
+        subject: 'New prayer request submitted',
+        text: [
+          'A new prayer request was posted on the public prayer wall.',
+          '',
+          isAnonymous ? 'Requester: Anonymous' : `Requester: ${cleanName || 'Not provided'}`,
+          '',
+          requestText.trim(),
+        ].join('\n'),
+      });
+    }
 
     revalidatePath('/');
     revalidatePath('/admin/dashboard');
