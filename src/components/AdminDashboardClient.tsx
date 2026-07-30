@@ -45,6 +45,7 @@ import {
   generateDevotionalAction,
   getAdmins,
   addAdminEmail,
+  prevalidateAdminInviteEmail,
   deleteAdminEmail,
   setAdminSuperAdminStatus,
   getContactSubmissions,
@@ -56,14 +57,24 @@ import {
   deleteBlogPost,
   saveMinistry,
   translateBlogContentAction,
+  translateAdminTextsAction,
   getMinistrySignups,
   deleteMinistrySignup,
   exportMinistrySignupsSpreadsheet
 } from '@/lib/actions';
 import AdminSectionContactExport from '@/components/AdminSectionContactExport';
+import AdminBilingualTranslateBar from '@/components/AdminBilingualTranslateBar';
+import AdminDocumentsMenu from '@/components/AdminDocumentsMenu';
 import { MINISTRY_SIGNUP_FIELDS, MinistrySignupSlug } from '@/lib/ministry-signup-fields';
 import { useRouter } from 'next/navigation';
 import { getYouTubeThumbnailUrl } from '@/lib/youtube';
+import {
+  BilingualTextField,
+  TranslateDirection,
+  applyTranslatedFields,
+  collectTextsForTranslation,
+  resolveTranslateSourceLang,
+} from '@/lib/admin-translate';
 import { 
   Church, 
   Globe2, 
@@ -162,6 +173,7 @@ export default function AdminDashboardClient({
   });
   const [adminList, setAdminList] = useState<AdminRecord[]>(initialAdmins);
   const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [newAdminEmailError, setNewAdminEmailError] = useState('');
   const [contactLogs, setContactLogs] = useState<ContactSubmission[]>([]);
   const [moderationPrayers, setModerationPrayers] = useState<PrayerRequest[]>([]);
   const [blogPostsList, setBlogPostsList] = useState<BlogPost[]>([]);
@@ -174,6 +186,8 @@ export default function AdminDashboardClient({
     date: ''
   });
   const [isTranslating, setIsTranslating] = useState(false);
+  const [bilingualTranslateDirection, setBilingualTranslateDirection] = useState<TranslateDirection>('auto');
+  const [isBilingualTranslating, setIsBilingualTranslating] = useState(false);
 
   // Ministry edit states
   const [ministriesList, setMinistriesList] = useState<Ministry[]>(initialMinistries);
@@ -398,15 +412,40 @@ export default function AdminDashboardClient({
     loadTabSpecificData();
   }, [activeTab]);
 
+  useEffect(() => {
+    if (activeTab !== 'admins' || !newAdminEmail.trim()) {
+      setNewAdminEmailError('');
+      return;
+    }
+
+    let cancelled = false;
+    const timeout = setTimeout(async () => {
+      const validation = await prevalidateAdminInviteEmail(newAdminEmail, language);
+      if (!cancelled) {
+        setNewAdminEmailError(validation.error || '');
+      }
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [activeTab, newAdminEmail, language]);
+
   // NEW HANDLERS FOR PAROUSIA BAPTIST MINISTRIES
   const handleAddAdminEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAdminEmail.trim()) return;
+    if (newAdminEmailError) {
+      triggerAlert(newAdminEmailError, 'error');
+      return;
+    }
     try {
       const res = await addAdminEmail(newAdminEmail.trim());
       if (res.success) {
         triggerAlert(language === 'fr_ht' ? 'Admin otorize avèk siksè!' : 'Admin authorized successfully!', 'success');
         setNewAdminEmail('');
+        setNewAdminEmailError('');
         const list = await getAdmins();
         setAdminList(list);
         router.refresh();
@@ -1126,6 +1165,218 @@ export default function AdminDashboardClient({
     });
   };
 
+  const runBilingualTranslation = async (
+    fields: BilingualTextField[],
+    onApply: (updated: BilingualTextField[]) => void,
+    contextLabel: string
+  ) => {
+    const payload = collectTextsForTranslation(fields, bilingualTranslateDirection, language);
+    if (!payload) {
+      triggerAlert(
+        language === 'fr_ht'
+          ? 'Tanpri mete tèks nan lang sous la anvan ou tradui.'
+          : 'Please enter source-language text before translating.',
+        'error'
+      );
+      return;
+    }
+
+    setIsBilingualTranslating(true);
+    triggerAlert(
+      language === 'fr_ht' ? 'Tradiksyon entèlijan an kouran...' : 'Smart translation in progress...',
+      'success'
+    );
+
+    try {
+      const res = await translateAdminTextsAction(payload.items, payload.fromLang, contextLabel);
+      if (res.success && res.translations) {
+        onApply(applyTranslatedFields(fields, res.translations, payload.fromLang));
+        triggerAlert(
+          language === 'fr_ht' ? 'Tradiksyon fini ak siksè!' : 'Translation completed successfully!',
+          'success'
+        );
+      } else {
+        triggerAlert(res.error || (language === 'fr_ht' ? 'Tradiksyon echwe.' : 'Translation failed.'), 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || (language === 'fr_ht' ? 'Erè pandan tradiksyon an.' : 'An error occurred during translation.'), 'error');
+    } finally {
+      setIsBilingualTranslating(false);
+    }
+  };
+
+  const getHomeTabBilingualFields = (): BilingualTextField[] => {
+    if (homeSubTab === 'about') {
+      return [
+        { id: 'about_title', kreyol: aboutUsTitleHt, english: aboutUsTitleEn },
+        { id: 'about_p1', kreyol: aboutUsP1Ht, english: aboutUsP1En },
+        { id: 'about_p2', kreyol: aboutUsP2Ht, english: aboutUsP2En },
+      ];
+    }
+
+    if (homeSubTab === 'beliefs') {
+      return [
+        { id: 'beliefs_title', kreyol: beliefsTitleHt, english: beliefsTitleEn },
+        { id: 'belief_1_title', kreyol: belief1TitleHt, english: belief1TitleEn },
+        { id: 'belief_1_desc', kreyol: belief1DescHt, english: belief1DescEn },
+        { id: 'belief_2_title', kreyol: belief2TitleHt, english: belief2TitleEn },
+        { id: 'belief_2_desc', kreyol: belief2DescHt, english: belief2DescEn },
+        { id: 'belief_3_title', kreyol: belief3TitleHt, english: belief3TitleEn },
+        { id: 'belief_3_desc', kreyol: belief3DescHt, english: belief3DescEn },
+        { id: 'belief_4_title', kreyol: belief4TitleHt, english: belief4TitleEn },
+        { id: 'belief_4_desc', kreyol: belief4DescHt, english: belief4DescEn },
+      ];
+    }
+
+    if (homeSubTab === 'team') {
+      const memberFields = teamMembers.flatMap((member, index) => ([
+        { id: `team_member_${index}_role`, kreyol: member.role_ht, english: member.role_en },
+        { id: `team_member_${index}_bio`, kreyol: member.bio_ht, english: member.bio_en },
+      ]));
+      return [
+        { id: 'team_title', kreyol: teamTitleHt, english: teamTitleEn },
+        ...memberFields,
+      ];
+    }
+
+    return [
+      { id: 'expect_title', kreyol: expectTitleHt, english: expectTitleEn },
+      { id: 'expect_p1', kreyol: expectP1Ht, english: expectP1En },
+    ];
+  };
+
+  const applyHomeTabBilingualFields = (updated: BilingualTextField[]) => {
+    const byId = Object.fromEntries(updated.map((field) => [field.id, field]));
+
+    if (homeSubTab === 'about') {
+      if (byId.about_title) {
+        setAboutUsTitleHt(byId.about_title.kreyol);
+        setAboutUsTitleEn(byId.about_title.english);
+      }
+      if (byId.about_p1) {
+        setAboutUsP1Ht(byId.about_p1.kreyol);
+        setAboutUsP1En(byId.about_p1.english);
+      }
+      if (byId.about_p2) {
+        setAboutUsP2Ht(byId.about_p2.kreyol);
+        setAboutUsP2En(byId.about_p2.english);
+      }
+      return;
+    }
+
+    if (homeSubTab === 'beliefs') {
+      if (byId.beliefs_title) {
+        setBeliefsTitleHt(byId.beliefs_title.kreyol);
+        setBeliefsTitleEn(byId.beliefs_title.english);
+      }
+      if (byId.belief_1_title) {
+        setBelief1TitleHt(byId.belief_1_title.kreyol);
+        setBelief1TitleEn(byId.belief_1_title.english);
+      }
+      if (byId.belief_1_desc) {
+        setBelief1DescHt(byId.belief_1_desc.kreyol);
+        setBelief1DescEn(byId.belief_1_desc.english);
+      }
+      if (byId.belief_2_title) {
+        setBelief2TitleHt(byId.belief_2_title.kreyol);
+        setBelief2TitleEn(byId.belief_2_title.english);
+      }
+      if (byId.belief_2_desc) {
+        setBelief2DescHt(byId.belief_2_desc.kreyol);
+        setBelief2DescEn(byId.belief_2_desc.english);
+      }
+      if (byId.belief_3_title) {
+        setBelief3TitleHt(byId.belief_3_title.kreyol);
+        setBelief3TitleEn(byId.belief_3_title.english);
+      }
+      if (byId.belief_3_desc) {
+        setBelief3DescHt(byId.belief_3_desc.kreyol);
+        setBelief3DescEn(byId.belief_3_desc.english);
+      }
+      if (byId.belief_4_title) {
+        setBelief4TitleHt(byId.belief_4_title.kreyol);
+        setBelief4TitleEn(byId.belief_4_title.english);
+      }
+      if (byId.belief_4_desc) {
+        setBelief4DescHt(byId.belief_4_desc.kreyol);
+        setBelief4DescEn(byId.belief_4_desc.english);
+      }
+      return;
+    }
+
+    if (homeSubTab === 'team') {
+      if (byId.team_title) {
+        setTeamTitleHt(byId.team_title.kreyol);
+        setTeamTitleEn(byId.team_title.english);
+      }
+      setTeamMembers((prev) =>
+        prev.map((member, index) => {
+          const role = byId[`team_member_${index}_role`];
+          const bio = byId[`team_member_${index}_bio`];
+          return {
+            ...member,
+            role_ht: role?.kreyol ?? member.role_ht,
+            role_en: role?.english ?? member.role_en,
+            bio_ht: bio?.kreyol ?? member.bio_ht,
+            bio_en: bio?.english ?? member.bio_en,
+          };
+        })
+      );
+      return;
+    }
+
+    if (byId.expect_title) {
+      setExpectTitleHt(byId.expect_title.kreyol);
+      setExpectTitleEn(byId.expect_title.english);
+    }
+    if (byId.expect_p1) {
+      setExpectP1Ht(byId.expect_p1.kreyol);
+      setExpectP1En(byId.expect_p1.english);
+    }
+  };
+
+  const handleTranslatePastorMessage = async () => {
+    await runBilingualTranslation(
+      [{ id: 'pastor_message', kreyol: pMsgHt, english: pMsgEn }],
+      (updated) => {
+        setPMsgHt(updated[0].kreyol);
+        setPMsgEn(updated[0].english);
+      },
+      'pastor welcome message'
+    );
+  };
+
+  const handleTranslateHomeTab = async () => {
+    await runBilingualTranslation(
+      getHomeTabBilingualFields(),
+      applyHomeTabBilingualFields,
+      `home page ${homeSubTab} content`
+    );
+  };
+
+  const handleTranslateMinistry = async () => {
+    await runBilingualTranslation(
+      [
+        { id: 'ministry_title', kreyol: minForm.title_kreyol, english: minForm.title_english },
+        { id: 'ministry_description', kreyol: minForm.description_kreyol, english: minForm.description_english },
+        { id: 'ministry_bullets', kreyol: minForm.bullets_kreyol, english: minForm.bullets_english },
+      ],
+      (updated) => {
+        const byId = Object.fromEntries(updated.map((field) => [field.id, field]));
+        setMinForm((prev) => ({
+          ...prev,
+          title_kreyol: byId.ministry_title?.kreyol ?? prev.title_kreyol,
+          title_english: byId.ministry_title?.english ?? prev.title_english,
+          description_kreyol: byId.ministry_description?.kreyol ?? prev.description_kreyol,
+          description_english: byId.ministry_description?.english ?? prev.description_english,
+          bullets_kreyol: byId.ministry_bullets?.kreyol ?? prev.bullets_kreyol,
+          bullets_english: byId.ministry_bullets?.english ?? prev.bullets_english,
+        }));
+      },
+      `${selectedMinistrySlug} ministry content`
+    );
+  };
+
   const handleAutoTranslate = async () => {
     const hasHt = blogForm.title_kreyol.trim() || blogForm.content_kreyol.trim();
     const hasEn = blogForm.title_english.trim() || blogForm.content_english.trim();
@@ -1140,13 +1391,21 @@ export default function AdminDashboardClient({
       return;
     }
 
-    let fromLang: 'en' | 'fr_ht' = 'fr_ht';
-    if (hasHt && !hasEn) {
-      fromLang = 'fr_ht';
-    } else if (hasEn && !hasHt) {
-      fromLang = 'en';
-    } else {
-      fromLang = language === 'fr_ht' ? 'fr_ht' : 'en';
+    let fromLang: 'en' | 'fr_ht' | null = resolveTranslateSourceLang(
+      bilingualTranslateDirection,
+      `${blogForm.title_kreyol}\n${blogForm.content_kreyol}`,
+      `${blogForm.title_english}\n${blogForm.content_english}`,
+      language
+    );
+
+    if (!fromLang) {
+      triggerAlert(
+        language === 'fr_ht'
+          ? 'Tanpri mete tèks an kreyòl oswa an anglè anvan ou tradui.'
+          : 'Please enter content in either Creole or English before translating.',
+        'error'
+      );
+      return;
     }
 
     setIsTranslating(true);
@@ -2517,6 +2776,8 @@ export default function AdminDashboardClient({
           </div>
 
           <div className="flex items-center gap-4">
+            <AdminDocumentsMenu language={language} />
+
             {/* Language Switcher */}
             <button 
               onClick={() => setLanguage(language === 'fr_ht' ? 'en' : 'fr_ht')}
@@ -2775,6 +3036,14 @@ export default function AdminDashboardClient({
                   />
                 </div>
               </div>
+
+              <AdminBilingualTranslateBar
+                language={language}
+                direction={bilingualTranslateDirection}
+                onDirectionChange={setBilingualTranslateDirection}
+                onTranslate={handleTranslatePastorMessage}
+                isTranslating={isBilingualTranslating}
+              />
 
               <div className="grid md:grid-cols-3 gap-6">
                 <div>
@@ -3965,6 +4234,14 @@ export default function AdminDashboardClient({
                   {language === 'fr_ht' ? 'Kisa pou Atann' : 'What to Expect'}
                 </button>
               </div>
+
+              <AdminBilingualTranslateBar
+                language={language}
+                direction={bilingualTranslateDirection}
+                onDirectionChange={setBilingualTranslateDirection}
+                onTranslate={handleTranslateHomeTab}
+                isTranslating={isBilingualTranslating}
+              />
 
               <form onSubmit={handleHomeTabsSubmit} className="space-y-6">
                 
@@ -6200,7 +6477,7 @@ export default function AdminDashboardClient({
                     <label className="block text-xs font-bold text-slate-400 mb-2">
                       {language === 'fr_ht' ? 'Adrès Imel Administratè a' : 'Administrator Email Address'}
                     </label>
-                    <input 
+                    <input
                       type="email"
                       value={newAdminEmail}
                       onChange={(e) => setNewAdminEmail(e.target.value)}
@@ -6208,10 +6485,16 @@ export default function AdminDashboardClient({
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-amber-500 font-semibold"
                       required
                     />
+                    {newAdminEmailError && (
+                      <p className="text-[11px] text-rose-400 mt-2 leading-relaxed font-semibold">
+                        {newAdminEmailError}
+                      </p>
+                    )}
                   </div>
                   <button
                     type="submit"
-                    className="w-full sm:w-auto px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 transition-all text-slate-950 text-xs font-bold cursor-pointer inline-flex items-center justify-center gap-1.5 shrink-0"
+                    disabled={Boolean(newAdminEmailError)}
+                    className="w-full sm:w-auto px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 transition-all text-slate-950 text-xs font-bold cursor-pointer inline-flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Plus className="w-4 h-4" />
                     <span>{t.adminAdminsBtnAdd}</span>
@@ -6513,17 +6796,15 @@ export default function AdminDashboardClient({
                       />
                     </div>
 
-                    {/* Auto-Translate Button */}
-                    <div className="md:col-span-2 flex justify-end">
-                      <button
-                        type="button"
-                        onClick={handleAutoTranslate}
-                        disabled={isTranslating}
-                        className="px-3.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 hover:border-amber-500/50 hover:bg-amber-500/20 text-amber-400 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-lg disabled:opacity-50 disabled:pointer-events-none hover:-translate-y-0.5 active:translate-y-0"
-                      >
-                        <Wand2 className={`w-3.5 h-3.5 ${isTranslating ? 'animate-spin' : ''}`} />
-                        <span>{isTranslating ? (language === 'fr_ht' ? 'Y ap Tradui...' : 'Translating...') : (language === 'fr_ht' ? '✨ Auto-Tradui' : '✨ Auto-Translate')}</span>
-                      </button>
+                    {/* Auto-Translate Controls */}
+                    <div className="md:col-span-2">
+                      <AdminBilingualTranslateBar
+                        language={language}
+                        direction={bilingualTranslateDirection}
+                        onDirectionChange={setBilingualTranslateDirection}
+                        onTranslate={handleAutoTranslate}
+                        isTranslating={isTranslating}
+                      />
                     </div>
 
                     {/* Contents */}
@@ -6668,6 +6949,14 @@ export default function AdminDashboardClient({
                   );
                 })}
               </div>
+
+              <AdminBilingualTranslateBar
+                language={language}
+                direction={bilingualTranslateDirection}
+                onDirectionChange={setBilingualTranslateDirection}
+                onTranslate={handleTranslateMinistry}
+                isTranslating={isBilingualTranslating}
+              />
 
               {/* Form */}
               <form onSubmit={handleSaveMinistry} className="p-5 rounded-2xl bg-slate-950/30 border border-slate-850 space-y-4">

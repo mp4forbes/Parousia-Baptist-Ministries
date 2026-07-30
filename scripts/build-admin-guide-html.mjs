@@ -1,0 +1,452 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { execSync } from 'node:child_process';
+
+const docsDir = path.join(process.cwd(), 'docs');
+const publicDir = path.join(process.cwd(), 'public/admin-guide');
+const screenshotsSource = path.join(docsDir, 'screenshots');
+const screenshotsTarget = path.join(publicDir, 'screenshots');
+const CHURCH_LOGO_PUBLIC_PATH = '/admin-guide/church-logo.png';
+const CHURCH_LOGO_SOURCE_CANDIDATES = [
+  path.join(process.cwd(), 'data/assets/logo_1779287428274.png'),
+  path.join(process.cwd(), 'data/assets/logo_1785327385228.png'),
+];
+const SLH_LOGO_SOURCE = path.join(process.cwd(), 'docs/assets/straight-line-holdings-logo.png');
+const SLH_LOGO_PUBLIC_PATH = '/admin-guide/straight-line-holdings-logo.png';
+
+function syncStraightLineLogo() {
+  const targetPath = path.join(publicDir, 'straight-line-holdings-logo.png');
+  if (!fs.existsSync(SLH_LOGO_SOURCE)) {
+    console.warn('Straight-Line Holdings logo source not found.');
+    return SLH_LOGO_PUBLIC_PATH;
+  }
+
+  fs.copyFileSync(SLH_LOGO_SOURCE, targetPath);
+  console.log(`Synced Straight-Line Holdings logo to ${targetPath}`);
+  return SLH_LOGO_PUBLIC_PATH;
+}
+
+function syncChurchLogo() {
+  const targetPath = path.join(publicDir, 'church-logo.png');
+  const sourcePath = CHURCH_LOGO_SOURCE_CANDIDATES.find((candidate) => fs.existsSync(candidate));
+
+  if (!sourcePath) {
+    console.warn('Church logo source not found; admin guide will reference a missing image.');
+    return CHURCH_LOGO_PUBLIC_PATH;
+  }
+
+  fs.copyFileSync(sourcePath, targetPath);
+  console.log(`Synced church logo from ${sourcePath} to ${targetPath}`);
+  return CHURCH_LOGO_PUBLIC_PATH;
+}
+
+const bilingualDocuments = [
+  {
+    id: 'admin-guide',
+    inputEn: 'Parousia-Admin-Guide-en.md',
+    inputHt: 'Parousia-Admin-Guide-ht.md',
+    output: 'Parousia-Admin-Guide.html',
+    titleEn: 'Parousia Baptist Ministries — Administration Guide',
+    titleHt: 'Parousia Baptist Ministries — Gid Administrasyon',
+    kind: 'guide',
+  },
+  {
+    id: 'completion-letter',
+    inputEn: 'Parousia-Completion-Letter-en.md',
+    inputHt: 'Parousia-Completion-Letter-ht.md',
+    output: 'Parousia-Completion-Letter.html',
+    titleEn: 'Parousia Baptist Ministries — Project Completion Letter',
+    titleHt: 'Parousia Baptist Ministries — Lèt Fini Pwojè',
+    kind: 'letter',
+  },
+];
+
+fs.mkdirSync(publicDir, { recursive: true });
+fs.mkdirSync(screenshotsTarget, { recursive: true });
+
+const churchLogoPath = syncChurchLogo();
+syncStraightLineLogo();
+
+if (fs.existsSync(screenshotsSource)) {
+  for (const file of fs.readdirSync(screenshotsSource)) {
+    if (/\.(png|jpe?g|webp)$/i.test(file)) {
+      fs.copyFileSync(path.join(screenshotsSource, file), path.join(screenshotsTarget, file));
+    }
+  }
+}
+
+function stripTableOfContents(mdPath) {
+  const strippedPath = path.join(publicDir, `.tmp-${path.basename(mdPath)}`);
+  execSync(`sed '/^## Table of Contents$/,/^---$/d' "${mdPath}" > "${strippedPath}"`);
+  return strippedPath;
+}
+
+function pandocFragment(mdPath) {
+  const strippedPath = stripTableOfContents(mdPath);
+  try {
+    return execSync(
+      `pandoc "${strippedPath}" -t html5 --resource-path="${docsDir}:${publicDir}"`,
+      { encoding: 'utf8' }
+    );
+  } finally {
+    fs.rmSync(strippedPath, { force: true });
+  }
+}
+
+function wrapBilingualDocument({ titleEn, titleHt, enBody, htBody, logoPath, kind = 'guide' }) {
+  const escapeAttr = (value) =>
+    value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+  const isLetter = kind === 'letter';
+  const headerHtml = isLetter
+    ? `<header class="doc-header doc-header--letter">
+    <div class="doc-header__spacer" aria-hidden="true"></div>
+    <div class="doc-header__spacer" aria-hidden="true"></div>
+    <button type="button" class="lang-toggle" id="lang-toggle" aria-label="Switch language">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+        <path d="M2 12h20"></path>
+      </svg>
+      <span id="lang-toggle-label">Kreyòl</span>
+    </button>
+  </header>`
+    : `<header class="doc-header">
+    <div class="doc-header__spacer" aria-hidden="true"></div>
+    <div class="doc-header__logo">
+      <a href="/" title="Parousia Baptist Ministries">
+        <img src="${logoPath}" alt="Église Baptiste de la Parousie" />
+      </a>
+    </div>
+    <button type="button" class="lang-toggle" id="lang-toggle" aria-label="Switch language">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+        <path d="M2 12h20"></path>
+      </svg>
+      <span id="lang-toggle-label">Kreyòl</span>
+    </button>
+  </header>`;
+
+  const letterStyles = isLetter
+    ? `
+    .doc-header--letter {
+      grid-template-columns: 1fr auto;
+    }
+    .doc-lang .letter-title-row,
+    .doc-lang .letter-signature {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      margin: 0 0 1.5rem;
+    }
+    .doc-lang .letter-title-row h1 {
+      margin: 0;
+      font-size: 1.75rem;
+      line-height: 1.2;
+    }
+    .doc-lang .letter-brand-logo {
+      width: 88px;
+      height: auto;
+      flex-shrink: 0;
+      border: none;
+      border-radius: 0;
+      margin: 0;
+    }
+    .doc-lang .letter-signature {
+      margin-top: 1.5rem;
+      align-items: flex-start;
+    }
+    .doc-lang .letter-signature-contact {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 0.95rem;
+      line-height: 1.55;
+      color: var(--text);
+    }
+    .doc-lang .letter-signature-contact strong {
+      font-size: 1rem;
+    }
+    @media (max-width: 640px) {
+      .doc-lang .letter-title-row,
+      .doc-lang .letter-signature {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .doc-lang .letter-title-row h1 {
+        font-size: 1.4rem;
+      }
+    }`
+    : '';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeAttr(titleEn)}</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --text: #1e293b;
+      --muted: #475569;
+      --border: #e2e8f0;
+      --accent: #d97706;
+      --accent-hover: #b45309;
+      --surface: #f8fafc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--text);
+      background: #fff;
+      line-height: 1.6;
+    }
+    .doc-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(8px);
+    }
+    .doc-header__spacer { min-width: 0; }
+    .doc-header__logo {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .doc-header__logo img {
+      height: 64px;
+      width: auto;
+      max-width: min(360px, 72vw);
+      object-fit: contain;
+    }
+    .lang-toggle {
+      justify-self: end;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      background: var(--surface);
+      color: var(--accent);
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .lang-toggle:hover {
+      background: #f1f5f9;
+      transform: scale(1.03);
+    }
+    .lang-toggle svg {
+      width: 1rem;
+      height: 1rem;
+      flex-shrink: 0;
+    }
+    .doc-content {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+    .doc-lang { display: none; }
+    .doc-lang.is-active { display: block; }
+    .doc-lang h1, .doc-lang h2, .doc-lang h3, .doc-lang h4 {
+      font-family: Georgia, "Times New Roman", serif;
+      line-height: 1.25;
+    }
+    .doc-lang img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      margin: 1rem 0;
+    }
+    .doc-lang a { color: #2563eb; }
+    .doc-lang code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.9em;
+      background: #f1f5f9;
+      padding: 0.1em 0.35em;
+      border-radius: 0.25rem;
+    }
+    .doc-lang pre {
+      overflow-x: auto;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 0.5rem;
+    }
+    .doc-lang table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.95rem;
+    }
+    .doc-lang th, .doc-lang td {
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    .doc-lang th { background: var(--surface); }${letterStyles}
+    @media (max-width: 640px) {
+      .doc-header {
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+          "logo lang"
+          "logo lang";
+      }
+      .doc-header__spacer { display: none; }
+      .doc-header__logo { grid-area: logo; justify-content: flex-start; }
+      .lang-toggle { grid-area: lang; }
+      .doc-header__logo img { height: 44px; }
+    }
+  </style>
+</head>
+<body>
+  ${headerHtml}
+
+  <main class="doc-content">
+    <article class="doc-lang is-active" id="doc-en" lang="en" data-title="${escapeAttr(titleEn)}">
+      ${enBody}
+    </article>
+    <article class="doc-lang" id="doc-ht" lang="ht" data-title="${escapeAttr(titleHt)}">
+      ${htBody}
+    </article>
+  </main>
+
+  <script>
+    (function () {
+      var STORAGE_KEY = 'church_lang';
+      var toggle = document.getElementById('lang-toggle');
+      var label = document.getElementById('lang-toggle-label');
+      var en = document.getElementById('doc-en');
+      var ht = document.getElementById('doc-ht');
+
+      function normalizeLang(value) {
+        return value === 'fr_ht' || value === 'ht' ? 'ht' : 'en';
+      }
+
+      function readLang() {
+        try {
+          return normalizeLang(localStorage.getItem(STORAGE_KEY) || 'en');
+        } catch (e) {
+          return 'en';
+        }
+      }
+
+      function writeLang(lang) {
+        try {
+          localStorage.setItem(STORAGE_KEY, lang === 'ht' ? 'fr_ht' : 'en');
+        } catch (e) {}
+      }
+
+      function applyLang(lang) {
+        var isHt = lang === 'ht';
+        en.classList.toggle('is-active', !isHt);
+        ht.classList.toggle('is-active', isHt);
+        document.documentElement.lang = isHt ? 'ht' : 'en';
+        document.title = isHt ? ht.getAttribute('data-title') : en.getAttribute('data-title');
+        label.textContent = isHt ? 'English' : 'Kreyòl';
+        toggle.setAttribute('aria-label', isHt ? 'Switch to English' : 'Chanje an Kreyòl');
+      }
+
+      applyLang(readLang());
+
+      toggle.addEventListener('click', function () {
+        var next = en.classList.contains('is-active') ? 'ht' : 'en';
+        writeLang(next);
+        applyLang(next);
+      });
+    })();
+  </script>
+</body>
+</html>
+`;
+}
+
+for (const doc of bilingualDocuments) {
+  const enPath = path.join(docsDir, doc.inputEn);
+  const htPath = path.join(docsDir, doc.inputHt);
+  const outputPath = path.join(publicDir, doc.output);
+
+  if (!fs.existsSync(enPath) || !fs.existsSync(htPath)) {
+    console.warn(`Skipping ${doc.output}: missing source file(s)`);
+    continue;
+  }
+
+  const html = wrapBilingualDocument({
+    titleEn: doc.titleEn,
+    titleHt: doc.titleHt,
+    enBody: pandocFragment(enPath),
+    htBody: pandocFragment(htPath),
+    logoPath: churchLogoPath,
+    kind: doc.kind || 'guide',
+  });
+
+  fs.writeFileSync(outputPath, html, 'utf8');
+  console.log(`Built ${outputPath}`);
+}
+
+const indexHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Parousia Baptist Ministries — Admin Documents</title>
+  <style>
+    body { font-family: Georgia, serif; max-width: 720px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #1e293b; }
+    h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
+    p { color: #475569; }
+    ul { padding-left: 1.25rem; }
+    a { color: #2563eb; text-decoration: none; font-weight: 600; }
+    a:hover { text-decoration: underline; }
+    .section { margin-top: 2rem; }
+    .logo { display: block; margin: 0 auto 1.5rem; height: 80px; width: auto; max-width: min(360px, 90vw); }
+  </style>
+</head>
+<body>
+  <img class="logo" src="${churchLogoPath}" alt="Église Baptiste de la Parousie" />
+  <h1>Parousia Baptist Ministries</h1>
+  <p>Official administration documents — English &amp; Kreyòl (toggle inside each document)</p>
+  <div class="section">
+    <h2>Administration Guide</h2>
+    <ul>
+      <li><a href="/admin-guide/Parousia-Admin-Guide.html">Website Administration Guide / Gid Administrasyon</a></li>
+    </ul>
+  </div>
+  <div class="section">
+    <h2>Project Letter</h2>
+    <ul>
+      <li><a href="/admin-guide/Parousia-Completion-Letter.html">Project Completion Letter / Lèt Fini Pwojè</a></li>
+    </ul>
+  </div>
+</body>
+</html>
+`;
+
+fs.writeFileSync(path.join(publicDir, 'index.html'), indexHtml, 'utf8');
+console.log(`Built ${path.join(publicDir, 'index.html')}`);
+
+// Remove legacy single-language HTML files if present
+for (const legacy of [
+  'Parousia-Admin-Guide-en.html',
+  'Parousia-Admin-Guide-ht.html',
+  'Parousia-Completion-Letter-en.html',
+  'Parousia-Completion-Letter-ht.html',
+]) {
+  const legacyPath = path.join(publicDir, legacy);
+  if (fs.existsSync(legacyPath)) {
+    fs.rmSync(legacyPath);
+    console.log(`Removed legacy ${legacyPath}`);
+  }
+}

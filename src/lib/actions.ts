@@ -14,6 +14,14 @@ import { execSync } from 'child_process';
 import crypto from 'crypto';
 import { getAssetDir, getBackupDir } from './paths';
 import { formatSuperAdminEmailsForDisplay, getPrimarySuperAdminEmail, getSuperAdminEmails, isSuperAdminEmail } from './super-admin';
+import {
+  getAdminEmailFormatError,
+  getUnauthorizedAdminEmailError,
+  isAuthorizedAdminEmail,
+  isValidAdminEmailFormat,
+  normalizeAdminEmail,
+  validateAdminEmailForInvite,
+} from './admin-email';
 
 // HELPERS TO GET DATA (Server Components will call these directly)
 
@@ -2388,6 +2396,14 @@ export async function getActiveDevotional(dateStr: string): Promise<DailyDevotio
 async function sendAdminOtpCode(
   normalizedEmail: string
 ): Promise<{ success: boolean; otpRequired?: boolean; fromEmail?: string; error?: string }> {
+  if (!isValidAdminEmailFormat(normalizedEmail)) {
+    return { success: false, error: 'Please enter a valid email address.' };
+  }
+
+  if (!(await isAuthorizedAdminEmail(normalizedEmail))) {
+    return { success: false, error: getUnauthorizedAdminEmailError() };
+  }
+
   const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
@@ -2443,9 +2459,14 @@ export async function requestAdminForgotPassword(
   email: string
 ): Promise<{ success: boolean; fromEmail?: string; error?: string }> {
   try {
-    const normalizedEmail = email.toLowerCase().trim();
-    if (!normalizedEmail) {
-      return { success: false, error: 'Email cannot be empty' };
+    const normalizedEmail = normalizeAdminEmail(email);
+    const formatError = getAdminEmailFormatError(normalizedEmail);
+    if (formatError) {
+      return { success: false, error: formatError };
+    }
+
+    if (!(await isAuthorizedAdminEmail(normalizedEmail))) {
+      return { success: false, error: getUnauthorizedAdminEmailError() };
     }
 
     if (await isSuperAdminUser(normalizedEmail)) {
@@ -2477,15 +2498,69 @@ export async function requestAdminForgotPassword(
   }
 }
 
+export async function prevalidateAdminInviteEmail(
+  email: string,
+  language: 'en' | 'fr_ht' = 'en'
+): Promise<{ valid: boolean; error?: string }> {
+  return validateAdminEmailForInvite(email, language);
+}
+
+export async function prevalidateAdminLoginEmail(
+  email: string,
+  language: 'en' | 'fr_ht' = 'en'
+): Promise<{ validFormat: boolean; authorized: boolean; error?: string }> {
+  const formatError = getAdminEmailFormatError(email, language);
+  if (formatError) {
+    return { validFormat: false, authorized: false, error: formatError };
+  }
+
+  const authorized = await isAuthorizedAdminEmail(email);
+  if (!authorized) {
+    return {
+      validFormat: true,
+      authorized: false,
+      error: getUnauthorizedAdminEmailError(language),
+    };
+  }
+
+  return { validFormat: true, authorized: true };
+}
+
+export async function checkAdminDeviceTrusted(
+  email: string,
+  deviceHash: string
+): Promise<{ trusted: boolean }> {
+  try {
+    const normalizedEmail = normalizeAdminEmail(email);
+    if (!normalizedEmail || !deviceHash || !(await isAuthorizedAdminEmail(normalizedEmail))) {
+      return { trusted: false };
+    }
+
+    const device = await db.prepare(
+      'SELECT verified FROM admin_devices WHERE LOWER(email) = ? AND device_hash = ?'
+    ).get(normalizedEmail, deviceHash) as { verified: number } | undefined;
+
+    return { trusted: device?.verified === 1 };
+  } catch (error) {
+    console.error('Error checking admin device trust:', error);
+    return { trusted: false };
+  }
+}
+
 export async function requestAdminOtp(
   email: string,
   accessCode: string,
   deviceHash: string
 ): Promise<{ success: boolean; otpRequired?: boolean; setupPasswordRequired?: boolean; fromEmail?: string; error?: string }> {
   try {
-    const normalizedEmail = email.toLowerCase().trim();
-    if (!normalizedEmail) {
-      return { success: false, error: 'Email cannot be empty' };
+    const normalizedEmail = normalizeAdminEmail(email);
+    const formatError = getAdminEmailFormatError(normalizedEmail);
+    if (formatError) {
+      return { success: false, error: formatError };
+    }
+
+    if (!(await isAuthorizedAdminEmail(normalizedEmail))) {
+      return { success: false, error: getUnauthorizedAdminEmailError() };
     }
 
     const auth = await authenticateAdminLogin(normalizedEmail, accessCode);
@@ -2657,9 +2732,10 @@ export async function addAdminEmail(email: string): Promise<{ success: boolean; 
   }
 
   try {
-    const normalizedEmail = email.toLowerCase().trim();
-    if (!normalizedEmail) {
-      return { success: false, error: 'Email cannot be empty' };
+    const normalizedEmail = normalizeAdminEmail(email);
+    const inviteValidation = await validateAdminEmailForInvite(normalizedEmail);
+    if (!inviteValidation.valid) {
+      return { success: false, error: inviteValidation.error };
     }
 
     await db.prepare('INSERT INTO admins (email, created_at) VALUES (?, ?)').run(normalizedEmail, new Date().toISOString().split('T')[0]);
@@ -3034,6 +3110,106 @@ Return a JSON object conforming to this exact structure:
     };
   } catch (error: any) {
     console.error('Error in translateBlogContentAction:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function translateAdminTextsAction(
+  items: Array<{ id: string; text: string }>,
+  fromLang: 'en' | 'fr_ht',
+  contextLabel = 'church website content'
+): Promise<{ success: boolean; translations?: Record<string, string>; error?: string }> {
+  const isAuthed = await checkAdminAuth();
+  if (!isAuthed) return { success: false, error: 'Unauthorized' };
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return { success: false, error: 'GEMINI_API_KEY is not defined in environment variables' };
+  }
+
+  const filteredItems = items.filter((item) => item.text.trim().length > 0);
+  if (filteredItems.length === 0) {
+    return { success: false, error: 'No text provided for translation' };
+  }
+
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const sourceLangName = fromLang === 'en' ? 'English' : 'Haitian Creole';
+    const targetLangName = fromLang === 'en' ? 'Haitian Creole' : 'English';
+
+    const prompt = `You are a professional Christian translator for Parousia Baptist Ministries.
+Translate the following ${contextLabel} fields from ${sourceLangName} to ${targetLangName}.
+Preserve markdown formatting, line breaks, and bullet lists exactly where present.
+
+Input JSON:
+${JSON.stringify(filteredItems, null, 2)}
+
+Return a JSON object with this exact structure:
+{
+  "translations": [
+    { "id": "same id from input", "text": "translated text in ${targetLangName}" }
+  ]
+}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [{ text: prompt }],
+          },
+        ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: 'OBJECT',
+            properties: {
+              translations: {
+                type: 'ARRAY',
+                items: {
+                  type: 'OBJECT',
+                  properties: {
+                    id: { type: 'STRING' },
+                    text: { type: 'STRING' },
+                  },
+                  required: ['id', 'text'],
+                },
+              },
+            },
+            required: ['translations'],
+          },
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { success: false, error: `Gemini API call failed: ${errorText}` };
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      return { success: false, error: 'Empty response text from Gemini' };
+    }
+
+    const parsed = JSON.parse(text) as {
+      translations: Array<{ id: string; text: string }>;
+    };
+
+    const translations: Record<string, string> = {};
+    for (const entry of parsed.translations || []) {
+      if (entry.id && typeof entry.text === 'string') {
+        translations[entry.id] = entry.text;
+      }
+    }
+
+    return { success: true, translations };
+  } catch (error: any) {
+    console.error('Error in translateAdminTextsAction:', error);
     return { success: false, error: error.message };
   }
 }

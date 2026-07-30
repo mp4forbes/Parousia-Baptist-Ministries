@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition, useEffect } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
-import { requestAdminOtp, verifyAdminOtp, completeAdminPasswordSetup, requestAdminForgotPassword } from '@/lib/actions';
+import { requestAdminOtp, verifyAdminOtp, completeAdminPasswordSetup, requestAdminForgotPassword, checkAdminDeviceTrusted, prevalidateAdminLoginEmail } from '@/lib/actions';
 import { useRouter } from 'next/navigation';
 import { Lock, Eye, EyeOff, Sparkles, Globe2, Clock, Mail, Key, ArrowLeft } from 'lucide-react';
 
@@ -45,6 +45,8 @@ export default function AdminLoginClient({
   const [error, setError] = useState('');
   const [isPending, startTransition] = useTransition();
   const [timer, setTimer] = useState(600);
+  const [deviceTrusted, setDeviceTrusted] = useState(false);
+  const [emailValidationError, setEmailValidationError] = useState('');
 
   useEffect(() => {
     let hash = localStorage.getItem('parousia_device_hash');
@@ -73,6 +75,40 @@ export default function AdminLoginClient({
     return () => clearInterval(interval);
   }, [step, timer]);
 
+  useEffect(() => {
+    if (!deviceHash || !email.trim() || step !== 1 || viewMode !== 'login') {
+      setDeviceTrusted(false);
+      setEmailValidationError('');
+      return;
+    }
+
+    let cancelled = false;
+
+    const timeout = setTimeout(async () => {
+      const validation = await prevalidateAdminLoginEmail(email, language);
+      if (cancelled) return;
+
+      setEmailValidationError(validation.error || '');
+
+      if (!validation.authorized) {
+        setDeviceTrusted(false);
+        return;
+      }
+
+      const res = await checkAdminDeviceTrusted(email, deviceHash);
+      if (!cancelled) {
+        setDeviceTrusted(res.trusted);
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [email, deviceHash, step, viewMode, language]);
+
+  const loginButtonLabel = deviceTrusted ? t.loginBtnLogin : t.loginBtnNext;
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -83,6 +119,10 @@ export default function AdminLoginClient({
     e.preventDefault();
     if (!email.trim()) {
       setError(language === 'fr_ht' ? 'Tanpri antre adrès imel ou.' : 'Please enter your email address.');
+      return;
+    }
+    if (emailValidationError) {
+      setError(emailValidationError);
       return;
     }
     setError('');
@@ -245,6 +285,11 @@ export default function AdminLoginClient({
                   />
                   <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 </div>
+                {emailValidationError && (
+                  <p className="text-[11px] text-rose-400 mt-2 leading-relaxed font-semibold">
+                    {emailValidationError}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -294,7 +339,7 @@ export default function AdminLoginClient({
 
               <button
                 type="submit"
-                disabled={isPending}
+                disabled={isPending || Boolean(emailValidationError)}
                 className="w-full py-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 disabled:opacity-50 text-slate-950 font-extrabold text-sm shadow-xl shadow-amber-500/10 cursor-pointer transition-all flex items-center justify-center gap-2"
               >
                 {isPending ? (
@@ -302,7 +347,7 @@ export default function AdminLoginClient({
                 ) : (
                   <Sparkles className="w-4 h-4" />
                 )}
-                <span>{isPending ? t.btnLoading : t.loginBtnNext}</span>
+                <span>{isPending ? t.btnLoading : loginButtonLabel}</span>
               </button>
             </form>
           ) : step === 1 && viewMode === 'forgot' ? (

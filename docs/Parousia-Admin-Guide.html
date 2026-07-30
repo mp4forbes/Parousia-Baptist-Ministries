@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.10.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Parousia Baptist Ministries Admin Guide</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Parousia Baptist Ministries Admin Guide</h1>
+</header>
+<h1 id="parousia-baptist-ministries">Parousia Baptist Ministries</h1>
+<h2 id="website-administration-guide">Website Administration Guide</h2>
+<p><strong>Prepared for:</strong> Pastor and Church Leadership<br />
+<strong>Prepared by:</strong> Straight Line Projects<br />
+<strong>Date:</strong> July 29, 2026<br />
+<strong>Version:</strong> 1.0</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol type="1">
+<li><a href="#1-introduction">Introduction</a></li>
+<li><a href="#2-accessing-the-admin-portal">Accessing the Admin
+Portal</a></li>
+<li><a href="#3-logging-in-secure-two-step-verification">Logging In
+(Secure Two-Step Verification)</a></li>
+<li><a href="#4-admin-dashboard-overview">Admin Dashboard
+Overview</a></li>
+<li><a href="#5-global-settings">Global Settings</a></li>
+<li><a href="#6-configure-home-page-tabs">Configure Home Page
+Tabs</a></li>
+<li><a href="#7-service-schedules">Service Schedules</a></li>
+<li><a href="#8-haiti-missions--local-outreach">Haiti Missions &amp;
+Local Outreach</a></li>
+<li><a href="#9-ministries-women-men-children-missions">Ministries
+(Women, Men, Children, Missions)</a></li>
+<li><a href="#10-events--registrations">Events &amp;
+Registrations</a></li>
+<li><a href="#11-sermons--youtube-sync">Sermons &amp; YouTube
+Sync</a></li>
+<li><a href="#12-daily-devotional--theme-settings">Daily Devotional
+&amp; Theme Settings</a></li>
+<li><a href="#13-pastors-blog">Pastor’s Blog</a></li>
+<li><a href="#14-contact-form-submissions">Contact Form
+Submissions</a></li>
+<li><a href="#15-prayer-wall-moderation">Prayer Wall Moderation</a></li>
+<li><a href="#16-managing-additional-administrators">Managing Additional
+Administrators</a></li>
+<li><a href="#17-language-toggle-kreyòl--english">Language Toggle
+(Kreyòl / English)</a></li>
+<li><a href="#18-creating-a-site-backup">Creating a Site Backup</a></li>
+<li><a href="#19-signing-out">Signing Out</a></li>
+<li><a href="#20-quick-reference--support">Quick Reference &amp;
+Support</a></li>
+</ol>
+<hr />
+<h2 id="introduction">1. Introduction</h2>
+<p>Welcome to the <strong>Parousia Baptist Ministries</strong> website
+administration guide. This document explains how to manage and update
+your church website without technical knowledge.</p>
+<p>The website is designed to be used primarily in <strong>Kreyòl
+(Haitian Creole)</strong>, with a one-click switch to
+<strong>English</strong> for visitors and administrators.</p>
+<p><strong>Your live website:</strong><br />
+https://ParousiaBaptistChurch.org</p>
+<p><strong>Admin login page:</strong><br />
+https://ParousiaBaptistChurch.org/admin</p>
+<hr />
+<h2 id="accessing-the-admin-portal">2. Accessing the Admin Portal</h2>
+<p>There are two ways to reach the admin area:</p>
+<p><strong>Option A — Direct URL</strong><br />
+Type the admin URL above into your browser.</p>
+<p><strong>Option B — From the public website</strong><br />
+After you log in as an administrator, a <strong>gear (⚙) settings
+icon</strong> appears in the website navigation bar. This icon is
+<strong>only visible to logged-in administrators</strong> and is not
+shown to regular visitors.</p>
+<blockquote>
+<p><strong>📸 SCREENSHOT 1 — Recommended</strong><br />
+Capture the top navigation bar of the public website while logged in as
+admin, showing the gear icon on the right side of the menu.</p>
+</blockquote>
+<hr />
+<h2 id="logging-in-secure-two-step-verification">3. Logging In (Secure
+Two-Step Verification)</h2>
+<p>Your admin portal uses secure login with email verification. This
+protects the church website from unauthorized changes.</p>
+<h3 id="step-1-enter-email-and-password">Step 1 — Enter Email and
+Password</h3>
+<ol type="1">
+<li>Go to <code>/admin</code></li>
+<li>Enter your <strong>authorized email address</strong></li>
+<li>Enter your <strong>personal access code (password)</strong></li>
+<li>Click <strong>Next</strong> / <strong>Kontinye</strong></li>
+</ol>
+<blockquote>
+<p><strong>📸 SCREENSHOT 2 — Recommended</strong><br />
+The admin login screen (Step 1) showing the email and password
+fields.</p>
+</blockquote>
+<h3 id="step-2-verify-with-email-code-otp">Step 2 — Verify with Email
+Code (OTP)</h3>
+<p>On your <strong>first login</strong> or when signing in from a
+<strong>new device</strong>, the system sends a <strong>6-digit
+verification code</strong> to your email.</p>
+<ol type="1">
+<li>Check your inbox (and spam folder if needed)</li>
+<li>Enter the 6-digit code within <strong>10 minutes</strong></li>
+<li>Click <strong>Verify</strong></li>
+</ol>
+<blockquote>
+<p><strong>📸 SCREENSHOT 3 — Recommended</strong><br />
+The verification code entry screen showing the 6-digit field and
+countdown timer.</p>
+</blockquote>
+<h3 id="step-3-create-or-reset-password-first-time-users">Step 3 —
+Create or Reset Password (First-Time Users)</h3>
+<p>If this is your first login, you will be asked to <strong>create a
+personal password</strong>. Choose something secure and memorable. You
+will use this password on future logins (along with the email code when
+on a new device).</p>
+<p><strong>Forgot password?</strong><br />
+Click <strong>Forgot Password</strong> on the login screen, enter your
+email, verify with the code sent to your inbox, then set a new
+password.</p>
+<hr />
+<h2 id="admin-dashboard-overview">4. Admin Dashboard Overview</h2>
+<p>After logging in, you arrive at the <strong>Admin Command
+Center</strong>. The left sidebar lists all management sections:</p>
+<table>
+<colgroup>
+<col style="width: 47%" />
+<col style="width: 52%" />
+</colgroup>
+<thead>
+<tr>
+<th>Section</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Global Settings</strong></td>
+<td>Church info, logo, colors, hero image, contact details</td>
+</tr>
+<tr>
+<td><strong>Configure Home Tabs</strong></td>
+<td>About Us, Our Beliefs, Our Team, What to Expect</td>
+</tr>
+<tr>
+<td><strong>Service Schedules</strong></td>
+<td>Worship times and service descriptions</td>
+</tr>
+<tr>
+<td><strong>Haiti Missions</strong></td>
+<td>Haiti mission content</td>
+</tr>
+<tr>
+<td><strong>Local Outreach</strong></td>
+<td>Community outreach projects</td>
+</tr>
+<tr>
+<td><strong>Ministries</strong></td>
+<td>Women, Men, Children, and Missions ministry pages</td>
+</tr>
+<tr>
+<td><strong>Events &amp; Signups</strong></td>
+<td>Church events and registration management</td>
+</tr>
+<tr>
+<td><strong>Registrations</strong></td>
+<td>View who signed up for events</td>
+</tr>
+<tr>
+<td><strong>Sermons</strong></td>
+<td>Manage sermon videos (YouTube sync)</td>
+</tr>
+<tr>
+<td><strong>E-Book Subscribers</strong></td>
+<td>Spiritual gift download signups</td>
+</tr>
+<tr>
+<td><strong>Daily Devotional</strong></td>
+<td>Daily verses, themes, and auto-publish</td>
+</tr>
+<tr>
+<td><strong>Security &amp; Admins</strong></td>
+<td>Add/remove admin users <em>(Super Admin only)</em></td>
+</tr>
+<tr>
+<td><strong>Contact Submissions</strong></td>
+<td>Messages from the Contact Us form</td>
+</tr>
+<tr>
+<td><strong>Prayer Moderation</strong></td>
+<td>Review and manage prayer requests</td>
+</tr>
+<tr>
+<td><strong>Pastor’s Blog</strong></td>
+<td>Weekly pastor’s point of view articles</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>📸 SCREENSHOT 4 — Recommended</strong><br />
+Full admin dashboard showing the left sidebar with all menu items
+highlighted.</p>
+</blockquote>
+<p><strong>Language toggle:</strong><br />
+Use the <strong>globe icon</strong> in the top-right corner to switch
+the admin interface between Kreyòl and English at any time.</p>
+<hr />
+<h2 id="global-settings">5. Global Settings</h2>
+<p><strong>Menu:</strong> Global Settings / <em>Anviwònman
+Global</em></p>
+<p>This is the most important section for overall site appearance and
+church information.</p>
+<h3 id="church-information">Church Information</h3>
+<ul>
+<li><strong>Pastor’s Name</strong> — displayed on the website</li>
+<li><strong>Pastor Message</strong> — welcome message in both Kreyòl and
+English</li>
+<li><strong>Church Phone, Email, and Address</strong> — shown in the
+footer and contact areas</li>
+</ul>
+<h3 id="church-logo">Church Logo</h3>
+<ul>
+<li>Click, drag-and-drop, or paste (Ctrl+V / Cmd+V) a new logo
+image</li>
+<li>Accepted formats: <strong>PNG or JPG</strong></li>
+<li>After uploading, the system <strong>automatically detects
+colors</strong> from your logo and suggests a matching color
+palette</li>
+</ul>
+<blockquote>
+<p><strong>📸 SCREENSHOT 5 — Recommended</strong><br />
+The logo upload area showing the current logo preview.</p>
+</blockquote>
+<h3 id="color-adjuster">Color Adjuster</h3>
+<ul>
+<li><strong>Primary</strong> — main button and accent color (light
+pastel blue is the current theme)</li>
+<li><strong>Hover</strong> — color when users hover over buttons</li>
+<li><strong>Accent</strong> — secondary highlight color</li>
+<li><strong>Background Theme</strong> — switch between Light Mode and
+Dark Mode</li>
+<li><strong>Hero Background Opacity</strong> — control how visible the
+background image is behind the hero section</li>
+<li><strong>Soften Text Backdrop</strong> — adds a readable blur layer
+behind hero text</li>
+</ul>
+<blockquote>
+<p><strong>📸 SCREENSHOT 6 — Recommended</strong><br />
+The Color Adjuster panel with the three color pickers and live
+preview.</p>
+</blockquote>
+<h3 id="hero-background-image">Hero Background Image</h3>
+<ul>
+<li>Upload a custom background image for the home page hero section</li>
+<li>The floral artwork at the bottom of the hero is displayed from this
+image</li>
+<li>Adjust opacity using the slider above</li>
+</ul>
+<h3 id="devotional-theme-also-in-daily-devotional-tab">Devotional Theme
+(also in Daily Devotional tab)</h3>
+<ul>
+<li>Enable <strong>Use Theme</strong> checkbox</li>
+<li>Enter a spiritual theme (e.g., <em>Faith</em>, <em>Hope</em>,
+<em>Forgiveness</em>, <em>Easter</em>)</li>
+<li>Leave theme disabled or blank for <strong>random</strong> daily
+verse selection</li>
+</ul>
+<h3 id="saving-changes">Saving Changes</h3>
+<p>Always scroll to the bottom and click <strong>Save Changes</strong> /
+<strong>Sove Chanjman yo</strong> when finished. A success message will
+confirm your changes are live.</p>
+<hr />
+<h2 id="configure-home-page-tabs">6. Configure Home Page Tabs</h2>
+<p><strong>Menu:</strong> Configure Home Tabs / <em>Konfigire Paj
+Akèy</em></p>
+<p>This section controls the four sub-tabs under <strong>Home</strong>
+on the public website:</p>
+<table>
+<colgroup>
+<col style="width: 47%" />
+<col style="width: 52%" />
+</colgroup>
+<thead>
+<tr>
+<th>Sub-Tab</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>About Us</strong></td>
+<td>Church history and mission (Kreyòl + English)</td>
+</tr>
+<tr>
+<td><strong>Our Beliefs</strong></td>
+<td>Statement of faith</td>
+</tr>
+<tr>
+<td><strong>Our Team</strong></td>
+<td>Pastor and Assistant Pastor profiles with photo, bio, and email</td>
+</tr>
+<tr>
+<td><strong>What to Expect</strong></td>
+<td>First-time visitor information</td>
+</tr>
+</tbody>
+</table>
+<p>For each sub-tab:</p>
+<ol type="1">
+<li>Click the sub-tab pill at the top (About Us, Beliefs, Team,
+Expect)</li>
+<li>Fill in titles and body text in <strong>both Kreyòl and
+English</strong></li>
+<li>Upload images by clicking, dragging, or pasting into the image
+zone</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<blockquote>
+<p><strong>📸 SCREENSHOT 7 — Recommended</strong><br />
+The Home Tabs configuration screen with the four sub-tab pills and About
+Us content fields.</p>
+</blockquote>
+<p><strong>Our Team tip:</strong> Add a photo, name, role, short
+biography, and email for the Pastor and Assistant Pastor. These appear
+on the public “Our Team” page.</p>
+<hr />
+<h2 id="service-schedules">7. Service Schedules</h2>
+<p><strong>Menu:</strong> Service Schedules / <em>Lè Sèvis yo</em></p>
+<p>Manage your weekly worship and service times.</p>
+<ul>
+<li>Click <strong>+ Add</strong> to create a new service entry</li>
+<li>Enter the day, time, service name, and description (Kreyòl +
+English)</li>
+<li>Mark a service as <strong>Live Stream</strong> if it should appear
+in the live stream section</li>
+<li>Click the <strong>pencil icon</strong> to edit or the <strong>trash
+icon</strong> to delete</li>
+</ul>
+<hr />
+<h2 id="haiti-missions-local-outreach">8. Haiti Missions &amp; Local
+Outreach</h2>
+<p><strong>Haiti Missions</strong> — Manage mission trip information,
+photos, and descriptions for your Haiti outreach work.</p>
+<p><strong>Local Outreach</strong> — Manage community outreach project
+listings (title, description, image, date).</p>
+<p>Both sections follow the same pattern: add, edit, or delete entries,
+then save.</p>
+<hr />
+<h2 id="ministries-women-men-children-missions">9. Ministries (Women,
+Men, Children, Missions)</h2>
+<p><strong>Menu:</strong> Ministries</p>
+<p>Configure the four ministry pages accessible from the
+<strong>Ministries</strong> tab on the public menu:</p>
+<ul>
+<li><strong>Women’s Ministry</strong></li>
+<li><strong>Men’s Ministry</strong></li>
+<li><strong>Children &amp; Youth</strong></li>
+<li><strong>Missions</strong></li>
+</ul>
+<p>For each ministry:</p>
+<ol type="1">
+<li>Select the ministry tab at the top</li>
+<li>Enter title and description in Kreyòl and English</li>
+<li>Upload a ministry image</li>
+<li>Add bullet points (one per line) in both languages</li>
+<li>Set <strong>committee contact</strong> name, email, and phone</li>
+<li>Add <strong>notification emails</strong> (comma-separated) to
+receive signup alerts</li>
+<li>Click <strong>Save Ministry</strong></li>
+</ol>
+<p><strong>Viewing signups:</strong><br />
+Below the form, a table shows individuals who signed up for that
+ministry. You can export signups to a spreadsheet using the export
+button.</p>
+<blockquote>
+<p><strong>📸 SCREENSHOT 8 — Recommended</strong><br />
+The Ministries configuration screen showing the four ministry tabs and
+the signup table.</p>
+</blockquote>
+<hr />
+<h2 id="events-registrations">10. Events &amp; Registrations</h2>
+<p><strong>Events &amp; Signups</strong> — Create church events (title,
+date, description, image). Visitors can register directly on the
+website.</p>
+<p><strong>Registrations</strong> — View all event signups. The badge
+number on the menu shows how many registrations are pending review.</p>
+<p>To add an event:</p>
+<ol type="1">
+<li>Click <strong>+ Add Event</strong></li>
+<li>Fill in details in both languages</li>
+<li>Save</li>
+</ol>
+<hr />
+<h2 id="sermons-youtube-sync">11. Sermons &amp; YouTube Sync</h2>
+<p><strong>Menu:</strong> Sermons</p>
+<ul>
+<li>View all synced sermon videos from your YouTube channel</li>
+<li>Click <strong>Sync from YouTube</strong> to pull the latest videos
+automatically</li>
+<li>Edit sermon titles or delete entries as needed</li>
+</ul>
+<hr />
+<h2 id="daily-devotional-theme-settings">12. Daily Devotional &amp;
+Theme Settings</h2>
+<p><strong>Menu:</strong> Daily Devotional / <em>Devosyonèl Chak
+Jou</em></p>
+<p>This section manages the daily Bible verse shown on the website.</p>
+<h3 id="theme-configuration">Theme Configuration</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Use Theme — ON</strong> + theme entered (e.g., “Hope”)</td>
+<td>Daily verse is selected around that spiritual theme</td>
+</tr>
+<tr>
+<td><strong>Use Theme — OFF</strong> or theme left blank</td>
+<td>Daily verse is chosen <strong>at random</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Suggested themes: Forgiveness, Easter, Christmas, Miracles,
+Compassion, Faith, Love, Hope, Peace, Grace, Strength, Thanksgiving.</p>
+<h3 id="other-devotional-controls">Other Devotional Controls</h3>
+<ul>
+<li><strong>Auto-Publish</strong> — automatically publish approved
+devotionals each day</li>
+<li><strong>Generate</strong> — use AI to create a new devotional draft
+(review before publishing)</li>
+<li><strong>Edit / Approve / Delete</strong> — manage individual
+devotional entries in the list below</li>
+</ul>
+<blockquote>
+<p><strong>📸 SCREENSHOT 9 — Recommended</strong><br />
+Daily Devotional screen showing the theme toggle and theme text
+field.</p>
+</blockquote>
+<hr />
+<h2 id="pastors-blog">13. Pastor’s Blog</h2>
+<p><strong>Menu:</strong> Pastor’s Blog / <em>Piblikasyon Blòg</em></p>
+<p>Publish your weekly point of view articles (replaces the old
+“Community Outreach” public tab).</p>
+<p><strong>To create a new blog post:</strong></p>
+<ol type="1">
+<li>Click <strong>Create New Article</strong></li>
+<li>Enter the title in English and Kreyòl</li>
+<li>Write the article content in both languages (Markdown formatting
+supported)</li>
+<li>Set the publication date</li>
+<li>Click <strong>Save Article</strong></li>
+</ol>
+<p>Use the <strong>Translate</strong> button to auto-translate content
+between languages (review before publishing).</p>
+<blockquote>
+<p><strong>📸 SCREENSHOT 10 — Recommended</strong><br />
+Blog editor showing bilingual title and content fields.</p>
+</blockquote>
+<hr />
+<h2 id="contact-form-submissions">14. Contact Form Submissions</h2>
+<p><strong>Menu:</strong> Contact Submissions / <em>Mesaj
+Kontakte</em></p>
+<p>When visitors submit the <strong>Contact Us</strong> form on the
+public website, their messages appear here.</p>
+<p>Each entry shows:</p>
+<ul>
+<li>Name</li>
+<li>Email</li>
+<li>Phone</li>
+<li>Message</li>
+<li>Date submitted</li>
+</ul>
+<p>Review messages regularly and delete entries once handled.</p>
+<hr />
+<h2 id="prayer-wall-moderation">15. Prayer Wall Moderation</h2>
+<p><strong>Menu:</strong> Prayer Moderation / <em>Moderasyon Miray
+Lapriyè</em></p>
+<p>Visitors can submit prayer requests on the public Prayer Wall. Some
+may choose to remain <strong>anonymous</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Requester</strong></td>
+<td>Name (hidden from public if anonymous)</td>
+</tr>
+<tr>
+<td><strong>Request Text</strong></td>
+<td>The prayer request</td>
+</tr>
+<tr>
+<td><strong>Anonymous?</strong></td>
+<td>Yes/No — if Yes, name is not shown publicly</td>
+</tr>
+<tr>
+<td><strong>Date</strong></td>
+<td>When submitted</td>
+</tr>
+</tbody>
+</table>
+<p>Review new requests and delete spam or resolved entries. Approved
+requests appear on the public Prayer Wall with date, request text, and
+requester name (unless anonymous).</p>
+<hr />
+<h2 id="managing-additional-administrators">16. Managing Additional
+Administrators</h2>
+<p><strong>Menu:</strong> Security &amp; Admins / <em>Sekirite &amp;
+Admins</em><br />
+<strong>Access:</strong> Super Admin only</p>
+<p>To add a new administrator:</p>
+<ol type="1">
+<li>Enter their <strong>email address</strong> in the field</li>
+<li>Click <strong>Authorize Admin</strong></li>
+<li>They will receive login instructions on first sign-in</li>
+<li>On first login or from a new device, they must verify via
+<strong>email code</strong></li>
+</ol>
+<p>To remove an administrator, click the <strong>trash icon</strong>
+next to their email.</p>
+<p><strong>Super Admin</strong> checkbox grants full access including
+the ability to manage other admins.</p>
+<blockquote>
+<p><strong>📸 SCREENSHOT 11 — Recommended</strong><br />
+Security &amp; Admins screen showing the email list and Add Admin
+form.</p>
+</blockquote>
+<hr />
+<h2 id="language-toggle-kreyòl-english">17. Language Toggle (Kreyòl /
+English)</h2>
+<p>Both the <strong>public website</strong> and the <strong>admin
+dashboard</strong> support bilingual display:</p>
+<ul>
+<li>Click the <strong>globe icon (🌐)</strong> in the top-right
+corner</li>
+<li>Toggle between <strong>Kreyòl</strong> and
+<strong>English</strong></li>
+<li>All content you enter in admin should be filled in <strong>both
+languages</strong> so visitors see the correct text regardless of their
+language choice</li>
+</ul>
+<hr />
+<h2 id="creating-a-site-backup">18. Creating a Site Backup</h2>
+<p>In <strong>Global Settings</strong>, scroll to the
+<strong>Backup</strong> section and click <strong>Create Site
+Backup</strong>.</p>
+<p>This saves a snapshot of your website data. Backups are stored
+securely on the server. Run a backup before making major changes.</p>
+<hr />
+<h2 id="signing-out">19. Signing Out</h2>
+<p>Click <strong>Sign Out</strong> / <em>Dekonekte</em> in the top-right
+corner of the admin dashboard when you are finished. Always sign out on
+shared or public computers.</p>
+<hr />
+<h2 id="quick-reference-support">20. Quick Reference &amp; Support</h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Website URL</strong></td>
+<td>https://ParousiaBaptistChurch.org</td>
+</tr>
+<tr>
+<td><strong>Admin URL</strong></td>
+<td>https://ParousiaBaptistChurch.org/admin</td>
+</tr>
+<tr>
+<td><strong>Primary Language</strong></td>
+<td>Kreyòl (Haitian Creole) with English toggle</td>
+</tr>
+<tr>
+<td><strong>Hosting</strong></td>
+<td>Google Cloud Platform (Cloud Run)</td>
+</tr>
+<tr>
+<td><strong>Maintenance Contact</strong></td>
+<td>Straight Line Projects</td>
+</tr>
+<tr>
+<td><strong>Support Schedule</strong></td>
+<td>Weekly assistance initially, then biweekly</td>
+</tr>
+<tr>
+<td><strong>Payment (Zelle)</strong></td>
+<td>929-529-8809</td>
+</tr>
+</tbody>
+</table>
+<p>For help adding events, updating content, or troubleshooting login
+issues, contact your website maintainer during scheduled support
+sessions.</p>
+<hr />
+<p><em>End of Administration Guide</em></p>
+</body>
+</html>

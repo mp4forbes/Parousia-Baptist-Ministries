@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Parousia Baptist Ministries — Project Completion Letter</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --text: #1e293b;
+      --muted: #475569;
+      --border: #e2e8f0;
+      --accent: #d97706;
+      --accent-hover: #b45309;
+      --surface: #f8fafc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--text);
+      background: #fff;
+      line-height: 1.6;
+    }
+    .doc-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(8px);
+    }
+    .doc-header__spacer { min-width: 0; }
+    .doc-header__logo {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .doc-header__logo img {
+      height: 64px;
+      width: auto;
+      max-width: min(360px, 72vw);
+      object-fit: contain;
+    }
+    .lang-toggle {
+      justify-self: end;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      background: var(--surface);
+      color: var(--accent);
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .lang-toggle:hover {
+      background: #f1f5f9;
+      transform: scale(1.03);
+    }
+    .lang-toggle svg {
+      width: 1rem;
+      height: 1rem;
+      flex-shrink: 0;
+    }
+    .doc-content {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+    .doc-lang { display: none; }
+    .doc-lang.is-active { display: block; }
+    .doc-lang h1, .doc-lang h2, .doc-lang h3, .doc-lang h4 {
+      font-family: Georgia, "Times New Roman", serif;
+      line-height: 1.25;
+    }
+    .doc-lang img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      margin: 1rem 0;
+    }
+    .doc-lang a { color: #2563eb; }
+    .doc-lang code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.9em;
+      background: #f1f5f9;
+      padding: 0.1em 0.35em;
+      border-radius: 0.25rem;
+    }
+    .doc-lang pre {
+      overflow-x: auto;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 0.5rem;
+    }
+    .doc-lang table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.95rem;
+    }
+    .doc-lang th, .doc-lang td {
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    .doc-lang th { background: var(--surface); }
+    .doc-header--letter {
+      grid-template-columns: 1fr auto;
+    }
+    .doc-lang .letter-title-row,
+    .doc-lang .letter-signature {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      margin: 0 0 1.5rem;
+    }
+    .doc-lang .letter-title-row h1 {
+      margin: 0;
+      font-size: 1.75rem;
+      line-height: 1.2;
+    }
+    .doc-lang .letter-brand-logo {
+      width: 88px;
+      height: auto;
+      flex-shrink: 0;
+      border: none;
+      border-radius: 0;
+      margin: 0;
+    }
+    .doc-lang .letter-signature {
+      margin-top: 1.5rem;
+      align-items: flex-start;
+    }
+    .doc-lang .letter-signature-contact {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 0.95rem;
+      line-height: 1.55;
+      color: var(--text);
+    }
+    .doc-lang .letter-signature-contact strong {
+      font-size: 1rem;
+    }
+    @media (max-width: 640px) {
+      .doc-lang .letter-title-row,
+      .doc-lang .letter-signature {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .doc-lang .letter-title-row h1 {
+        font-size: 1.4rem;
+      }
+    }
+    @media (max-width: 640px) {
+      .doc-header {
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+          "logo lang"
+          "logo lang";
+      }
+      .doc-header__spacer { display: none; }
+      .doc-header__logo { grid-area: logo; justify-content: flex-start; }
+      .lang-toggle { grid-area: lang; }
+      .doc-header__logo img { height: 44px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="doc-header doc-header--letter">
+    <div class="doc-header__spacer" aria-hidden="true"></div>
+    <div class="doc-header__spacer" aria-hidden="true"></div>
+    <button type="button" class="lang-toggle" id="lang-toggle" aria-label="Switch language">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+        <path d="M2 12h20"></path>
+      </svg>
+      <span id="lang-toggle-label">Kreyòl</span>
+    </button>
+  </header>
+
+  <main class="doc-content">
+    <article class="doc-lang is-active" id="doc-en" lang="en" data-title="Parousia Baptist Ministries — Project Completion Letter">
+      <div class="letter-title-row">
+<img class="letter-brand-logo" src="/admin-guide/straight-line-holdings-logo.png" alt="Straight-Line Holdings, Inc." />
+<h1>
+Formal Project Completion Letter
+</h1>
+</div>
+<hr />
+<p><strong>Michael Forbes</strong><br />
+Straight-Line Holdings, Inc.<br />
+300 Carnegie Center Dr., Ste 150<br />
+Princeton, NJ 08540<br />
+<a
+href="mailto:mp4forbes@straightlineholdings.com">mp4forbes@straightlineholdings.com</a>
+| 609-540-6556</p>
+<p>July 29, 2026</p>
+<p><strong>Pastor Yvan Dalzon</strong><br />
+<strong>Project Sponsor: Micheline Mesidor</strong><br />
+<strong>Parousia Baptist Ministries</strong><br />
+227-10 Merrick Blvd<br />
+Laurelton, NY 11413<br />
+<a href="mailto:franckyvan@gmail.com">franckyvan@gmail.com</a> | (929)
+398-2829</p>
+<p><strong>Re: Formal Notice of Project Completion — Parousia Baptist
+Ministries Website</strong></p>
+<p>Dear Pastor Yvan Dalzon and Leadership Team,</p>
+<p>I am pleased to formally notify you that all contracted work on the
+<strong>Parousia Baptist Ministries</strong> website has been completed,
+tested, and deployed to production. The site is now live and ready for
+ongoing use by your congregation and leadership.</p>
+<hr />
+<h2 id="project-scope-items-completed">Project Scope — Items
+Completed</h2>
+<p>All items from our agreed scope of work (June 6 and June 9, 2026)
+have been delivered:</p>
+<h3 id="branding-design">Branding &amp; Design</h3>
+<ol type="1">
+<li>Church name updated to <strong>Parousia Baptist Ministries</strong>
+across the website and admin system.</li>
+<li>Site color theme set to <strong>light pastel blue</strong>, with an
+admin Color Adjuster for future adjustments.</li>
+<li>Hero background updated to remove gold floral elements; custom hero
+artwork and logo display are now cleanly integrated.</li>
+<li>Daily devotional verses support a <strong>configurable
+theme</strong>; when no theme is set, verses are selected at
+random.</li>
+</ol>
+<h3 id="navigation-content-structure">Navigation &amp; Content
+Structure</h3>
+<ol start="5" type="1">
+<li>Website displays responsively on <strong>mobile phones, tablets, and
+desktop</strong> computers.</li>
+<li><strong>Home</strong> tab includes sub-sections: About Us, Our
+Beliefs, Our Team (Pastor and Assistant Pastor), and What to
+Expect.</li>
+<li><strong>Ministries</strong> tab added with sub-sections: Women, Men,
+Children, and Missions.</li>
+<li><strong>Community Outreach</strong> tab replaced with a
+<strong>Blog</strong> tab for the Pastor’s weekly point of view.</li>
+<li><strong>Administration</strong> tab replaced with a <strong>gear
+(settings) icon</strong>, visible only to logged-in administrators.</li>
+</ol>
+<h3 id="security-administration">Security &amp; Administration</h3>
+<ol start="10" type="1">
+<li>Admin portal supports <strong>adding additional administrators by
+email address</strong>. First-time logins and logins from new devices
+require <strong>email verification (OTP code)</strong>.</li>
+<li><strong>Contact form</strong> added for individuals who wish to be
+contacted by the church.</li>
+<li><strong>Prayer wall</strong> added with an anonymous option; public
+display shows date, request, and requester name (when not
+anonymous).</li>
+</ol>
+<hr />
+<h2 id="deliverables">Deliverables</h2>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 42%" />
+<col style="width: 28%" />
+<col style="width: 28%" />
+</colgroup>
+<thead>
+<tr>
+<th>Deliverable</th>
+<th>Status</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bilingual website (Kreyòl + English)</td>
+<td>✅ Complete</td>
+<td>Primary display in Kreyòl; English available via language
+toggle</td>
+</tr>
+<tr>
+<td>Live website URL</td>
+<td>✅ Complete</td>
+<td>https://ParousiaBaptistChurch.org</td>
+</tr>
+<tr>
+<td>Web hosting</td>
+<td>✅ Complete</td>
+<td><strong>Google Cloud Platform</strong> — Cloud Run (application) and
+Cloud SQL (database), region: US West</td>
+</tr>
+<tr>
+<td>Admin tutorial</td>
+<td>✅ Complete</td>
+<td>Administration Guide (provided separately)</td>
+</tr>
+<tr>
+<td>Ongoing maintenance agreement</td>
+<td>✅ Agreed</td>
+<td>See Maintenance Terms below</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="website-access">Website Access</h2>
+<ul>
+<li><strong>Public website:</strong>
+https://ParousiaBaptistChurch.org</li>
+<li><strong>Admin portal:</strong>
+https://ParousiaBaptistChurch.org/admin</li>
+</ul>
+<p>Please save both URLs. The admin portal is where you and authorized
+staff will manage content, events, blog posts, prayer requests, and
+contact messages.</p>
+<hr />
+<h2 id="maintenance-terms-as-agreed">Maintenance Terms (As Agreed)</h2>
+<p>Ongoing website maintenance has been agreed upon under the following
+terms:</p>
+<ul>
+<li><strong>Initial period:</strong> Weekly support sessions to help
+your team navigate the admin portal and become comfortable making
+updates independently.</li>
+<li><strong>Ongoing period:</strong> Biweekly support sessions
+thereafter.</li>
+<li><strong>Scope of support:</strong> Assistance adding events,
+updating content, managing admin users, and general website navigation.
+Training on self-service updates is included.</li>
+<li><strong>Payment:</strong> Zelle — <strong>929-529-8809</strong></li>
+</ul>
+<hr />
+<h2 id="recommended-next-steps">Recommended Next Steps</h2>
+<ol type="1">
+<li>Review the attached <strong>Website Administration Guide</strong>
+and bookmark the admin URL.</li>
+<li>Log in to the admin portal and confirm your email and password are
+working.</li>
+<li>Upload or verify your church logo, hero image, and team photos in
+<strong>Global Settings</strong> and <strong>Configure Home
+Tabs</strong>.</li>
+<li>Add your first Pastor’s Blog post under <strong>Pastor’s
+Blog</strong>.</li>
+<li>Schedule your first weekly maintenance/training session.</li>
+</ol>
+<hr />
+<h2 id="acceptance">Acceptance</h2>
+<p>This letter serves as formal notice that the Parousia Baptist
+Ministries website project is <strong>complete</strong> as of
+<strong>July 29, 2026</strong>. Please review the live site at your
+convenience. If you identify any item that does not match our agreed
+scope, notify us within <strong>14 days</strong> of this letter so we
+may address it promptly.</p>
+<p>We are honored to have built this platform for Parousia Baptist
+Ministries and look forward to supporting your ministry online in the
+weeks ahead.</p>
+<p>Respectfully,</p>
+<div class="letter-signature">
+<img class="letter-brand-logo" src="/admin-guide/straight-line-holdings-logo.png" alt="Straight-Line Holdings, Inc." />
+<div class="letter-signature-contact">
+<p><strong>Michael Forbes</strong><br /> Straight-Line Holdings,
+Inc.<br /> 300 Carnegie Center Dr., Ste 150<br /> Princeton, NJ
+08540<br />
+<a href="mailto:mp4forbes@straightlineholdings.com">mp4forbes@straightlineholdings.com</a><br />
+609-540-6556</p>
+</div>
+</div>
+<hr />
+<p><em>Enclosure: Parousia Baptist Ministries — Website Administration
+Guide (v1.0)</em></p>
+
+    </article>
+    <article class="doc-lang" id="doc-ht" lang="ht" data-title="Parousia Baptist Ministries — Lèt Fini Pwojè">
+      <div class="letter-title-row">
+<img class="letter-brand-logo" src="/admin-guide/straight-line-holdings-logo.png" alt="Straight-Line Holdings, Inc." />
+<h1>
+Lèt Ofisyèl Fini Pwojè a
+</h1>
+</div>
+<hr />
+<p><strong>Michael Forbes</strong><br />
+Straight-Line Holdings, Inc.<br />
+300 Carnegie Center Dr., Ste 150<br />
+Princeton, NJ 08540<br />
+<a
+href="mailto:mp4forbes@straightlineholdings.com">mp4forbes@straightlineholdings.com</a>
+| 609-540-6556</p>
+<p>29 jiyè 2026</p>
+<p><strong>Pastè Yvan Dalzon</strong><br />
+<strong>Sponsor Pwojè a: Micheline Mesidor</strong><br />
+<strong>Parousia Baptist Ministries</strong><br />
+227-10 Merrick Blvd<br />
+Laurelton, NY 11413<br />
+<a href="mailto:franckyvan@gmail.com">franckyvan@gmail.com</a> | (929)
+398-2829</p>
+<p><strong>Objè: Avi Ofisyèl Fini Pwojè — Sit Wèb Parousia Baptist
+Ministries</strong></p>
+<p>Bonjou Pastè Yvan Dalzon ak ekip lidèchip la,</p>
+<p>Mwen kontan fòmèlman enfòme nou ke tout travay ki te kontra sou
+<strong>sit wèb Parousia Baptist Ministries</strong> la fini, teste, epi
+mete an pwodiksyon. Sit la kounye a ap fonksyone epi pare pou legliz la
+itilize l chak jou.</p>
+<hr />
+<h2 id="travay-ki-te-fini">Travay ki Te Fini</h2>
+<p>Tout pwen yo nan kontra nou an (6 jen ak 9 jen 2026) delivre:</p>
+<h3 id="mak-ak-design">Mak ak Design</h3>
+<ol type="1">
+<li>Non legliz la mete ajou kòm <strong>Parousia Baptist
+Ministries</strong> sou tout sit la ak sistèm admin an.</li>
+<li>Koulè sit la mete an <strong>ble pastel klè</strong>, ak yon Ajistè
+Koulè nan admin pou chanjman pita.</li>
+<li>Background hero a mete ajou pou retire eleman floral yo; logo ak
+artwork kounye a parèt pwòp.</li>
+<li>Devosyonèl chak jou sipòte yon <strong>tèm konfigirab</strong>; lè
+pa gen tèm, vèsè yo chwazi pa chans.</li>
+</ol>
+<h3 id="navigasyon-estrikti-kontni">Navigasyon &amp; Estrikti
+Kontni</h3>
+<ol start="5" type="1">
+<li>Sit la parèt byen sou <strong>telefòn, tablèt, ak
+òdinatè</strong>.</li>
+<li>Tab <strong>Akèy</strong> gen: Konsènan Nou, Kwayans Nou, Ekip la,
+Kisa pou Atann.</li>
+<li>Tab <strong>Ministè</strong> gen: Fanm, Gason, Timoun, Misyon.</li>
+<li>Tab <strong>Community Outreach</strong> ranplase pa tab
+<strong>Blòg</strong> pou pwen de vi pastè a.</li>
+<li>Tab <strong>Administrasyon</strong> ranplase pa <strong>ikon
+angranaj</strong>, vizib sèlman pou administratè ki konekte.</li>
+</ol>
+<h3 id="sekirite-administrasyon">Sekirite &amp; Administrasyon</h3>
+<ol start="10" type="1">
+<li>Pòtay admin sipòte <strong>ajoute administratè pa imel</strong>.
+Premye koneksyon ak nouvo aparèy mande <strong>verifikasyon
+OTP</strong>.</li>
+<li><strong>Fòm kontakte</strong> ajoute pou moun ki vle legliz la
+kontakte yo.</li>
+<li><strong>Miray lapriyè</strong> ajoute ak opsyon anonim.</li>
+</ol>
+<hr />
+<h2 id="delivrab">Delivrab</h2>
+<table>
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 32%" />
+<col style="width: 28%" />
+</colgroup>
+<thead>
+<tr>
+<th>Delivrab</th>
+<th>Estati</th>
+<th>Detay</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sit bileng (Kreyòl + Angle)</td>
+<td>✅ Fini</td>
+<td>Kreyòl prensipal; Angle disponib</td>
+</tr>
+<tr>
+<td>URL sit la</td>
+<td>✅ Fini</td>
+<td>https://ParousiaBaptistChurch.org</td>
+</tr>
+<tr>
+<td>Hosting</td>
+<td>✅ Fini</td>
+<td><strong>Google Cloud Platform</strong> — Cloud Run ak Cloud SQL</td>
+</tr>
+<tr>
+<td>Gid administrasyon</td>
+<td>✅ Fini</td>
+<td>Gid Administrasyon (bay apa)</td>
+</tr>
+<tr>
+<td>Akò antretyen</td>
+<td>✅ Dakò</td>
+<td>Gade kondisyon yo anba a</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="aksè-sit-la">Aksè Sit la</h2>
+<ul>
+<li><strong>Sit piblik:</strong> https://ParousiaBaptistChurch.org</li>
+<li><strong>Pòtay admin:</strong>
+https://ParousiaBaptistChurch.org/admin</li>
+</ul>
+<hr />
+<h2 id="kondisyon-antretyen-jan-nou-te-dakò">Kondisyon Antretyen (Jan
+nou te dakò)</h2>
+<ul>
+<li><strong>Premye peryòd:</strong> Sesyon sipò chak semèn pou ede ekip
+la navige admin an.</li>
+<li><strong>Apre sa:</strong> Sesyon sipò chak de semèn.</li>
+<li><strong>Peman:</strong> Zelle — <strong>929-529-8809</strong></li>
+</ul>
+<hr />
+<h2 id="pwochen-etap-rekòmande">Pwochen Etap Rekòmande</h2>
+<ol type="1">
+<li>Li <strong>Gid Administrasyon Sit Wèb la</strong> epi sove URL admin
+an.</li>
+<li>Konekte nan pòtay admin an epi verifye imel ak modpas ou.</li>
+<li>Verifye logo, imaj hero, ak foto ekip la.</li>
+<li>Pibliye premye atik blòg pastè a.</li>
+<li>Planifye premye sesyon fòmasyon semènè a.</li>
+</ol>
+<hr />
+<h2 id="akseptasyon">Akseptasyon</h2>
+<p>Lèt sa a sèvi kòm avi ofisyèl ke pwojè sit <strong>Parousia Baptist
+Ministries</strong> la <strong>fini</strong> depi <strong>29 jiyè
+2026</strong>. Si gen nenpòt bagay ki pa koresponn ak sa nou te dakò,
+tanpri fè nou konnen nan <strong>14 jou</strong>.</p>
+<p>Avèk respè,</p>
+<div class="letter-signature">
+<img class="letter-brand-logo" src="/admin-guide/straight-line-holdings-logo.png" alt="Straight-Line Holdings, Inc." />
+<div class="letter-signature-contact">
+<p><strong>Michael Forbes</strong><br /> Straight-Line Holdings,
+Inc.<br /> 300 Carnegie Center Dr., Ste 150<br /> Princeton, NJ
+08540<br />
+<a href="mailto:mp4forbes@straightlineholdings.com">mp4forbes@straightlineholdings.com</a><br />
+609-540-6556</p>
+</div>
+</div>
+<hr />
+<p><em>Anèks: Gid Administrasyon Parousia Baptist Ministries
+(v1.0)</em></p>
+
+    </article>
+  </main>
+
+  <script>
+    (function () {
+      var STORAGE_KEY = 'church_lang';
+      var toggle = document.getElementById('lang-toggle');
+      var label = document.getElementById('lang-toggle-label');
+      var en = document.getElementById('doc-en');
+      var ht = document.getElementById('doc-ht');
+
+      function normalizeLang(value) {
+        return value === 'fr_ht' || value === 'ht' ? 'ht' : 'en';
+      }
+
+      function readLang() {
+        try {
+          return normalizeLang(localStorage.getItem(STORAGE_KEY) || 'en');
+        } catch (e) {
+          return 'en';
+        }
+      }
+
+      function writeLang(lang) {
+        try {
+          localStorage.setItem(STORAGE_KEY, lang === 'ht' ? 'fr_ht' : 'en');
+        } catch (e) {}
+      }
+
+      function applyLang(lang) {
+        var isHt = lang === 'ht';
+        en.classList.toggle('is-active', !isHt);
+        ht.classList.toggle('is-active', isHt);
+        document.documentElement.lang = isHt ? 'ht' : 'en';
+        document.title = isHt ? ht.getAttribute('data-title') : en.getAttribute('data-title');
+        label.textContent = isHt ? 'English' : 'Kreyòl';
+        toggle.setAttribute('aria-label', isHt ? 'Switch to English' : 'Chanje an Kreyòl');
+      }
+
+      applyLang(readLang());
+
+      toggle.addEventListener('click', function () {
+        var next = en.classList.contains('is-active') ? 'ht' : 'en';
+        writeLang(next);
+        applyLang(next);
+      });
+    })();
+  </script>
+</body>
+</html>

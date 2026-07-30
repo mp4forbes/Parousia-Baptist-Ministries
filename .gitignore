@@ -38,6 +38,13 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# playwright admin guide auth session
+scripts/.auth/
+
+# local runtime data (uploads live here; backups are not versioned)
+data/backups/
+scratch/
+
 # vercel
 .vercel
 

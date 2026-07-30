@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Parousia Baptist Ministries — Administration Guide</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --text: #1e293b;
+      --muted: #475569;
+      --border: #e2e8f0;
+      --accent: #d97706;
+      --accent-hover: #b45309;
+      --surface: #f8fafc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--text);
+      background: #fff;
+      line-height: 1.6;
+    }
+    .doc-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(8px);
+    }
+    .doc-header__spacer { min-width: 0; }
+    .doc-header__logo {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .doc-header__logo img {
+      height: 64px;
+      width: auto;
+      max-width: min(360px, 72vw);
+      object-fit: contain;
+    }
+    .lang-toggle {
+      justify-self: end;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      background: var(--surface);
+      color: var(--accent);
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .lang-toggle:hover {
+      background: #f1f5f9;
+      transform: scale(1.03);
+    }
+    .lang-toggle svg {
+      width: 1rem;
+      height: 1rem;
+      flex-shrink: 0;
+    }
+    .doc-content {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+    .doc-lang { display: none; }
+    .doc-lang.is-active { display: block; }
+    .doc-lang h1, .doc-lang h2, .doc-lang h3, .doc-lang h4 {
+      font-family: Georgia, "Times New Roman", serif;
+      line-height: 1.25;
+    }
+    .doc-lang img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      margin: 1rem 0;
+    }
+    .doc-lang a { color: #2563eb; }
+    .doc-lang code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.9em;
+      background: #f1f5f9;
+      padding: 0.1em 0.35em;
+      border-radius: 0.25rem;
+    }
+    .doc-lang pre {
+      overflow-x: auto;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 0.5rem;
+    }
+    .doc-lang table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.95rem;
+    }
+    .doc-lang th, .doc-lang td {
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    .doc-lang th { background: var(--surface); }
+    @media (max-width: 640px) {
+      .doc-header {
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+          "logo lang"
+          "logo lang";
+      }
+      .doc-header__spacer { display: none; }
+      .doc-header__logo { grid-area: logo; justify-content: flex-start; }
+      .lang-toggle { grid-area: lang; }
+      .doc-header__logo img { height: 44px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="doc-header">
+    <div class="doc-header__spacer" aria-hidden="true"></div>
+    <div class="doc-header__logo">
+      <a href="/" title="Parousia Baptist Ministries">
+        <img src="/admin-guide/church-logo.png" alt="Église Baptiste de la Parousie" />
+      </a>
+    </div>
+    <button type="button" class="lang-toggle" id="lang-toggle" aria-label="Switch language">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+        <path d="M2 12h20"></path>
+      </svg>
+      <span id="lang-toggle-label">Kreyòl</span>
+    </button>
+  </header>
+
+  <main class="doc-content">
+    <article class="doc-lang is-active" id="doc-en" lang="en" data-title="Parousia Baptist Ministries — Administration Guide">
+      <h1 id="parousia-baptist-ministries">Parousia Baptist Ministries</h1>
+<h2 id="website-administration-guide">Website Administration Guide</h2>
+<p><strong>Prepared for:</strong> Pastor and Church Leadership<br />
+<strong>Prepared by:</strong> Straight-Line Holdings, Inc.<br />
+<strong>Date:</strong> July 29, 2026<br />
+<strong>Version:</strong> 1.0</p>
+<hr />
+<h2 id="introduction">1. Introduction</h2>
+<p>Welcome to the <strong>Parousia Baptist Ministries</strong> website
+administration guide. This document explains how to manage and update
+your church website without technical knowledge.</p>
+<p>The website is designed to be used primarily in <strong>Kreyòl
+(Haitian Creole)</strong>, with a one-click switch to
+<strong>English</strong> for visitors and administrators.</p>
+<p><strong>Your live website:</strong><br />
+https://ParousiaBaptistChurch.org</p>
+<p><strong>Admin login page:</strong><br />
+https://ParousiaBaptistChurch.org/admin</p>
+<hr />
+<h2 id="accessing-the-admin-portal">2. Accessing the Admin Portal</h2>
+<p>There are two ways to reach the admin area:</p>
+<p><strong>Option A — Direct URL</strong><br />
+Type the admin URL above into your browser.</p>
+<p><strong>Option B — From the public website</strong><br />
+After you log in as an administrator, a <strong>gear (⚙) settings
+icon</strong> appears in the website navigation bar. This icon is
+<strong>only visible to logged-in administrators</strong> and is not
+shown to regular visitors.</p>
+<figure>
+<img src="/admin-guide/screenshots/01-public-nav-gear.png"
+alt="Public website navigation with admin gear icon" />
+<figcaption aria-hidden="true">Public website navigation with admin gear
+icon</figcaption>
+</figure>
+<p><em>Figure 1 — After logging in as admin, the gear icon appears in
+the top navigation.</em></p>
+<hr />
+<h2 id="logging-in-secure-two-step-verification">3. Logging In (Secure
+Two-Step Verification)</h2>
+<p>Your admin portal uses secure login with email verification. This
+protects the church website from unauthorized changes.</p>
+<h3 id="step-1-enter-email-and-password">Step 1 — Enter Email and
+Password</h3>
+<ol type="1">
+<li>Go to <code>/admin</code></li>
+<li>Enter your <strong>authorized email address</strong></li>
+<li>Enter your <strong>personal access code (password)</strong></li>
+<li>Click <strong>Next</strong> / <strong>Kontinye</strong></li>
+</ol>
+<figure>
+<img src="/admin-guide/screenshots/02-admin-login-step1.png"
+alt="Admin login screen — email and password" />
+<figcaption aria-hidden="true">Admin login screen — email and
+password</figcaption>
+</figure>
+<p><em>Figure 2 — Admin login Step 1.</em></p>
+<h3 id="step-2-verify-with-email-code-otp">Step 2 — Verify with Email
+Code (OTP)</h3>
+<p>On your <strong>first login</strong> or when signing in from a
+<strong>new device</strong>, the system sends a <strong>6-digit
+verification code</strong> to your email.</p>
+<ol type="1">
+<li>Check your inbox (and spam folder if needed)</li>
+<li>Enter the 6-digit code within <strong>10 minutes</strong></li>
+<li>Click <strong>Verify</strong></li>
+</ol>
+<figure>
+<img src="/admin-guide/screenshots/03-admin-login-otp-en.png"
+alt="Admin login OTP verification screen (English)" />
+<figcaption aria-hidden="true">Admin login OTP verification screen
+(English)</figcaption>
+</figure>
+<p><em>Figure 3 — OTP verification screen (capture manually or with
+Playwright MCP).</em></p>
+<h3 id="step-3-create-or-reset-password-first-time-users">Step 3 —
+Create or Reset Password (First-Time Users)</h3>
+<p>If this is your first login, you will be asked to <strong>create a
+personal password</strong>. Choose something secure and memorable. You
+will use this password on future logins (along with the email code when
+on a new device).</p>
+<p><strong>Forgot password?</strong><br />
+Click <strong>Forgot Password</strong> on the login screen, enter your
+email, verify with the code sent to your inbox, then set a new
+password.</p>
+<hr />
+<h2 id="admin-dashboard-overview">4. Admin Dashboard Overview</h2>
+<p>After logging in, you arrive at the <strong>Admin Command
+Center</strong>. The left sidebar lists all management sections:</p>
+<table>
+<colgroup>
+<col style="width: 47%" />
+<col style="width: 52%" />
+</colgroup>
+<thead>
+<tr>
+<th>Section</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Global Settings</strong></td>
+<td>Church info, logo, colors, hero image, contact details</td>
+</tr>
+<tr>
+<td><strong>Configure Home Tabs</strong></td>
+<td>About Us, Our Beliefs, Our Team, What to Expect</td>
+</tr>
+<tr>
+<td><strong>Service Schedules</strong></td>
+<td>Worship times and service descriptions</td>
+</tr>
+<tr>
+<td><strong>Haiti Missions</strong></td>
+<td>Haiti mission content</td>
+</tr>
+<tr>
+<td><strong>Local Outreach</strong></td>
+<td>Community outreach projects</td>
+</tr>
+<tr>
+<td><strong>Ministries</strong></td>
+<td>Women, Men, Children, and Missions ministry pages</td>
+</tr>
+<tr>
+<td><strong>Events &amp; Signups</strong></td>
+<td>Church events and registration management</td>
+</tr>
+<tr>
+<td><strong>Registrations</strong></td>
+<td>View who signed up for events</td>
+</tr>
+<tr>
+<td><strong>Sermons</strong></td>
+<td>Manage sermon videos (YouTube sync)</td>
+</tr>
+<tr>
+<td><strong>E-Book Subscribers</strong></td>
+<td>Spiritual gift download signups</td>
+</tr>
+<tr>
+<td><strong>Daily Devotional</strong></td>
+<td>Daily verses, themes, and auto-publish</td>
+</tr>
+<tr>
+<td><strong>Security &amp; Admins</strong></td>
+<td>Add/remove admin users <em>(Super Admin only)</em></td>
+</tr>
+<tr>
+<td><strong>Contact Submissions</strong></td>
+<td>Messages from the Contact Us form</td>
+</tr>
+<tr>
+<td><strong>Prayer Moderation</strong></td>
+<td>Review and manage prayer requests</td>
+</tr>
+<tr>
+<td><strong>Pastor’s Blog</strong></td>
+<td>Weekly pastor’s point of view articles</td>
+</tr>
+</tbody>
+</table>
+<figure>
+<img src="/admin-guide/screenshots/04-admin-dashboard-sidebar.png"
+alt="Admin dashboard sidebar" />
+<figcaption aria-hidden="true">Admin dashboard sidebar</figcaption>
+</figure>
+<p><em>Figure 4 — Admin dashboard overview.</em></p>
+<p><strong>Language toggle:</strong><br />
+Use the <strong>globe icon</strong> in the top-right corner to switch
+the admin interface between Kreyòl and English at any time.</p>
+<hr />
+<h2 id="global-settings">5. Global Settings</h2>
+<p><strong>Menu:</strong> Global Settings / <em>Anviwònman
+Global</em></p>
+<p>This is the most important section for overall site appearance and
+church information.</p>
+<h3 id="church-information">Church Information</h3>
+<ul>
+<li><strong>Pastor’s Name</strong> — displayed on the website</li>
+<li><strong>Pastor Message</strong> — welcome message in both Kreyòl and
+English</li>
+<li><strong>Church Phone, Email, and Address</strong> — shown in the
+footer and contact areas</li>
+</ul>
+<h3 id="church-logo">Church Logo</h3>
+<ul>
+<li>Click, drag-and-drop, or paste (Ctrl+V / Cmd+V) a new logo
+image</li>
+<li>Accepted formats: <strong>PNG or JPG</strong></li>
+<li>After uploading, the system <strong>automatically detects
+colors</strong> from your logo and suggests a matching color
+palette</li>
+</ul>
+<figure>
+<img src="/admin-guide/screenshots/05-logo-upload.png"
+alt="Church logo upload area" />
+<figcaption aria-hidden="true">Church logo upload area</figcaption>
+</figure>
+<p><em>Figure 5 — Logo upload panel.</em></p>
+<h3 id="color-adjuster">Color Adjuster</h3>
+<ul>
+<li><strong>Primary</strong> — main button and accent color (light
+pastel blue is the current theme)</li>
+<li><strong>Hover</strong> — color when users hover over buttons</li>
+<li><strong>Accent</strong> — secondary highlight color</li>
+<li><strong>Background Theme</strong> — switch between Light Mode and
+Dark Mode</li>
+<li><strong>Hero Background Opacity</strong> — control how visible the
+background image is behind the hero section</li>
+<li><strong>Soften Text Backdrop</strong> — adds a readable blur layer
+behind hero text</li>
+</ul>
+<figure>
+<img src="/admin-guide/screenshots/06-color-adjuster.png"
+alt="Color adjuster panel" />
+<figcaption aria-hidden="true">Color adjuster panel</figcaption>
+</figure>
+<p><em>Figure 6 — Color adjuster and live preview.</em></p>
+<h3 id="hero-background-image">Hero Background Image</h3>
+<ul>
+<li>Upload a custom background image for the home page hero section</li>
+<li>The floral artwork at the bottom of the hero is displayed from this
+image</li>
+<li>Adjust opacity using the slider above</li>
+</ul>
+<h3 id="devotional-theme-also-in-daily-devotional-tab">Devotional Theme
+(also in Daily Devotional tab)</h3>
+<ul>
+<li>Enable <strong>Use Theme</strong> checkbox</li>
+<li>Enter a spiritual theme (e.g., <em>Faith</em>, <em>Hope</em>,
+<em>Forgiveness</em>, <em>Easter</em>)</li>
+<li>Leave theme disabled or blank for <strong>random</strong> daily
+verse selection</li>
+</ul>
+<h3 id="saving-changes">Saving Changes</h3>
+<p>Always scroll to the bottom and click <strong>Save Changes</strong> /
+<strong>Sove Chanjman yo</strong> when finished. A success message will
+confirm your changes are live.</p>
+<hr />
+<h2 id="configure-home-page-tabs">6. Configure Home Page Tabs</h2>
+<p><strong>Menu:</strong> Configure Home Tabs / <em>Konfigire Paj
+Akèy</em></p>
+<p>This section controls the four sub-tabs under <strong>Home</strong>
+on the public website:</p>
+<table>
+<colgroup>
+<col style="width: 47%" />
+<col style="width: 52%" />
+</colgroup>
+<thead>
+<tr>
+<th>Sub-Tab</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>About Us</strong></td>
+<td>Church history and mission (Kreyòl + English)</td>
+</tr>
+<tr>
+<td><strong>Our Beliefs</strong></td>
+<td>Statement of faith</td>
+</tr>
+<tr>
+<td><strong>Our Team</strong></td>
+<td>Pastor and Assistant Pastor profiles with photo, bio, and email</td>
+</tr>
+<tr>
+<td><strong>What to Expect</strong></td>
+<td>First-time visitor information</td>
+</tr>
+</tbody>
+</table>
+<p>For each sub-tab:</p>
+<ol type="1">
+<li>Click the sub-tab pill at the top (About Us, Beliefs, Team,
+Expect)</li>
+<li>Fill in titles and body text in <strong>both Kreyòl and
+English</strong></li>
+<li>Upload images by clicking, dragging, or pasting into the image
+zone</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<figure>
+<img src="/admin-guide/screenshots/07-home-tabs-config.png"
+alt="Configure Home Tabs screen" />
+<figcaption aria-hidden="true">Configure Home Tabs screen</figcaption>
+</figure>
+<p><em>Figure 7 — Home page tab configuration.</em></p>
+<p><strong>Our Team tip:</strong> Add a photo, name, role, short
+biography, and email for the Pastor and Assistant Pastor. These appear
+on the public “Our Team” page.</p>
+<hr />
+<h2 id="service-schedules">7. Service Schedules</h2>
+<p><strong>Menu:</strong> Service Schedules / <em>Lè Sèvis yo</em></p>
+<p>Manage your weekly worship and service times.</p>
+<ul>
+<li>Click <strong>+ Add</strong> to create a new service entry</li>
+<li>Enter the day, time, service name, and description (Kreyòl +
+English)</li>
+<li>Mark a service as <strong>Live Stream</strong> if it should appear
+in the live stream section</li>
+<li>Click the <strong>pencil icon</strong> to edit or the <strong>trash
+icon</strong> to delete</li>
+</ul>
+<hr />
+<h2 id="haiti-missions-local-outreach">8. Haiti Missions &amp; Local
+Outreach</h2>
+<p><strong>Haiti Missions</strong> — Manage mission trip information,
+photos, and descriptions for your Haiti outreach work.</p>
+<p><strong>Local Outreach</strong> — Manage community outreach project
+listings (title, description, image, date).</p>
+<p>Both sections follow the same pattern: add, edit, or delete entries,
+then save.</p>
+<hr />
+<h2 id="ministries-women-men-children-missions">9. Ministries (Women,
+Men, Children, Missions)</h2>
+<p><strong>Menu:</strong> Ministries</p>
+<p>Configure the four ministry pages accessible from the
+<strong>Ministries</strong> tab on the public menu:</p>
+<ul>
+<li><strong>Women’s Ministry</strong></li>
+<li><strong>Men’s Ministry</strong></li>
+<li><strong>Children &amp; Youth</strong></li>
+<li><strong>Missions</strong></li>
+</ul>
+<p>For each ministry:</p>
+<ol type="1">
+<li>Select the ministry tab at the top</li>
+<li>Enter title and description in Kreyòl and English</li>
+<li>Upload a ministry image</li>
+<li>Add bullet points (one per line) in both languages</li>
+<li>Set <strong>committee contact</strong> name, email, and phone</li>
+<li>Add <strong>notification emails</strong> (comma-separated) to
+receive signup alerts</li>
+<li>Click <strong>Save Ministry</strong></li>
+</ol>
+<p><strong>Viewing signups:</strong><br />
+Below the form, a table shows individuals who signed up for that
+ministry. You can export signups to a spreadsheet using the export
+button.</p>
+<figure>
+<img src="/admin-guide/screenshots/08-ministries-config.png"
+alt="Ministries configuration screen" />
+<figcaption aria-hidden="true">Ministries configuration
+screen</figcaption>
+</figure>
+<p><em>Figure 8 — Ministries configuration and signups.</em></p>
+<hr />
+<h2 id="events-registrations">10. Events &amp; Registrations</h2>
+<p><strong>Events &amp; Signups</strong> — Create church events (title,
+date, description, image). Visitors can register directly on the
+website.</p>
+<p><strong>Registrations</strong> — View all event signups. The badge
+number on the menu shows how many registrations are pending review.</p>
+<p>To add an event:</p>
+<ol type="1">
+<li>Click <strong>+ Add Event</strong></li>
+<li>Fill in details in both languages</li>
+<li>Save</li>
+</ol>
+<hr />
+<h2 id="sermons-youtube-sync">11. Sermons &amp; YouTube Sync</h2>
+<p><strong>Menu:</strong> Sermons</p>
+<ul>
+<li>View all synced sermon videos from your YouTube channel</li>
+<li>Click <strong>Sync from YouTube</strong> to pull the latest videos
+automatically</li>
+<li>Edit sermon titles or delete entries as needed</li>
+</ul>
+<hr />
+<h2 id="daily-devotional-theme-settings">12. Daily Devotional &amp;
+Theme Settings</h2>
+<p><strong>Menu:</strong> Daily Devotional / <em>Devosyonèl Chak
+Jou</em></p>
+<p>This section manages the daily Bible verse shown on the website.</p>
+<h3 id="theme-configuration">Theme Configuration</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Use Theme — ON</strong> + theme entered (e.g., “Hope”)</td>
+<td>Daily verse is selected around that spiritual theme</td>
+</tr>
+<tr>
+<td><strong>Use Theme — OFF</strong> or theme left blank</td>
+<td>Daily verse is chosen <strong>at random</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Suggested themes: Forgiveness, Easter, Christmas, Miracles,
+Compassion, Faith, Love, Hope, Peace, Grace, Strength, Thanksgiving.</p>
+<h3 id="other-devotional-controls">Other Devotional Controls</h3>
+<ul>
+<li><strong>Auto-Publish</strong> — automatically publish approved
+devotionals each day</li>
+<li><strong>Generate</strong> — use AI to create a new devotional draft
+(review before publishing)</li>
+<li><strong>Edit / Approve / Delete</strong> — manage individual
+devotional entries in the list below</li>
+</ul>
+<figure>
+<img src="/admin-guide/screenshots/09-devotional-theme.png"
+alt="Daily devotional theme settings" />
+<figcaption aria-hidden="true">Daily devotional theme
+settings</figcaption>
+</figure>
+<p><em>Figure 9 — Daily devotional theme controls.</em></p>
+<hr />
+<h2 id="pastors-blog">13. Pastor’s Blog</h2>
+<p><strong>Menu:</strong> Pastor’s Blog / <em>Piblikasyon Blòg</em></p>
+<p>Publish your weekly point of view articles (replaces the old
+“Community Outreach” public tab).</p>
+<p><strong>To create a new blog post:</strong></p>
+<ol type="1">
+<li>Click <strong>Create New Article</strong></li>
+<li>Enter the title in English and Kreyòl</li>
+<li>Write the article content in both languages (Markdown formatting
+supported)</li>
+<li>Set the publication date</li>
+<li>Click <strong>Save Article</strong></li>
+</ol>
+<p>Use the <strong>Translate</strong> button to auto-translate content
+between languages (review before publishing).</p>
+<figure>
+<img src="/admin-guide/screenshots/10-blog-editor.png"
+alt="Pastor blog editor" />
+<figcaption aria-hidden="true">Pastor blog editor</figcaption>
+</figure>
+<p><em>Figure 10 — Pastor’s blog editor.</em></p>
+<hr />
+<h2 id="contact-form-submissions">14. Contact Form Submissions</h2>
+<p><strong>Menu:</strong> Contact Submissions / <em>Mesaj
+Kontakte</em></p>
+<p>When visitors submit the <strong>Contact Us</strong> form on the
+public website, their messages appear here.</p>
+<p>Each entry shows:</p>
+<ul>
+<li>Name</li>
+<li>Email</li>
+<li>Phone</li>
+<li>Message</li>
+<li>Date submitted</li>
+</ul>
+<p>Review messages regularly and delete entries once handled.</p>
+<hr />
+<h2 id="prayer-wall-moderation">15. Prayer Wall Moderation</h2>
+<p><strong>Menu:</strong> Prayer Moderation / <em>Moderasyon Miray
+Lapriyè</em></p>
+<p>Visitors can submit prayer requests on the public Prayer Wall. Some
+may choose to remain <strong>anonymous</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Requester</strong></td>
+<td>Name (hidden from public if anonymous)</td>
+</tr>
+<tr>
+<td><strong>Request Text</strong></td>
+<td>The prayer request</td>
+</tr>
+<tr>
+<td><strong>Anonymous?</strong></td>
+<td>Yes/No — if Yes, name is not shown publicly</td>
+</tr>
+<tr>
+<td><strong>Date</strong></td>
+<td>When submitted</td>
+</tr>
+</tbody>
+</table>
+<p>Review new requests and delete spam or resolved entries. Approved
+requests appear on the public Prayer Wall with date, request text, and
+requester name (unless anonymous).</p>
+<hr />
+<h2 id="managing-additional-administrators">16. Managing Additional
+Administrators</h2>
+<p><strong>Menu:</strong> Security &amp; Admins / <em>Sekirite &amp;
+Admins</em><br />
+<strong>Access:</strong> Super Admin only</p>
+<p>To add a new administrator:</p>
+<ol type="1">
+<li>Enter their <strong>email address</strong> in the field</li>
+<li>Click <strong>Authorize Admin</strong></li>
+<li>They will receive login instructions on first sign-in</li>
+<li>On first login or from a new device, they must verify via
+<strong>email code</strong></li>
+</ol>
+<p>To remove an administrator, click the <strong>trash icon</strong>
+next to their email.</p>
+<p><strong>Super Admin</strong> checkbox grants full access including
+the ability to manage other admins.</p>
+<figure>
+<img src="/admin-guide/screenshots/11-security-admins.png"
+alt="Security and admins screen" />
+<figcaption aria-hidden="true">Security and admins screen</figcaption>
+</figure>
+<p><em>Figure 11 — Managing administrator accounts.</em></p>
+<hr />
+<h2 id="language-toggle-bilingual-content-kreyòl-english">17. Language
+Toggle &amp; Bilingual Content (Kreyòl / English)</h2>
+<p>The website and admin dashboard both support <strong>Kreyòl</strong>
+and <strong>English</strong>.</p>
+<h3 id="visitor-language-toggle-public-website">Visitor Language Toggle
+(Public Website)</h3>
+<ul>
+<li>Click the <strong>globe icon (🌐)</strong> in the top-right corner
+of the public site</li>
+<li>Toggle between <strong>Kreyòl</strong> and
+<strong>English</strong></li>
+<li>This only changes how the site is displayed — it does not create
+content for you</li>
+</ul>
+<h3 id="how-bilingual-content-works-in-admin">How Bilingual Content
+Works in Admin</h3>
+<p>Most admin sections show <strong>two fields</strong> for the same
+content:</p>
+<ul>
+<li>one field for <strong>Kreyòl</strong></li>
+<li>one field for <strong>English</strong></li>
+</ul>
+<p>Visitors will only see the correct language when both sides have been
+filled in (either manually or with auto-translation).</p>
+<p>You have <strong>two ways</strong> to manage bilingual content:</p>
+<h4 id="option-a-manual-entry-traditional">Option A — Manual Entry
+(Traditional)</h4>
+<ol type="1">
+<li>Type the Kreyòl version in the left/Kreyòl field</li>
+<li>Type the English version in the right/English field</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<p>Use this when you want full control over wording in both
+languages.</p>
+<h4 id="option-b-auto-translation-recommended-for-faster-updates">Option
+B — Auto-Translation (Recommended for Faster Updates)</h4>
+<p>Several admin sections now include an
+<strong>Auto-Translation</strong> panel with three choices:</p>
+<table>
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 72%" />
+</colgroup>
+<thead>
+<tr>
+<th>Mode</th>
+<th>What It Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Auto (fill empty language)</strong></td>
+<td>If you only filled in Kreyòl, it translates to English. If you only
+filled in English, it translates to Kreyòl.</td>
+</tr>
+<tr>
+<td><strong>Kreyòl → English</strong></td>
+<td>Always uses the Kreyòl text as the source and fills/overwrites the
+English fields</td>
+</tr>
+<tr>
+<td><strong>English → Kreyòl</strong></td>
+<td>Always uses the English text as the source and fills/overwrites the
+Kreyòl fields</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Steps:</strong></p>
+<ol type="1">
+<li>Enter your content in <strong>one language only</strong> (or both,
+if you prefer)</li>
+<li>Choose the translation direction</li>
+<li>Click <strong>Translate Now</strong> / <strong>Tradui Kounye
+a</strong></li>
+<li><strong>Review the translated text carefully</strong> before
+saving</li>
+<li>Click <strong>Save</strong> to publish</li>
+</ol>
+<blockquote>
+<p><strong>Important:</strong> Auto-translation uses AI and is very
+helpful, but it should always be reviewed by a human before publishing —
+especially for scripture references, church names, and pastoral
+language.</p>
+</blockquote>
+<h3 id="where-auto-translation-is-available-today">Where
+Auto-Translation Is Available Today</h3>
+<table>
+<colgroup>
+<col style="width: 36%" />
+<col style="width: 63%" />
+</colgroup>
+<thead>
+<tr>
+<th>Admin Section</th>
+<th>Auto-Translate Support</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Global Settings</strong> — Pastor Message</td>
+<td>✅ Yes</td>
+</tr>
+<tr>
+<td><strong>Configure Home Tabs</strong> — About, Beliefs, Team, What to
+Expect</td>
+<td>✅ Yes</td>
+</tr>
+<tr>
+<td><strong>Ministries</strong> — title, description, bullet points</td>
+<td>✅ Yes</td>
+</tr>
+<tr>
+<td><strong>Pastor’s Blog</strong></td>
+<td>✅ Yes</td>
+</tr>
+<tr>
+<td>Service Schedules, Events, Missions, Outreach</td>
+<td>Manual entry for now</td>
+</tr>
+</tbody>
+</table>
+<h3 id="example-workflow-pastor-writes-in-kreyòl-only">Example Workflow
+(Pastor writes in Kreyòl only)</h3>
+<ol type="1">
+<li>Open <strong>Configure Home Tabs</strong> → <strong>About
+Us</strong></li>
+<li>Fill in only the Kreyòl fields</li>
+<li>Set translation mode to <strong>Kreyòl → English</strong></li>
+<li>Click <strong>Translate Now</strong></li>
+<li>Review the English fields that were filled in automatically</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<h3 id="example-workflow-english-draft-first">Example Workflow (English
+draft first)</h3>
+<ol type="1">
+<li>Open <strong>Pastor’s Blog</strong></li>
+<li>Write the article in English only</li>
+<li>Set translation mode to <strong>English → Kreyòl</strong></li>
+<li>Click <strong>Translate Now</strong></li>
+<li>Review the Kreyòl version</li>
+<li>Click <strong>Save Article</strong></li>
+</ol>
+<figure>
+<img src="/admin-guide/screenshots/12-auto-translate-panel.png"
+alt="Auto-translation controls" />
+<figcaption aria-hidden="true">Auto-translation controls</figcaption>
+</figure>
+<p><em>Figure 12 — Auto-translation direction controls.</em></p>
+<hr />
+<h2 id="creating-a-site-backup">18. Creating a Site Backup</h2>
+<p>In <strong>Global Settings</strong>, scroll to the
+<strong>Backup</strong> section and click <strong>Create Site
+Backup</strong>.</p>
+<p>This saves a snapshot of your website data. Backups are stored
+securely on the server. Run a backup before making major changes.</p>
+<hr />
+<h2 id="signing-out">19. Signing Out</h2>
+<p>Click <strong>Sign Out</strong> / <em>Dekonekte</em> in the top-right
+corner of the admin dashboard when you are finished. Always sign out on
+shared or public computers.</p>
+<hr />
+<h2 id="quick-reference-support">20. Quick Reference &amp; Support</h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Website URL</strong></td>
+<td>https://ParousiaBaptistChurch.org</td>
+</tr>
+<tr>
+<td><strong>Admin URL</strong></td>
+<td>https://ParousiaBaptistChurch.org/admin</td>
+</tr>
+<tr>
+<td><strong>Primary Language</strong></td>
+<td>Kreyòl (Haitian Creole) with English toggle</td>
+</tr>
+<tr>
+<td><strong>Hosting</strong></td>
+<td>Google Cloud Platform (Cloud Run)</td>
+</tr>
+<tr>
+<td><strong>Maintenance Contact</strong></td>
+<td>Straight-Line Holdings, Inc.</td>
+</tr>
+<tr>
+<td><strong>Support Schedule</strong></td>
+<td>Weekly assistance initially, then biweekly</td>
+</tr>
+<tr>
+<td><strong>Payment (Zelle)</strong></td>
+<td>929-529-8809</td>
+</tr>
+</tbody>
+</table>
+<p>For help adding events, updating content, or troubleshooting login
+issues, contact your website maintainer during scheduled support
+sessions.</p>
+<hr />
+<p><em>End of Administration Guide</em></p>
+
+    </article>
+    <article class="doc-lang" id="doc-ht" lang="ht" data-title="Parousia Baptist Ministries — Gid Administrasyon">
+      <h1 id="parousia-baptist-ministries">Parousia Baptist Ministries</h1>
+<h2 id="gid-administrasyon-sit-wèb-la">Gid Administrasyon Sit Wèb
+la</h2>
+<p><strong>Prepare pou:</strong> Pastè ak lidèchip legliz la<br />
+<strong>Prepare pa:</strong> Straight-Line Holdings, Inc.<br />
+<strong>Dat:</strong> 29 jiyè 2026<br />
+<strong>Vèsyon:</strong> 1.0</p>
+<hr />
+<h2 id="entwodiksyon">1. Entwodiksyon</h2>
+<p>Byenveni nan <strong>gid administrasyon</strong> sit wèb
+<strong>Parousia Baptist Ministries</strong> la. Dokiman sa a eksplike
+kijan pou jere ak mete sit legliz ou an ajou san ou pa bezwen konesans
+teknik.</p>
+<p>Sit la fèt pou itilize prensipalman an <strong>Kreyòl</strong>, ak
+yon bouton pou chanje an <strong>Angle</strong> pou vizitè ak
+administratè yo.</p>
+<p><strong>Sit wèb la:</strong><br />
+https://ParousiaBaptistChurch.org</p>
+<p><strong>Paj koneksyon administratè:</strong><br />
+https://ParousiaBaptistChurch.org/admin</p>
+<hr />
+<h2 id="kijan-pou-aksede-pòtay-administrasyon-an">2. Kijan pou Aksede
+Pòtay Administrasyon an</h2>
+<p>Gen de fason pou rive nan zòn administrasyon an:</p>
+<p><strong>Opsyon A — URL dirèk</strong><br />
+Tape adrès admin an pi wo a nan navigatè ou.</p>
+<p><strong>Opsyon B — Depi sit piblik la</strong><br />
+Apre ou fin konekte kòm administratè, yon <strong>ikon angranaj
+(⚙)</strong> parèt nan ba navigasyon sit la. Ikon sa a <strong>vizib
+sèlman pou administratè ki konekte</strong> — vizitè regilye yo pa wè
+l.</p>
+<figure>
+<img src="/admin-guide/screenshots/01-public-nav-gear.png"
+alt="Ba navigasyon sit la ak ikon admin" />
+<figcaption aria-hidden="true">Ba navigasyon sit la ak ikon
+admin</figcaption>
+</figure>
+<p><em>Figir 1 — Apre ou konekte kòm admin, ikon angranaj la parèt nan
+ba navigasyon an.</em></p>
+<hr />
+<h2 id="koneksyon-verifikasyon-de-etap">3. Koneksyon (Verifikasyon De
+Etap)</h2>
+<p>Pòtay administrasyon ou an itilize yon sistèm koneksyon sekirize ak
+verifikasyon pa imel. Sa pwoteje sit legliz la kont chanjman san
+otorizasyon.</p>
+<h3 id="etap-1-antre-imel-ak-modpas">Etap 1 — Antre Imel ak Modpas</h3>
+<ol type="1">
+<li>Ale sou <code>/admin</code></li>
+<li>Antre <strong>adrès imel otorize</strong> ou</li>
+<li>Antre <strong>modpas pèsonèl</strong> ou</li>
+<li>Klike <strong>Kontinye</strong> / <strong>Next</strong></li>
+</ol>
+<figure>
+<img src="/admin-guide/screenshots/02-admin-login-step1.png"
+alt="Ekran koneksyon admin — imel ak modpas" />
+<figcaption aria-hidden="true">Ekran koneksyon admin — imel ak
+modpas</figcaption>
+</figure>
+<p><em>Figir 2 — Premye etap koneksyon admin.</em></p>
+<p><strong>Sou yon aparèy deja verifye</strong>, bouton an ap montre
+<strong>Konekte</strong> olye de <strong>Mande Kòd OTP</strong>.</p>
+<h3 id="etap-2-verifye-ak-kòd-imel-otp">Etap 2 — Verifye ak Kòd Imel
+(OTP)</h3>
+<p>Lè ou <strong>konekte pou premye fwa</strong> oswa depi yon
+<strong>nouvo aparèy</strong>, sistèm nan voye yon <strong>kòd 6
+chif</strong> nan imel ou.</p>
+<ol type="1">
+<li>Tcheke bwat resepsyon ou (ak katab spam si bezwen)</li>
+<li>Antre kòd 6 chif la nan <strong>10 minit</strong></li>
+<li>Klike <strong>Verifye</strong></li>
+</ol>
+<figure>
+<img src="/admin-guide/screenshots/03-admin-login-otp-ht.png"
+alt="Ekran verifikasyon OTP (Kreyòl)" />
+<figcaption aria-hidden="true">Ekran verifikasyon OTP
+(Kreyòl)</figcaption>
+</figure>
+<p><em>Figir 3 — Ekran verifikasyon OTP (pran foto a anvan ou antre kòd
+la).</em></p>
+<h3 id="etap-3-kreye-oswa-reyinisyalize-modpas-premye-fwa">Etap 3 —
+Kreye oswa Reyinisyalize Modpas (Premye Fwa)</h3>
+<p>Si se premye koneksyon ou, sistèm nan ap mande w <strong>kreye yon
+modpas pèsonèl</strong>. Chwazi yon modpas ki an sekirite epi fasil pou
+ou sonje.</p>
+<p><strong>Bliye modpas?</strong><br />
+Klike <strong>Bliye modpas</strong> sou ekran koneksyon an, antre imel
+ou, verifye ak kòd la, epi mete yon nouvo modpas.</p>
+<hr />
+<h2 id="apèsi-sou-tablo-administrasyon-an">4. Apèsi sou Tablo
+Administrasyon an</h2>
+<p>Apre ou fin konekte, ou rive nan <strong>Sant Kòmand Administrasyon
+an</strong>. Ba bò gòch la montre tout seksyon yo:</p>
+<table>
+<colgroup>
+<col style="width: 47%" />
+<col style="width: 52%" />
+</colgroup>
+<thead>
+<tr>
+<th>Seksyon</th>
+<th>Objektif</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Anviwònman Global</strong></td>
+<td>Enfòmasyon legliz, logo, koulè, imaj akèy, kontak</td>
+</tr>
+<tr>
+<td><strong>Konfigire Paj Akèy</strong></td>
+<td>Konsènan Nou, Kwayans, Ekip, Kisa pou Atann</td>
+</tr>
+<tr>
+<td><strong>Lè Sèvis yo</strong></td>
+<td>Lè adorasyon ak deskripsyon sèvis yo</td>
+</tr>
+<tr>
+<td><strong>Misyon an Ayiti</strong></td>
+<td>Kontni misyon Ayiti</td>
+</tr>
+<tr>
+<td><strong>Pwojè Kominote</strong></td>
+<td>Pwojè outreach kominote a</td>
+</tr>
+<tr>
+<td><strong>Ministè yo</strong></td>
+<td>Fanm, Gason, Timoun, Misyon</td>
+</tr>
+<tr>
+<td><strong>Evènman &amp; Enskripsyon</strong></td>
+<td>Evènman legliz ak enskripsyon</td>
+</tr>
+<tr>
+<td><strong>Moun Ki Enskri</strong></td>
+<td>Ki moun ki enskri pou evènman</td>
+</tr>
+<tr>
+<td><strong>Live &amp; Archives</strong></td>
+<td>Videyo sermon (senkronizasyon YouTube)</td>
+</tr>
+<tr>
+<td><strong>Abòne Devosyonèl</strong></td>
+<td>Moun ki abòne pou kado espirityèl</td>
+</tr>
+<tr>
+<td><strong>Devosyonèl Chak Jou</strong></td>
+<td>Vèsè chak jou, tèm, otomatik piblikasyon</td>
+</tr>
+<tr>
+<td><strong>Sekirite &amp; Admins</strong></td>
+<td>Ajoute/siprime administratè <em>(Super Admin sèlman)</em></td>
+</tr>
+<tr>
+<td><strong>Mesaj Kontakte</strong></td>
+<td>Mesaj fòm Kontakte Nou</td>
+</tr>
+<tr>
+<td><strong>Moderasyon Miray Lapriyè</strong></td>
+<td>Demann lapriyè</td>
+</tr>
+<tr>
+<td><strong>Piblikasyon Blòg</strong></td>
+<td>Atik pwen de vi pastè a</td>
+</tr>
+</tbody>
+</table>
+<figure>
+<img src="/admin-guide/screenshots/04-admin-dashboard-sidebar.png"
+alt="Ba bò gòch tablo admin" />
+<figcaption aria-hidden="true">Ba bò gòch tablo admin</figcaption>
+</figure>
+<p><em>Figir 4 — Apèsi sou tablo administrasyon an.</em></p>
+<p><strong>Chanje lang:</strong> Itilize <strong>ikon glòb la
+(🌐)</strong> anlè adwat pou pase ant Kreyòl ak Angle.</p>
+<hr />
+<h2 id="anviwònman-global">5. Anviwònman Global</h2>
+<p><strong>Meni:</strong> Anviwònman Global</p>
+<p>Se seksyon ki pi enpòtan pou aparans jeneral sit la ak enfòmasyon
+legliz la.</p>
+<h3 id="enfòmasyon-legliz">Enfòmasyon Legliz</h3>
+<ul>
+<li><strong>Non Pastè a</strong> — parèt sou sit la</li>
+<li><strong>Mesaj Pastè a</strong> — mesaj byenveni an Kreyòl ak
+Angle</li>
+<li><strong>Telefòn, Imel, Adrès Legliz</strong> — parèt nan pye paj la
+ak zòn kontak yo</li>
+</ul>
+<h3 id="logo-legliz-la">Logo Legliz la</h3>
+<ul>
+<li>Klike, trennen oswa kole (Ctrl+V / Cmd+V) yon nouvo logo</li>
+<li>Fòma aksepte: <strong>PNG oswa JPG</strong></li>
+<li>Apre upload, sistèm nan <strong>detekte koulè yo
+otomatikman</strong> depi logo a</li>
+</ul>
+<figure>
+<img src="/admin-guide/screenshots/05-logo-upload.png"
+alt="Zòn upload logo" />
+<figcaption aria-hidden="true">Zòn upload logo</figcaption>
+</figure>
+<p><em>Figir 5 — Panel upload logo.</em></p>
+<h3 id="ajistè-koulè">Ajistè Koulè</h3>
+<ul>
+<li><strong>Prensipal</strong> — koulè prensipal bouton yo</li>
+<li><strong>Mete Sou Li</strong> — koulè lè moun mete curseur sou
+bouton</li>
+<li><strong>Aksan</strong> — koulè segondè</li>
+<li><strong>Tèm Background</strong> — Tèm Klè oswa Tèm Nwa</li>
+<li><strong>Klète Foto Dèyè a</strong> — vizibilite imaj background hero
+a</li>
+<li><strong>Adousi Dèyè Tèks</strong> — kouch blur dèyè tèks la pou li
+pi fasil</li>
+</ul>
+<figure>
+<img src="/admin-guide/screenshots/06-color-adjuster.png"
+alt="Panel ajistè koulè" />
+<figcaption aria-hidden="true">Panel ajistè koulè</figcaption>
+</figure>
+<p><em>Figir 6 — Ajistè koulè ak preview.</em></p>
+<h3 id="imaj-background-hero">Imaj Background Hero</h3>
+<ul>
+<li>Upload yon imaj background pou seksyon akèy la</li>
+<li>Atizay floral nan pati anba a soti nan imaj sa a</li>
+<li>Ajiste opasite ak glisman an wo a</li>
+</ul>
+<h3 id="tèm-devosyonèl">Tèm Devosyonèl</h3>
+<ul>
+<li>Aktive <strong>Itilize Tèm</strong></li>
+<li>Antre yon tèm espirityèl (egzanp: <em>Lafwa</em>, <em>Espwa</em>,
+<em>Padon</em>)</li>
+<li>Kite tèm la dezaktive pou chwazi vèsè <strong>pa chans</strong></li>
+</ul>
+<h3 id="sove-chanjman-yo">Sove Chanjman yo</h3>
+<p>Toujou desann anba epi klike <strong>Sove Chanjman yo</strong> lè ou
+fini.</p>
+<hr />
+<h2 id="konfigire-paj-akèy">6. Konfigire Paj Akèy</h2>
+<p><strong>Meni:</strong> Konfigire Paj Akèy</p>
+<p>Seksyon sa a kontwole kat sub-tab ki anba <strong>Akèy</strong> sou
+sit piblik la:</p>
+<table>
+<thead>
+<tr>
+<th>Sub-Tab</th>
+<th>Kontni</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Konsènan Nou</strong></td>
+<td>Istwa ak misyon legliz la</td>
+</tr>
+<tr>
+<td><strong>Kwayans Nou</strong></td>
+<td>Deklarasyon lafwa</td>
+</tr>
+<tr>
+<td><strong>Ekip la</strong></td>
+<td>Pastè ak Asistan Pastè</td>
+</tr>
+<tr>
+<td><strong>Kisa pou Atann</strong></td>
+<td>Enfòmasyon pou nouvo vizitè</td>
+</tr>
+</tbody>
+</table>
+<p>Pou chak sub-tab:</p>
+<ol type="1">
+<li>Klike sou pil sub-tab la</li>
+<li>Ranpli tit ak tèks an <strong>Kreyòl ak Angle</strong></li>
+<li>Upload imaj yo</li>
+<li>Klike <strong>Sove</strong></li>
+</ol>
+<figure>
+<img src="/admin-guide/screenshots/07-home-tabs-config.png"
+alt="Ekran Konfigire Paj Akèy" />
+<figcaption aria-hidden="true">Ekran Konfigire Paj Akèy</figcaption>
+</figure>
+<p><em>Figir 7 — Konfigirasyon paj Akèy.</em></p>
+<hr />
+<h2 id="lè-sèvis-yo">7. Lè Sèvis yo</h2>
+<p><strong>Meni:</strong> Lè Sèvis yo</p>
+<p>Jere lè adorasyon ak sèvis legliz ou yo.</p>
+<ul>
+<li>Klike <strong>+ Add</strong> pou kreye yon nouvo sèvis</li>
+<li>Antre jou, lè, non sèvis, ak deskripsyon (Kreyòl + Angle)</li>
+<li>Make sèvis la kòm <strong>Live Stream</strong> si li dwe parèt nan
+seksyon live la</li>
+<li>Klike <strong>kreyon</strong> pou modifye oswa
+<strong>poubel</strong> pou efase</li>
+</ul>
+<hr />
+<h2 id="misyon-an-ayiti-pwojè-kominote">8. Misyon an Ayiti &amp; Pwojè
+Kominote</h2>
+<p><strong>Misyon an Ayiti</strong> — Jere enfòmasyon, foto, ak
+deskripsyon misyon Ayiti.</p>
+<p><strong>Pwojè Kominote</strong> — Jere lis pwojè outreach kominote
+a.</p>
+<hr />
+<h2 id="ministè-yo-fanm-gason-timoun-misyon">9. Ministè yo (Fanm, Gason,
+Timoun, Misyon)</h2>
+<p><strong>Meni:</strong> Ministè yo</p>
+<p>Konfigire kat paj ministè ki sou meni <strong>Ministè</strong> a:</p>
+<ol type="1">
+<li>Chwazi tab ministè a</li>
+<li>Antre tit ak deskripsyon an Kreyòl ak Angle</li>
+<li>Upload imaj ministè a</li>
+<li>Ajoute pwen kle yo (yon pa liy) nan toude lang</li>
+<li>Mete kontak komite a ak imel notifikasyon yo</li>
+<li>Klike <strong>Sove Ministè a</strong></li>
+</ol>
+<figure>
+<img src="/admin-guide/screenshots/08-ministries-config.png"
+alt="Ekran konfigirasyon ministè" />
+<figcaption aria-hidden="true">Ekran konfigirasyon ministè</figcaption>
+</figure>
+<p><em>Figir 8 — Konfigirasyon ministè ak enskripsyon.</em></p>
+<hr />
+<h2 id="evènman-enskripsyon">10. Evènman &amp; Enskripsyon</h2>
+<p><strong>Evènman &amp; Enskripsyon</strong> — Kreye evènman legliz
+(tit, dat, deskripsyon, imaj).</p>
+<p><strong>Moun Ki Enskri</strong> — Gade ki moun ki enskri. Nimewo sou
+meni an montre konbyen enskripsyon ki annatant.</p>
+<hr />
+<h2 id="live-archives-sermon-youtube">11. Live &amp; Archives (Sermon
+YouTube)</h2>
+<p><strong>Meni:</strong> Live &amp; Archives</p>
+<ul>
+<li>Gade tout videyo sermon ki senkronize depi chanèl YouTube ou</li>
+<li>Klike <strong>Sync from YouTube</strong> pou rale dènye videyo
+yo</li>
+<li>Modifye tit oswa efase antre yo si bezwen</li>
+</ul>
+<hr />
+<h2 id="devosyonèl-chak-jou-tèm">12. Devosyonèl Chak Jou &amp; Tèm</h2>
+<p><strong>Meni:</strong> Devosyonèl Chak Jou</p>
+<p>Jere vèsè biblik chak jou ki parèt sou sit la.</p>
+<table>
+<thead>
+<tr>
+<th>Anviwònman</th>
+<th>Efè</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Itilize Tèm — ON</strong></td>
+<td>Vèsè a chwazi selon tèm espirityèl la</td>
+</tr>
+<tr>
+<td><strong>Itilize Tèm — OFF</strong></td>
+<td>Vèsè a chwazi <strong>pa chans</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Lòt kontwòl:</strong> Oto-Piblikasyon, Jenere (AI),
+Modifye/Apwouve/Efase.</p>
+<figure>
+<img src="/admin-guide/screenshots/09-devotional-theme.png"
+alt="Anviwònman tèm devosyonèl" />
+<figcaption aria-hidden="true">Anviwònman tèm devosyonèl</figcaption>
+</figure>
+<p><em>Figir 9 — Kontwòl tèm devosyonèl.</em></p>
+<hr />
+<h2 id="piblikasyon-blòg-pastè-a">13. Piblikasyon Blòg Pastè a</h2>
+<p><strong>Meni:</strong> Piblikasyon Blòg</p>
+<p>Pibliye atik pwen de vi pastè a chak semèn.</p>
+<ol type="1">
+<li>Klike <strong>Kreye Nouvo Atik</strong></li>
+<li>Antre tit ak kontni an Angle ak Kreyòl</li>
+<li>Mete dat piblikasyon an</li>
+<li>Klike <strong>Sove Atik</strong></li>
+</ol>
+<p>Itilize bouton <strong>Tradui</strong> pou tradiksyon otomatik
+(toujou revize anvan ou pibliye).</p>
+<figure>
+<img src="/admin-guide/screenshots/10-blog-editor.png"
+alt="Editè blòg pastè a" />
+<figcaption aria-hidden="true">Editè blòg pastè a</figcaption>
+</figure>
+<p><em>Figir 10 — Editè blòg.</em></p>
+<hr />
+<h2 id="mesaj-kontakte">14. Mesaj Kontakte</h2>
+<p><strong>Meni:</strong> Mesaj Kontakte</p>
+<p>Lè vizitè yo soumèt fòm <strong>Kontakte Nou</strong> a, mesaj yo
+parèt isit la. Revize yo regilyèman epi efase yo lè ou fin trete yo.</p>
+<hr />
+<h2 id="moderasyon-miray-lapriyè">15. Moderasyon Miray Lapriyè</h2>
+<p><strong>Meni:</strong> Moderasyon Miray Lapriyè</p>
+<p>Vizitè yo ka voye demann lapriyè. Gen opsyon pou rete
+<strong>anonyme</strong>.</p>
+<p>Revize nouvo demann yo epi efase spam oswa demann ki rezoud deja.</p>
+<hr />
+<h2 id="jere-administratè-adisyonèl">16. Jere Administratè
+Adisyonèl</h2>
+<p><strong>Meni:</strong> Sekirite &amp; Admins <em>(Super Admin
+sèlman)</em></p>
+<ol type="1">
+<li>Antre <strong>adrès imel</strong> administratè a</li>
+<li>Klike <strong>Otorize Admin</strong></li>
+<li>Premye koneksyon oswa nouvo aparèy mande <strong>kòd imel
+(OTP)</strong></li>
+</ol>
+<p>Sistèm nan verifye fòma imel la ak domèn lan anvan li otorize yon
+nouvo admin.</p>
+<figure>
+<img src="/admin-guide/screenshots/11-security-admins.png"
+alt="Ekran Sekirite &amp; Admins" />
+<figcaption aria-hidden="true">Ekran Sekirite &amp; Admins</figcaption>
+</figure>
+<p><em>Figir 11 — Jesyon kont administratè.</em></p>
+<hr />
+<h2 id="lang-kontni-bileng-kreyòl-angle">17. Lang &amp; Kontni Bileng
+(Kreyòl / Angle)</h2>
+<p>Sit la ak tablo admin an sipòte <strong>Kreyòl</strong> ak
+<strong>Angle</strong>.</p>
+<h3 id="chanje-lang-sit-piblik">Chanje Lang (Sit Piblik)</h3>
+<ul>
+<li>Klike <strong>ikon glòb la (🌐)</strong> anlè adwat</li>
+<li>Chanje ant Kreyòl ak Angle</li>
+</ul>
+<h3 id="kontni-bileng-nan-admin">Kontni Bileng nan Admin</h3>
+<p>Pifò seksyon yo gen <strong>de jaden</strong> pou menm kontni an —
+yon pou Kreyòl, yon pou Angle.</p>
+<h4 id="opsyon-a-antre-manyèlman">Opsyon A — Antre Manyèlman</h4>
+<p>Ranpli toude lang yo epi klike <strong>Sove</strong>.</p>
+<h4 id="opsyon-b-tradiksyon-otomatik-rekòmande">Opsyon B — Tradiksyon
+Otomatik (Rekòmande)</h4>
+<p>Panel <strong>Tradiksyon Otomatik</strong> gen twa opsyon:</p>
+<table>
+<thead>
+<tr>
+<th>Mòd</th>
+<th>Sa li fè</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Otomatik (ranpli lang vid la)</strong></td>
+<td>Ranpli lang ki manke a</td>
+</tr>
+<tr>
+<td><strong>Kreyòl → Angle</strong></td>
+<td>Tradui soti nan Kreyòl pou ale Angle</td>
+</tr>
+<tr>
+<td><strong>Angle → Kreyòl</strong></td>
+<td>Tradui soti nan Angle pou ale Kreyòl</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Etap:</strong> Antre kontni → chwazi direksyon →
+<strong>Tradui Kounye a</strong> → revize → <strong>Sove</strong>.</p>
+<figure>
+<img src="/admin-guide/screenshots/12-auto-translate-panel.png"
+alt="Kontwòl tradiksyon otomatik" />
+<figcaption aria-hidden="true">Kontwòl tradiksyon otomatik</figcaption>
+</figure>
+<p><em>Figir 12 — Kontwòl direksyon tradiksyon otomatik.</em></p>
+<hr />
+<h2 id="kreye-yon-sovgard-sit-la">18. Kreye yon Sovgard Sit la</h2>
+<p>Nan <strong>Anviwònman Global</strong>, desann nan seksyon
+<strong>Sovgard</strong> epi klike <strong>Kreye yon Sovgard</strong>.
+Fè sa anvan gwo chanjman.</p>
+<hr />
+<h2 id="dekonekte">19. Dekonekte</h2>
+<p>Klike <strong>Dekonekte</strong> anlè adwat lè ou fini — espesyalman
+sou òdinatè piblik.</p>
+<hr />
+<h2 id="referans-rapid-sipò">20. Referans Rapid &amp; Sipò</h2>
+<table>
+<thead>
+<tr>
+<th>Atik</th>
+<th>Detay</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>URL Sit la</strong></td>
+<td>https://ParousiaBaptistChurch.org</td>
+</tr>
+<tr>
+<td><strong>URL Admin</strong></td>
+<td>https://ParousiaBaptistChurch.org/admin</td>
+</tr>
+<tr>
+<td><strong>Lang Prensipal</strong></td>
+<td>Kreyòl (ak opsyon Angle)</td>
+</tr>
+<tr>
+<td><strong>Hosting</strong></td>
+<td>Google Cloud Platform (Cloud Run)</td>
+</tr>
+<tr>
+<td><strong>Kontak Sipò</strong></td>
+<td>Straight-Line Holdings, Inc.</td>
+</tr>
+<tr>
+<td><strong>Orè Sipò</strong></td>
+<td>Semènèl premye, apre sa chak de semèn</td>
+</tr>
+<tr>
+<td><strong>Peman (Zelle)</strong></td>
+<td>929-529-8809</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>Fin Gid Administrasyon an</em></p>
+
+    </article>
+  </main>
+
+  <script>
+    (function () {
+      var STORAGE_KEY = 'church_lang';
+      var toggle = document.getElementById('lang-toggle');
+      var label = document.getElementById('lang-toggle-label');
+      var en = document.getElementById('doc-en');
+      var ht = document.getElementById('doc-ht');
+
+      function normalizeLang(value) {
+        return value === 'fr_ht' || value === 'ht' ? 'ht' : 'en';
+      }
+
+      function readLang() {
+        try {
+          return normalizeLang(localStorage.getItem(STORAGE_KEY) || 'en');
+        } catch (e) {
+          return 'en';
+        }
+      }
+
+      function writeLang(lang) {
+        try {
+          localStorage.setItem(STORAGE_KEY, lang === 'ht' ? 'fr_ht' : 'en');
+        } catch (e) {}
+      }
+
+      function applyLang(lang) {
+        var isHt = lang === 'ht';
+        en.classList.toggle('is-active', !isHt);
+        ht.classList.toggle('is-active', isHt);
+        document.documentElement.lang = isHt ? 'ht' : 'en';
+        document.title = isHt ? ht.getAttribute('data-title') : en.getAttribute('data-title');
+        label.textContent = isHt ? 'English' : 'Kreyòl';
+        toggle.setAttribute('aria-label', isHt ? 'Switch to English' : 'Chanje an Kreyòl');
+      }
+
+      applyLang(readLang());
+
+      toggle.addEventListener('click', function () {
+        var next = en.classList.contains('is-active') ? 'ht' : 'en';
+        writeLang(next);
+        applyLang(next);
+      });
+    })();
+  </script>
+</body>
+</html>
