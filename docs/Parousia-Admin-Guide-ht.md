@@ -29,12 +29,18 @@ Gen de fason pou rive nan zòn administrasyon an:
 **Opsyon A — URL dirèk**  
 Tape adrès admin an pi wo a nan navigatè ou.
 
-**Opsyon B — Depi sit piblik la**  
-Apre ou fin konekte kòm administratè, yon **ikon angranaj (⚙)** parèt nan ba navigasyon sit la. Ikon sa a **vizib sèlman pou administratè ki konekte** — vizitè regilye yo pa wè l.
+**Opsyon B — Depi sit piblik la (apre ou fin konekte)**  
+Apre ou fin konekte kòm administratè, yon **ikon angranaj (⚙)** parèt nan ba navigasyon sit la (sou òdinatè ak mobil). Ikon sa a **vizib sèlman pou administratè ki konekte** — vizitè regilye yo pa wè l. Klike sou li nenpòt lè pou tounen nan tablo administrasyon an.
 
 ![Ba navigasyon sit la ak ikon admin](/admin-guide/screenshots/01-public-nav-gear.png)
 
 *Figir 1 — Apre ou konekte kòm admin, ikon angranaj la parèt nan ba navigasyon an.*
+
+**Opsyon C — Lyen nan pye paj la (pou konekte)**  
+Anvan ou konekte, desann nan pye paj sit piblik la epi klike **Administrasyon** anba **Portals & Links**. Sa ouvri paj koneksyon admin an. Apre ou fin konekte, itilize **ikon angranaj** nan ba navigasyon an — lyen pye paj la kache pandan ou konekte.
+
+**Dekoneksyon**  
+Lè ou dekonekte nan pòtay administrasyon an, ou retounen sou **sit legliz prensipal la** si se la ou te kòmanse. Si ou te louvri adrès admin an dirèkteman (bookmark oswa ou te tape l), ou rete sou paj koneksyon admin an apre dekoneksyon.
 
 ---
 
@@ -372,7 +378,8 @@ Klike **Dekonekte** anlè adwat lè ou fini — espesyalman sou òdinatè piblik
 | **Hosting** | Google Cloud Platform (Cloud Run) |
 | **Kontak Sipò** | Straight-Line Holdings, Inc. |
 | **Orè Sipò** | Semènèl premye, apre sa chak de semèn |
-| **Peman (Zelle)** | 929-529-8809 |
+| **Peman Antretyen (Zelle)** | **Straight-Line Holdings, Inc.** — 609-540-6556 |
+| **Zelle (Ofann Legliz)** | **Eglise Baptiste de la Parousie** — 929-599-8809 |
 
 ---
 

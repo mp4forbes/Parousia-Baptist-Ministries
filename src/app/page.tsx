@@ -13,13 +13,14 @@ import PublicHome from "@/components/PublicHome";
 import { getLiveStatusFromYouTube } from "@/lib/youtube";
 
 // Disable route-level caching to fetch live SQLite database edits on page reload
+export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function Home() {
   const todayStr = new Date().toLocaleDateString('sv'); // YYYY-MM-DD
-  
-  // Fetch all databases records synchronously on the server
-  const [schedules, missions, outreaches, events, rawSettings, sermons, dailyDevotional, isAdmin, ministries] = await Promise.all([
+  const isAdmin = await checkAdminAuth();
+
+  const [schedules, missions, outreaches, events, rawSettings, sermons, dailyDevotional, ministries] = await Promise.all([
     getServiceSchedules(),
     getHaitiMissions(),
     getLocalOutreaches(),
@@ -27,7 +28,6 @@ export default async function Home() {
     getSettings(),
     getSermons(),
     getDailyDevotional(todayStr),
-    checkAdminAuth(),
     getMinistries()
   ]);
 

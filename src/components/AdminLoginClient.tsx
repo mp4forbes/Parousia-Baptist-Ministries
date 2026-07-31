@@ -4,6 +4,7 @@ import React, { useState, useTransition, useEffect } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { requestAdminOtp, verifyAdminOtp, completeAdminPasswordSetup, requestAdminForgotPassword, checkAdminDeviceTrusted, prevalidateAdminLoginEmail } from '@/lib/actions';
 import { useRouter } from 'next/navigation';
+import { setAdminUiClient } from '@/lib/admin-cookies';
 import { Lock, Eye, EyeOff, Sparkles, Globe2, Clock, Mail, Key, ArrowLeft } from 'lucide-react';
 
 interface AdminLoginClientProps {
@@ -141,6 +142,7 @@ export default function AdminLoginClient({
           setIsPasswordReset(false);
           setStep(3);
         } else {
+          setAdminUiClient();
           router.push('/admin/dashboard');
           router.refresh();
         }
@@ -192,6 +194,7 @@ export default function AdminLoginClient({
           setIsPasswordReset(!!res.resetPasswordRequired);
           setStep(3);
         } else {
+          setAdminUiClient();
           router.push('/admin/dashboard');
           router.refresh();
         }
@@ -212,6 +215,7 @@ export default function AdminLoginClient({
     startTransition(async () => {
       const res = await completeAdminPasswordSetup(newPassword, confirmPassword, deviceHash);
       if (res.success) {
+        setAdminUiClient();
         router.push('/admin/dashboard');
         router.refresh();
       } else {

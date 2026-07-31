@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "migrate:sqlite": "node scripts/migrate-sqlite-to-postgres.mjs",
+    "admin-guide:install-browsers": "playwright install chromium",
     "admin-guide:auth": "node scripts/save-admin-auth-state.mjs",
     "admin-guide:capture": "playwright test --config=playwright.admin-guide.config.ts",
     "admin-guide:sync": "node scripts/sync-admin-guide-screenshots.mjs",

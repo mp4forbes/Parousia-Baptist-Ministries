@@ -24,7 +24,7 @@ async function openDashboardTab(page: import('@playwright/test').Page, label: Re
 test.describe('authenticated admin guide screenshots', () => {
   test('capture authenticated screens', async ({ page }) => {
     await page.goto('/admin/dashboard', { waitUntil: 'networkidle' });
-    await expect(page.getByText(/Global Settings|Anviwònman Global/i)).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('heading', { name: /Global Settings|Anviwònman Global/i })).toBeVisible({ timeout: 30_000 });
 
     await page.goto('/', { waitUntil: 'networkidle' });
     await shot(page, '01-public-nav-gear.png');
@@ -45,7 +45,7 @@ test.describe('authenticated admin guide screenshots', () => {
     await shot(page, '09-devotional-theme.png');
 
     await openDashboardTab(page, /Pastor's Blog|Piblikasyon Blòg/i);
-    await page.getByRole('button', { name: /Create New Article|Kreye Nouvo Atik/i }).click();
+    await page.getByRole('button', { name: /Create New Post|Kreye Nouvo Atik/i }).click();
     await page.waitForTimeout(500);
     await shot(page, '10-blog-editor.png');
 

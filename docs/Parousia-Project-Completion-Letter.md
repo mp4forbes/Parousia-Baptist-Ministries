@@ -77,7 +77,7 @@ Ongoing website maintenance has been agreed upon under the following terms:
 - **Initial period:** Weekly support sessions to help your team navigate the admin portal and become comfortable making updates independently.
 - **Ongoing period:** Biweekly support sessions thereafter.
 - **Scope of support:** Assistance adding events, updating content, managing admin users, and general website navigation. Training on self-service updates is included.
-- **Payment:** Zelle — **929-529-8809**
+- **Payment:** Zelle to **Straight-Line Holdings, Inc.** — **609-540-6556**
 
 ---
 

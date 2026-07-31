@@ -2,6 +2,7 @@
 
 import React, { useState, useTransition, useEffect } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useAdminUi } from '@/lib/AdminUiContext';
 import { ServiceSchedule, HaitiMission, LocalOutreach, EventRecord, Sermon, DailyDevotional, BlogPost, PrayerRequest, Ministry } from '@/lib/db';
 import { 
   registerForEvent, 
@@ -10,9 +11,11 @@ import {
   getBlogPosts, 
   getPrayerRequests, 
   submitPrayerRequest, 
-  submitContactForm 
+  submitContactForm,
+  markAdminEntryFromSite,
 } from '@/lib/actions';
 import MinistrySignupForm from '@/components/MinistrySignupForm';
+import { setAdminUiClient } from '@/lib/admin-cookies';
 import { MinistrySignupSlug } from '@/lib/ministry-signup-fields';
 import { getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from '@/lib/youtube';
 import { 
@@ -77,6 +80,15 @@ export default function PublicHome({
 }: PublicHomeProps) {
   const { language, setLanguage, t } = useLanguage();
   const [isPending, startTransition] = useTransition();
+  const showAdminNav = useAdminUi();
+
+  const openAdminPortal = () => {
+    startTransition(async () => {
+      setAdminUiClient();
+      await markAdminEntryFromSite();
+      window.location.href = showAdminNav ? '/admin/dashboard' : '/admin?from=site';
+    });
+  };
 
   // Navigation Dropdown & Mobile Accordion states
   const [activeDropdown, setActiveDropdown] = useState<'home' | 'ministries' | null>(null);
@@ -923,14 +935,15 @@ export default function PublicHome({
             </button>
             
             {/* Config Gear Icon - Only visible to admin logins */}
-            {isAdmin && (
-              <a 
-                href="/admin"
+            {showAdminNav && (
+              <button
+                type="button"
+                onClick={openAdminPortal}
                 title={t.navAdmin}
                 className={`flex items-center justify-center p-2 rounded-lg ${isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700' : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-white'} border transition-all duration-300 cursor-pointer hover:scale-105`}
               >
                 <Settings className="w-5 h-5 text-blue-500 animate-[spin_8s_linear_infinite]" />
-              </a>
+              </button>
             )}
 
             {/* Contact Us CTA Button */}
@@ -945,6 +958,16 @@ export default function PublicHome({
 
           {/* Mobile Menu Toggle */}
           <div className="flex lg:hidden items-center gap-2">
+            {showAdminNav && (
+              <button
+                type="button"
+                onClick={openAdminPortal}
+                title={t.navAdmin}
+                className={`flex items-center justify-center p-2 rounded-lg border ${isLight ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200' : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'}`}
+              >
+                <Settings className="w-5 h-5 text-blue-500" />
+              </button>
+            )}
             <button 
               onClick={toggleLanguage}
               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border ${isLight ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-slate-900 border-slate-800 text-amber-400'} text-xs font-semibold cursor-pointer`}
@@ -1010,11 +1033,15 @@ export default function PublicHome({
             <a href="#giving" onClick={() => setMobileMenuOpen(false)} className="hover:text-amber-500 transition-colors">{t.navGiving}</a>
 
             {/* Settings Link - Only visible to admins */}
-            {isAdmin && (
-              <a href="/admin" onClick={() => setMobileMenuOpen(false)} className="hover:text-amber-500 transition-colors flex items-center gap-2 text-blue-500">
+            {showAdminNav && (
+              <button
+                type="button"
+                onClick={() => { setMobileMenuOpen(false); openAdminPortal(); }}
+                className="hover:text-amber-500 transition-colors flex items-center gap-2 text-blue-500 text-left cursor-pointer"
+              >
                 <Settings className="w-4 h-4" />
                 <span>{t.navAdmin}</span>
-              </a>
+              </button>
             )}
           </nav>
           <div className={`mt-8 pt-8 border-t ${borderMain} flex flex-col gap-4`}>
@@ -3916,10 +3943,12 @@ export default function PublicHome({
             <div>
               <h5 className={`font-bold uppercase text-xs tracking-widest mb-4 ${textTitle}`}>Portals & Links</h5>
               <div className="flex flex-col gap-3 text-sm">
-                <a href="/admin" className={`inline-flex items-center gap-1.5 transition-colors font-semibold ${isLight ? 'text-slate-600 hover:text-amber-600' : 'text-slate-300 hover:text-amber-400'}`}>
-                  <Lock className="w-3.5 h-3.5 text-blue-500" />
-                  <span>{t.navAdmin}</span>
-                </a>
+                {!showAdminNav && (
+                  <a href="/admin?from=site" className={`inline-flex items-center gap-1.5 transition-colors font-semibold ${isLight ? 'text-slate-600 hover:text-amber-600' : 'text-slate-300 hover:text-amber-400'}`}>
+                    <Lock className="w-3.5 h-3.5 text-blue-500" />
+                    <span>{t.navAdmin}</span>
+                  </a>
+                )}
               </div>
             </div>
 

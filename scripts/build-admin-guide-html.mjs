@@ -93,6 +93,38 @@ function pandocFragment(mdPath) {
   }
 }
 
+function renderDocActions(isLetter) {
+  const outlookButton = isLetter
+    ? `<button type="button" class="doc-action" id="outlook-btn" aria-label="Open in Outlook">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+      </svg>
+      <span id="outlook-btn-label">Outlook</span>
+    </button>`
+    : '';
+
+  return `<div class="doc-header__actions">
+    <button type="button" class="doc-action" id="print-btn" aria-label="Print document">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+        <rect width="12" height="8" x="6" y="14" rx="1"></rect>
+      </svg>
+      <span id="print-btn-label">Print</span>
+    </button>
+    ${outlookButton}
+    <button type="button" class="lang-toggle" id="lang-toggle" aria-label="Switch language">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+        <path d="M2 12h20"></path>
+      </svg>
+      <span id="lang-toggle-label">Kreyòl</span>
+    </button>
+  </div>`;
+}
+
 function wrapBilingualDocument({ titleEn, titleHt, enBody, htBody, logoPath, kind = 'guide' }) {
   const escapeAttr = (value) =>
     value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
@@ -102,14 +134,7 @@ function wrapBilingualDocument({ titleEn, titleHt, enBody, htBody, logoPath, kin
     ? `<header class="doc-header doc-header--letter">
     <div class="doc-header__spacer" aria-hidden="true"></div>
     <div class="doc-header__spacer" aria-hidden="true"></div>
-    <button type="button" class="lang-toggle" id="lang-toggle" aria-label="Switch language">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="10"></circle>
-        <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
-        <path d="M2 12h20"></path>
-      </svg>
-      <span id="lang-toggle-label">Kreyòl</span>
-    </button>
+    ${renderDocActions(true)}
   </header>`
     : `<header class="doc-header">
     <div class="doc-header__spacer" aria-hidden="true"></div>
@@ -118,14 +143,7 @@ function wrapBilingualDocument({ titleEn, titleHt, enBody, htBody, logoPath, kin
         <img src="${logoPath}" alt="Église Baptiste de la Parousie" />
       </a>
     </div>
-    <button type="button" class="lang-toggle" id="lang-toggle" aria-label="Switch language">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="10"></circle>
-        <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
-        <path d="M2 12h20"></path>
-      </svg>
-      <span id="lang-toggle-label">Kreyòl</span>
-    </button>
+    ${renderDocActions(false)}
   </header>`;
 
   const letterStyles = isLetter
@@ -227,8 +245,15 @@ function wrapBilingualDocument({ titleEn, titleHt, enBody, htBody, logoPath, kin
       max-width: min(360px, 72vw);
       object-fit: contain;
     }
-    .lang-toggle {
+    .doc-header__actions {
       justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .doc-action,
+    .lang-toggle {
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
@@ -243,10 +268,12 @@ function wrapBilingualDocument({ titleEn, titleHt, enBody, htBody, logoPath, kin
       cursor: pointer;
       transition: background 0.2s, transform 0.2s;
     }
+    .doc-action:hover,
     .lang-toggle:hover {
       background: #f1f5f9;
       transform: scale(1.03);
     }
+    .doc-action svg,
     .lang-toggle svg {
       width: 1rem;
       height: 1rem;
@@ -298,17 +325,40 @@ function wrapBilingualDocument({ titleEn, titleHt, enBody, htBody, logoPath, kin
       vertical-align: top;
     }
     .doc-lang th { background: var(--surface); }${letterStyles}
+    @media print {
+      .doc-header { display: none !important; }
+      body { background: #fff; }
+      .doc-content {
+        max-width: none;
+        margin: 0;
+        padding: 0;
+      }
+      .doc-lang { display: none !important; }
+      .doc-lang.is-active { display: block !important; }
+      .doc-lang img {
+        max-width: 100%;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .doc-lang table, .doc-lang tr, .doc-lang td, .doc-lang th {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      a { color: inherit; text-decoration: none; }
+    }
     @media (max-width: 640px) {
       .doc-header {
         grid-template-columns: 1fr auto;
         grid-template-areas:
-          "logo lang"
-          "logo lang";
+          "logo actions"
+          "logo actions";
       }
       .doc-header__spacer { display: none; }
       .doc-header__logo { grid-area: logo; justify-content: flex-start; }
-      .lang-toggle { grid-area: lang; }
+      .doc-header__actions { grid-area: actions; justify-self: end; }
       .doc-header__logo img { height: 44px; }
+      .doc-action span,
+      .lang-toggle span { display: none; }
     }
   </style>
 </head>
@@ -327,8 +377,19 @@ function wrapBilingualDocument({ titleEn, titleHt, enBody, htBody, logoPath, kin
   <script>
     (function () {
       var STORAGE_KEY = 'church_lang';
+      var IS_LETTER = ${isLetter ? 'true' : 'false'};
+      var OUTLOOK = {
+        to: 'franckyvan@gmail.com',
+        from: 'mp4forbes@straightlineholdings.com',
+        subjectEn: 'Formal Notice of Project Completion — Parousia Baptist Ministries Website',
+        subjectHt: 'Avi Ofisyèl Fini Pwojè — Sit Wèb Parousia Baptist Ministries'
+      };
       var toggle = document.getElementById('lang-toggle');
       var label = document.getElementById('lang-toggle-label');
+      var printBtn = document.getElementById('print-btn');
+      var printLabel = document.getElementById('print-btn-label');
+      var outlookBtn = document.getElementById('outlook-btn');
+      var outlookLabel = document.getElementById('outlook-btn-label');
       var en = document.getElementById('doc-en');
       var ht = document.getElementById('doc-ht');
 
@@ -350,14 +411,68 @@ function wrapBilingualDocument({ titleEn, titleHt, enBody, htBody, logoPath, kin
         } catch (e) {}
       }
 
+      function updateActionLabels(isHt) {
+        label.textContent = isHt ? 'English' : 'Kreyòl';
+        toggle.setAttribute('aria-label', isHt ? 'Switch to English' : 'Chanje an Kreyòl');
+        if (printLabel) printLabel.textContent = isHt ? 'Enprime' : 'Print';
+        if (printBtn) printBtn.setAttribute('aria-label', isHt ? 'Enprime dokiman an' : 'Print document');
+        if (outlookLabel) outlookLabel.textContent = 'Outlook';
+        if (outlookBtn) outlookBtn.setAttribute('aria-label', isHt ? 'Ouvri nan Outlook' : 'Open in Outlook');
+      }
+
       function applyLang(lang) {
         var isHt = lang === 'ht';
         en.classList.toggle('is-active', !isHt);
         ht.classList.toggle('is-active', isHt);
         document.documentElement.lang = isHt ? 'ht' : 'en';
         document.title = isHt ? ht.getAttribute('data-title') : en.getAttribute('data-title');
-        label.textContent = isHt ? 'English' : 'Kreyòl';
-        toggle.setAttribute('aria-label', isHt ? 'Switch to English' : 'Chanje an Kreyòl');
+        updateActionLabels(isHt);
+      }
+
+      function getActiveArticle() {
+        return ht.classList.contains('is-active') ? ht : en;
+      }
+
+      function absolutizeHtml(html) {
+        var origin = window.location.origin;
+        return html
+          .replace(/src="\\/admin-guide\\//g, 'src="' + origin + '/admin-guide/')
+          .replace(/src="\\/logo/g, 'src="' + origin + '/logo')
+          .replace(/href="\\/admin-guide\\//g, 'href="' + origin + '/admin-guide/');
+      }
+
+      function buildEml(isHt) {
+        var subject = isHt ? OUTLOOK.subjectHt : OUTLOOK.subjectEn;
+        var bodyHtml = absolutizeHtml(getActiveArticle().innerHTML);
+        var htmlDoc = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Georgia,serif;color:#1e293b;line-height:1.6;} img{max-width:100%;} table{border-collapse:collapse;width:100%;} td,th{border:1px solid #e2e8f0;padding:8px;}</style></head><body>' + bodyHtml + '</body></html>';
+        var lines = [
+          'From: ' + OUTLOOK.from,
+          'To: ' + OUTLOOK.to,
+          'Subject: ' + subject,
+          'MIME-Version: 1.0',
+          'Content-Type: text/html; charset=UTF-8',
+          'Content-Transfer-Encoding: 8bit',
+          'X-Unsent: 1',
+          '',
+          htmlDoc
+        ];
+        return lines.join('\\r\\n');
+      }
+
+      function openInOutlook() {
+        var isHt = ht.classList.contains('is-active');
+        var blob = new Blob([buildEml(isHt)], { type: 'message/rfc822' });
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = isHt ? 'Parousia-Completion-Letter-ht.eml' : 'Parousia-Completion-Letter-en.eml';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        window.alert(isHt
+          ? 'Fichye Outlook la telechaje. Louvri li pou w ka revize epi voye lèt la.'
+          : 'Outlook file downloaded. Open it to review and send the letter.');
       }
 
       applyLang(readLang());
@@ -367,6 +482,24 @@ function wrapBilingualDocument({ titleEn, titleHt, enBody, htBody, logoPath, kin
         writeLang(next);
         applyLang(next);
       });
+
+      if (printBtn) {
+        printBtn.addEventListener('click', function () {
+          window.print();
+        });
+      }
+
+      if (outlookBtn) {
+        outlookBtn.addEventListener('click', openInOutlook);
+      }
+
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('print') === '1') {
+        setTimeout(function () { window.print(); }, 300);
+      }
+      if (IS_LETTER && params.get('outlook') === '1') {
+        setTimeout(openInOutlook, 300);
+      }
     })();
   </script>
 </body>

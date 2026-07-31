@@ -47,8 +47,15 @@
       max-width: min(360px, 72vw);
       object-fit: contain;
     }
-    .lang-toggle {
+    .doc-header__actions {
       justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .doc-action,
+    .lang-toggle {
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
@@ -63,10 +70,12 @@
       cursor: pointer;
       transition: background 0.2s, transform 0.2s;
     }
+    .doc-action:hover,
     .lang-toggle:hover {
       background: #f1f5f9;
       transform: scale(1.03);
     }
+    .doc-action svg,
     .lang-toggle svg {
       width: 1rem;
       height: 1rem;
@@ -118,17 +127,40 @@
       vertical-align: top;
     }
     .doc-lang th { background: var(--surface); }
+    @media print {
+      .doc-header { display: none !important; }
+      body { background: #fff; }
+      .doc-content {
+        max-width: none;
+        margin: 0;
+        padding: 0;
+      }
+      .doc-lang { display: none !important; }
+      .doc-lang.is-active { display: block !important; }
+      .doc-lang img {
+        max-width: 100%;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .doc-lang table, .doc-lang tr, .doc-lang td, .doc-lang th {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      a { color: inherit; text-decoration: none; }
+    }
     @media (max-width: 640px) {
       .doc-header {
         grid-template-columns: 1fr auto;
         grid-template-areas:
-          "logo lang"
-          "logo lang";
+          "logo actions"
+          "logo actions";
       }
       .doc-header__spacer { display: none; }
       .doc-header__logo { grid-area: logo; justify-content: flex-start; }
-      .lang-toggle { grid-area: lang; }
+      .doc-header__actions { grid-area: actions; justify-self: end; }
       .doc-header__logo img { height: 44px; }
+      .doc-action span,
+      .lang-toggle span { display: none; }
     }
   </style>
 </head>
@@ -140,6 +172,16 @@
         <img src="/admin-guide/church-logo.png" alt="Église Baptiste de la Parousie" />
       </a>
     </div>
+    <div class="doc-header__actions">
+    <button type="button" class="doc-action" id="print-btn" aria-label="Print document">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+        <rect width="12" height="8" x="6" y="14" rx="1"></rect>
+      </svg>
+      <span id="print-btn-label">Print</span>
+    </button>
+    
     <button type="button" class="lang-toggle" id="lang-toggle" aria-label="Switch language">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="12" cy="12" r="10"></circle>
@@ -148,6 +190,7 @@
       </svg>
       <span id="lang-toggle-label">Kreyòl</span>
     </button>
+  </div>
   </header>
 
   <main class="doc-content">
@@ -175,11 +218,13 @@ https://ParousiaBaptistChurch.org/admin</p>
 <p>There are two ways to reach the admin area:</p>
 <p><strong>Option A — Direct URL</strong><br />
 Type the admin URL above into your browser.</p>
-<p><strong>Option B — From the public website</strong><br />
+<p><strong>Option B — From the public website (after you are logged
+in)</strong><br />
 After you log in as an administrator, a <strong>gear (⚙) settings
-icon</strong> appears in the website navigation bar. This icon is
-<strong>only visible to logged-in administrators</strong> and is not
-shown to regular visitors.</p>
+icon</strong> appears in the website navigation bar (desktop and
+mobile). This icon is <strong>only visible to logged-in
+administrators</strong> and is not shown to regular visitors. Click it
+anytime to return to the admin dashboard.</p>
 <figure>
 <img src="/admin-guide/screenshots/01-public-nav-gear.png"
 alt="Public website navigation with admin gear icon" />
@@ -188,6 +233,17 @@ icon</figcaption>
 </figure>
 <p><em>Figure 1 — After logging in as admin, the gear icon appears in
 the top navigation.</em></p>
+<p><strong>Option C — Footer link (to log in)</strong><br />
+Before you are logged in, scroll to the bottom of the public website and
+click <strong>Administration</strong> under <strong>Portals &amp;
+Links</strong>. This opens the admin login page. After you sign in, use
+the <strong>gear icon</strong> in the top navigation instead — the
+footer link is hidden while you are logged in.</p>
+<p><strong>Signing out</strong><br />
+When you sign out of the admin portal, you are returned to the
+<strong>main church website</strong> if that is where you started. If
+you opened the admin URL directly (bookmark or typed address), you
+remain on the admin login page after signing out.</p>
 <hr />
 <h2 id="logging-in-secure-two-step-verification">3. Logging In (Secure
 Two-Step Verification)</h2>
@@ -831,6 +887,10 @@ shared or public computers.</p>
 <hr />
 <h2 id="quick-reference-support">20. Quick Reference &amp; Support</h2>
 <table>
+<colgroup>
+<col style="width: 42%" />
+<col style="width: 57%" />
+</colgroup>
 <thead>
 <tr>
 <th>Item</th>
@@ -863,8 +923,12 @@ shared or public computers.</p>
 <td>Weekly assistance initially, then biweekly</td>
 </tr>
 <tr>
-<td><strong>Payment (Zelle)</strong></td>
-<td>929-529-8809</td>
+<td><strong>Maintenance Payment (Zelle)</strong></td>
+<td><strong>Straight-Line Holdings, Inc.</strong> — 609-540-6556</td>
+</tr>
+<tr>
+<td><strong>Zelle (Church Giving)</strong></td>
+<td><strong>Eglise Baptiste de la Parousie</strong> — 929-599-8809</td>
 </tr>
 </tbody>
 </table>
@@ -902,11 +966,13 @@ Pòtay Administrasyon an</h2>
 <p>Gen de fason pou rive nan zòn administrasyon an:</p>
 <p><strong>Opsyon A — URL dirèk</strong><br />
 Tape adrès admin an pi wo a nan navigatè ou.</p>
-<p><strong>Opsyon B — Depi sit piblik la</strong><br />
+<p><strong>Opsyon B — Depi sit piblik la (apre ou fin
+konekte)</strong><br />
 Apre ou fin konekte kòm administratè, yon <strong>ikon angranaj
-(⚙)</strong> parèt nan ba navigasyon sit la. Ikon sa a <strong>vizib
-sèlman pou administratè ki konekte</strong> — vizitè regilye yo pa wè
-l.</p>
+(⚙)</strong> parèt nan ba navigasyon sit la (sou òdinatè ak mobil). Ikon
+sa a <strong>vizib sèlman pou administratè ki konekte</strong> — vizitè
+regilye yo pa wè l. Klike sou li nenpòt lè pou tounen nan tablo
+administrasyon an.</p>
 <figure>
 <img src="/admin-guide/screenshots/01-public-nav-gear.png"
 alt="Ba navigasyon sit la ak ikon admin" />
@@ -915,6 +981,17 @@ admin</figcaption>
 </figure>
 <p><em>Figir 1 — Apre ou konekte kòm admin, ikon angranaj la parèt nan
 ba navigasyon an.</em></p>
+<p><strong>Opsyon C — Lyen nan pye paj la (pou konekte)</strong><br />
+Anvan ou konekte, desann nan pye paj sit piblik la epi klike
+<strong>Administrasyon</strong> anba <strong>Portals &amp;
+Links</strong>. Sa ouvri paj koneksyon admin an. Apre ou fin konekte,
+itilize <strong>ikon angranaj</strong> nan ba navigasyon an — lyen pye
+paj la kache pandan ou konekte.</p>
+<p><strong>Dekoneksyon</strong><br />
+Lè ou dekonekte nan pòtay administrasyon an, ou retounen sou <strong>sit
+legliz prensipal la</strong> si se la ou te kòmanse. Si ou te louvri
+adrès admin an dirèkteman (bookmark oswa ou te tape l), ou rete sou paj
+koneksyon admin an apre dekoneksyon.</p>
 <hr />
 <h2 id="koneksyon-verifikasyon-de-etap">3. Koneksyon (Verifikasyon De
 Etap)</h2>
@@ -1346,6 +1423,10 @@ sou òdinatè piblik.</p>
 <hr />
 <h2 id="referans-rapid-sipò">20. Referans Rapid &amp; Sipò</h2>
 <table>
+<colgroup>
+<col style="width: 42%" />
+<col style="width: 57%" />
+</colgroup>
 <thead>
 <tr>
 <th>Atik</th>
@@ -1378,8 +1459,12 @@ sou òdinatè piblik.</p>
 <td>Semènèl premye, apre sa chak de semèn</td>
 </tr>
 <tr>
-<td><strong>Peman (Zelle)</strong></td>
-<td>929-529-8809</td>
+<td><strong>Peman Antretyen (Zelle)</strong></td>
+<td><strong>Straight-Line Holdings, Inc.</strong> — 609-540-6556</td>
+</tr>
+<tr>
+<td><strong>Zelle (Ofann Legliz)</strong></td>
+<td><strong>Eglise Baptiste de la Parousie</strong> — 929-599-8809</td>
 </tr>
 </tbody>
 </table>
@@ -1392,8 +1477,19 @@ sou òdinatè piblik.</p>
   <script>
     (function () {
       var STORAGE_KEY = 'church_lang';
+      var IS_LETTER = false;
+      var OUTLOOK = {
+        to: 'franckyvan@gmail.com',
+        from: 'mp4forbes@straightlineholdings.com',
+        subjectEn: 'Formal Notice of Project Completion — Parousia Baptist Ministries Website',
+        subjectHt: 'Avi Ofisyèl Fini Pwojè — Sit Wèb Parousia Baptist Ministries'
+      };
       var toggle = document.getElementById('lang-toggle');
       var label = document.getElementById('lang-toggle-label');
+      var printBtn = document.getElementById('print-btn');
+      var printLabel = document.getElementById('print-btn-label');
+      var outlookBtn = document.getElementById('outlook-btn');
+      var outlookLabel = document.getElementById('outlook-btn-label');
       var en = document.getElementById('doc-en');
       var ht = document.getElementById('doc-ht');
 
@@ -1415,14 +1511,68 @@ sou òdinatè piblik.</p>
         } catch (e) {}
       }
 
+      function updateActionLabels(isHt) {
+        label.textContent = isHt ? 'English' : 'Kreyòl';
+        toggle.setAttribute('aria-label', isHt ? 'Switch to English' : 'Chanje an Kreyòl');
+        if (printLabel) printLabel.textContent = isHt ? 'Enprime' : 'Print';
+        if (printBtn) printBtn.setAttribute('aria-label', isHt ? 'Enprime dokiman an' : 'Print document');
+        if (outlookLabel) outlookLabel.textContent = 'Outlook';
+        if (outlookBtn) outlookBtn.setAttribute('aria-label', isHt ? 'Ouvri nan Outlook' : 'Open in Outlook');
+      }
+
       function applyLang(lang) {
         var isHt = lang === 'ht';
         en.classList.toggle('is-active', !isHt);
         ht.classList.toggle('is-active', isHt);
         document.documentElement.lang = isHt ? 'ht' : 'en';
         document.title = isHt ? ht.getAttribute('data-title') : en.getAttribute('data-title');
-        label.textContent = isHt ? 'English' : 'Kreyòl';
-        toggle.setAttribute('aria-label', isHt ? 'Switch to English' : 'Chanje an Kreyòl');
+        updateActionLabels(isHt);
+      }
+
+      function getActiveArticle() {
+        return ht.classList.contains('is-active') ? ht : en;
+      }
+
+      function absolutizeHtml(html) {
+        var origin = window.location.origin;
+        return html
+          .replace(/src="\/admin-guide\//g, 'src="' + origin + '/admin-guide/')
+          .replace(/src="\/logo/g, 'src="' + origin + '/logo')
+          .replace(/href="\/admin-guide\//g, 'href="' + origin + '/admin-guide/');
+      }
+
+      function buildEml(isHt) {
+        var subject = isHt ? OUTLOOK.subjectHt : OUTLOOK.subjectEn;
+        var bodyHtml = absolutizeHtml(getActiveArticle().innerHTML);
+        var htmlDoc = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Georgia,serif;color:#1e293b;line-height:1.6;} img{max-width:100%;} table{border-collapse:collapse;width:100%;} td,th{border:1px solid #e2e8f0;padding:8px;}</style></head><body>' + bodyHtml + '</body></html>';
+        var lines = [
+          'From: ' + OUTLOOK.from,
+          'To: ' + OUTLOOK.to,
+          'Subject: ' + subject,
+          'MIME-Version: 1.0',
+          'Content-Type: text/html; charset=UTF-8',
+          'Content-Transfer-Encoding: 8bit',
+          'X-Unsent: 1',
+          '',
+          htmlDoc
+        ];
+        return lines.join('\r\n');
+      }
+
+      function openInOutlook() {
+        var isHt = ht.classList.contains('is-active');
+        var blob = new Blob([buildEml(isHt)], { type: 'message/rfc822' });
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = isHt ? 'Parousia-Completion-Letter-ht.eml' : 'Parousia-Completion-Letter-en.eml';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        window.alert(isHt
+          ? 'Fichye Outlook la telechaje. Louvri li pou w ka revize epi voye lèt la.'
+          : 'Outlook file downloaded. Open it to review and send the letter.');
       }
 
       applyLang(readLang());
@@ -1432,6 +1582,24 @@ sou òdinatè piblik.</p>
         writeLang(next);
         applyLang(next);
       });
+
+      if (printBtn) {
+        printBtn.addEventListener('click', function () {
+          window.print();
+        });
+      }
+
+      if (outlookBtn) {
+        outlookBtn.addEventListener('click', openInOutlook);
+      }
+
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('print') === '1') {
+        setTimeout(function () { window.print(); }, 300);
+      }
+      if (IS_LETTER && params.get('outlook') === '1') {
+        setTimeout(openInOutlook, 300);
+      }
     })();
   </script>
 </body>

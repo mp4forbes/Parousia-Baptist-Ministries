@@ -78,7 +78,7 @@ Tout pwen yo nan kontra nou an (6 jen ak 9 jen 2026) delivre:
 
 - **Premye peryòd:** Sesyon sipò chak semèn pou ede ekip la navige admin an.
 - **Apre sa:** Sesyon sipò chak de semèn.
-- **Peman:** Zelle — **929-529-8809**
+- **Peman:** Zelle bay **Straight-Line Holdings, Inc.** — **609-540-6556**
 
 ---
 

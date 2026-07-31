@@ -54,12 +54,18 @@ There are two ways to reach the admin area:
 **Option A — Direct URL**  
 Type the admin URL above into your browser.
 
-**Option B — From the public website**  
-After you log in as an administrator, a **gear (⚙) settings icon** appears in the website navigation bar. This icon is **only visible to logged-in administrators** and is not shown to regular visitors.
+**Option B — From the public website (after you are logged in)**  
+After you log in as an administrator, a **gear (⚙) settings icon** appears in the website navigation bar (desktop and mobile). This icon is **only visible to logged-in administrators** and is not shown to regular visitors. Click it anytime to return to the admin dashboard.
 
 ![Public website navigation with admin gear icon](screenshots/01-public-nav-gear.png)
 
 *Figure 1 — After logging in as admin, the gear icon appears in the top navigation.*
+
+**Option C — Footer link (to log in)**  
+Before you are logged in, scroll to the bottom of the public website and click **Administration** under **Portals & Links**. This opens the admin login page. After you sign in, use the **gear icon** in the top navigation instead — the footer link is hidden while you are logged in.
+
+**Signing out**  
+When you sign out of the admin portal, you are returned to the **main church website** if that is where you started. If you opened the admin URL directly (bookmark or typed address), you remain on the admin login page after signing out.
 
 ---
 
@@ -501,7 +507,8 @@ Click **Sign Out** / *Dekonekte* in the top-right corner of the admin dashboard 
 | **Hosting** | Google Cloud Platform (Cloud Run) |
 | **Maintenance Contact** | Straight-Line Holdings, Inc. |
 | **Support Schedule** | Weekly assistance initially, then biweekly |
-| **Payment (Zelle)** | 929-529-8809 |
+| **Maintenance Payment (Zelle)** | **Straight-Line Holdings, Inc.** — 609-540-6556 |
+| **Zelle (Church Giving)** | **Eglise Baptiste de la Parousie** — 929-599-8809 |
 
 For help adding events, updating content, or troubleshooting login issues, contact your website maintainer during scheduled support sessions.
 

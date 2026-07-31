@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import { Outfit, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/lib/LanguageContext";
+import { AdminUiProvider } from "@/lib/AdminUiContext";
+import { checkAdminAuth } from "@/lib/actions";
 import { cookies } from "next/headers";
 import { Language } from "@/lib/translations";
+import DevExtensionNoiseFilter from "@/components/DevExtensionNoiseFilter";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -30,6 +33,8 @@ export const metadata: Metadata = {
   },
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -44,6 +49,7 @@ export default async function RootLayout({
   
   // Set html element lang to "en" or "ht"
   const htmlLang = defaultLanguage === 'en' ? 'en' : 'ht';
+  const isAdmin = await checkAdminAuth();
 
   return (
     <html
@@ -51,28 +57,11 @@ export default async function RootLayout({
       className={`${outfit.variable} ${playfair.variable} h-full antialiased scroll-smooth`}
     >
       <body className="min-h-full bg-slate-950 text-slate-100 font-sans flex flex-col selection:bg-amber-500 selection:text-slate-950">
-        {process.env.NODE_ENV === 'development' && (
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
-(function () {
-  function isExtensionNoise(err, filename) {
-    var blob = [err && err.message, err && err.stack, filename].filter(Boolean).join(' ');
-    return /-extension:\\/\\//.test(blob) || /Failed to connect to MetaMask/i.test(blob);
-  }
-  window.addEventListener('unhandledrejection', function (e) {
-    if (isExtensionNoise(e.reason)) e.preventDefault();
-  }, true);
-  window.addEventListener('error', function (e) {
-    if (isExtensionNoise(e.error, e.filename)) e.preventDefault();
-  }, true);
-})();
-              `.trim(),
-            }}
-          />
-        )}
+        <DevExtensionNoiseFilter />
         <LanguageProvider defaultLanguage={defaultLanguage}>
-          {children}
+          <AdminUiProvider initialIsAdmin={isAdmin}>
+            {children}
+          </AdminUiProvider>
         </LanguageProvider>
       </body>
     </html>

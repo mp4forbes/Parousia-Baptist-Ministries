@@ -13,7 +13,13 @@ import path from 'path';
 import { execSync } from 'child_process';
 import crypto from 'crypto';
 import { getAssetDir, getBackupDir } from './paths';
-import { formatSuperAdminEmailsForDisplay, getPrimarySuperAdminEmail, getSuperAdminEmails, isSuperAdminEmail } from './super-admin';
+import {
+  formatSuperAdminEmailsForDisplay,
+  getPrimarySuperAdminEmail,
+  getSuperAdminEmails,
+  isSuperAdminEmail,
+} from './super-admin';
+import { ADMIN_UI_COOKIE, adminUiCookieOptions } from './admin-cookies';
 import {
   getAdminEmailFormatError,
   getUnauthorizedAdminEmailError,
@@ -618,6 +624,7 @@ export async function verifyAdminPassword(password: string): Promise<{ success: 
         maxAge: 60 * 60 * 2, // 1 hour session
         path: '/'
       });
+      cookieStore.set(ADMIN_UI_COOKIE, '1', adminUiCookieOptions(60 * 60 * 2));
       return { success: true };
     }
     return { success: false };
@@ -792,6 +799,12 @@ async function setAdminSession(
     maxAge: maxAgeSeconds,
     path: '/',
   });
+
+  if (!options?.pendingPasswordSetup && !options?.pendingPasswordReset) {
+    cookieStore.set(ADMIN_UI_COOKIE, '1', adminUiCookieOptions(maxAgeSeconds));
+  } else {
+    cookieStore.delete(ADMIN_UI_COOKIE);
+  }
 }
 
 export async function isPendingPasswordSetup(): Promise<boolean> {
@@ -830,9 +843,24 @@ export async function checkAdminAuth(): Promise<boolean> {
   return true;
 }
 
-export async function logoutAdmin(): Promise<void> {
+export async function logoutAdmin(): Promise<{ redirectTo: '/' | '/admin' }> {
   const cookieStore = await cookies();
+  const returnToSite = cookieStore.get('admin_return_to')?.value === 'site';
   cookieStore.delete('admin_auth');
+  cookieStore.delete(ADMIN_UI_COOKIE);
+  cookieStore.delete('admin_return_to');
+  return { redirectTo: returnToSite ? '/' : '/admin' };
+}
+
+export async function markAdminEntryFromSite(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.set('admin_return_to', 'site', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 8,
+    path: '/',
+  });
 }
 
 // ADMINISTRATIVE CRUD OPERATIONS

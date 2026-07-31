@@ -26,3 +26,12 @@ export const ADMIN_DOCUMENTS: AdminDocument[] = [
 export function getAdminDocumentTitle(doc: AdminDocument, language: 'en' | 'fr_ht'): string {
   return language === 'fr_ht' ? doc.titleHt : doc.titleEn;
 }
+
+export function getAdminDocumentPrintUrl(doc: AdminDocument): string {
+  return `${doc.href}?print=1`;
+}
+
+export function getAdminDocumentOutlookUrl(doc: AdminDocument): string | null {
+  if (doc.kind !== 'letter') return null;
+  return `${doc.href}?outlook=1`;
+}

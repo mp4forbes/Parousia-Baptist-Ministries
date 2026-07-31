@@ -60,13 +60,15 @@ import {
   translateAdminTextsAction,
   getMinistrySignups,
   deleteMinistrySignup,
-  exportMinistrySignupsSpreadsheet
+  exportMinistrySignupsSpreadsheet,
+  markAdminEntryFromSite,
 } from '@/lib/actions';
 import AdminSectionContactExport from '@/components/AdminSectionContactExport';
 import AdminBilingualTranslateBar from '@/components/AdminBilingualTranslateBar';
 import AdminDocumentsMenu from '@/components/AdminDocumentsMenu';
 import { MINISTRY_SIGNUP_FIELDS, MinistrySignupSlug } from '@/lib/ministry-signup-fields';
 import { useRouter } from 'next/navigation';
+import { clearAdminUiClient, setAdminUiClient } from '@/lib/admin-cookies';
 import { getYouTubeThumbnailUrl } from '@/lib/youtube';
 import {
   BilingualTextField,
@@ -161,6 +163,10 @@ export default function AdminDashboardClient({
   const { language, setLanguage, t } = useLanguage();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setAdminUiClient();
+  }, []);
 
   // Active Management Tab State
   const [activeTab, setActiveTab] = useState<TabType>('settings');
@@ -296,9 +302,17 @@ export default function AdminDashboardClient({
 
   // Sign out
   const handleSignOut = async () => {
-    await logoutAdmin();
-    router.push('/admin');
-    router.refresh();
+    const { redirectTo } = await logoutAdmin();
+    clearAdminUiClient();
+    window.location.href = redirectTo;
+  };
+
+  const handleViewWebsite = () => {
+    startTransition(async () => {
+      setAdminUiClient();
+      await markAdminEntryFromSite();
+      window.location.href = '/';
+    });
   };
 
   // 1. GLOBAL SETTINGS FORM STATE
@@ -2777,6 +2791,15 @@ export default function AdminDashboardClient({
 
           <div className="flex items-center gap-4">
             <AdminDocumentsMenu language={language} />
+
+            <button
+              type="button"
+              onClick={handleViewWebsite}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs font-semibold hover:border-amber-500 text-slate-200 hover:text-white transition-all cursor-pointer"
+            >
+              <Globe2 className="w-3.5 h-3.5 text-amber-400" />
+              <span>{t.adminViewWebsite}</span>
+            </button>
 
             {/* Language Switcher */}
             <button 
