@@ -752,6 +752,7 @@ export default function AdminDashboardClient({
     return EXECUTIVE_COMMITTEE_MEMBERS;
   });
   const [draggingMemberIndex, setDraggingMemberIndex] = useState<number | null>(null);
+  const [translatingTeamMemberIndex, setTranslatingTeamMemberIndex] = useState<number | null>(null);
 
   const [expectTitleEn, setExpectTitleEn] = useState(settings.expect_title_en || 'What to Expect');
   const [expectTitleHt, setExpectTitleHt] = useState(settings.expect_title_ht || 'À quoi vous attendre');
@@ -1100,7 +1101,7 @@ export default function AdminDashboardClient({
         role_ht: '',
         bio_en: '',
         bio_ht: '',
-        image_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=300&auto=format&fit=crop',
+        image_url: '',
         email: ''
       }
     ]);
@@ -1207,19 +1208,17 @@ export default function AdminDashboardClient({
     }
 
     if (homeSubTab === 'team') {
-      const memberFields = teamMembers.flatMap((member, index) => ([
-        { id: `team_member_${index}_role`, kreyol: member.role_ht, english: member.role_en },
-        { id: `team_member_${index}_bio`, kreyol: member.bio_ht, english: member.bio_en },
-      ]));
       return [
         { id: 'team_title', kreyol: teamTitleHt, english: teamTitleEn },
-        ...memberFields,
       ];
     }
 
     return [
       { id: 'expect_title', kreyol: expectTitleHt, english: expectTitleEn },
       { id: 'expect_p1', kreyol: expectP1Ht, english: expectP1En },
+      { id: 'expect_bullet1', kreyol: expectBullet1Ht, english: expectBullet1En },
+      { id: 'expect_bullet2', kreyol: expectBullet2Ht, english: expectBullet2En },
+      { id: 'expect_bullet3', kreyol: expectBullet3Ht, english: expectBullet3En },
     ];
   };
 
@@ -1287,19 +1286,6 @@ export default function AdminDashboardClient({
         setTeamTitleHt(byId.team_title.kreyol);
         setTeamTitleEn(byId.team_title.english);
       }
-      setTeamMembers((prev) =>
-        prev.map((member, index) => {
-          const role = byId[`team_member_${index}_role`];
-          const bio = byId[`team_member_${index}_bio`];
-          return {
-            ...member,
-            role_ht: role?.kreyol ?? member.role_ht,
-            role_en: role?.english ?? member.role_en,
-            bio_ht: bio?.kreyol ?? member.bio_ht,
-            bio_en: bio?.english ?? member.bio_en,
-          };
-        })
-      );
       return;
     }
 
@@ -1310,6 +1296,18 @@ export default function AdminDashboardClient({
     if (byId.expect_p1) {
       setExpectP1Ht(byId.expect_p1.kreyol);
       setExpectP1En(byId.expect_p1.english);
+    }
+    if (byId.expect_bullet1) {
+      setExpectBullet1Ht(byId.expect_bullet1.kreyol);
+      setExpectBullet1En(byId.expect_bullet1.english);
+    }
+    if (byId.expect_bullet2) {
+      setExpectBullet2Ht(byId.expect_bullet2.kreyol);
+      setExpectBullet2En(byId.expect_bullet2.english);
+    }
+    if (byId.expect_bullet3) {
+      setExpectBullet3Ht(byId.expect_bullet3.kreyol);
+      setExpectBullet3En(byId.expect_bullet3.english);
     }
   };
 
@@ -1332,6 +1330,40 @@ export default function AdminDashboardClient({
     );
   };
 
+  const handleTranslateTeamMember = async (index: number) => {
+    const member = teamMembers[index];
+    if (!member) return;
+
+    setTranslatingTeamMemberIndex(index);
+    try {
+      await runBilingualTranslation(
+        [
+          { id: 'role', kreyol: member.role_ht, english: member.role_en },
+          { id: 'bio', kreyol: member.bio_ht, english: member.bio_en },
+        ],
+        (updated) => {
+          const byId = Object.fromEntries(updated.map((field) => [field.id, field]));
+          setTeamMembers((prev) =>
+            prev.map((current, currentIndex) =>
+              currentIndex === index
+                ? {
+                    ...current,
+                    role_ht: byId.role?.kreyol ?? current.role_ht,
+                    role_en: byId.role?.english ?? current.role_en,
+                    bio_ht: byId.bio?.kreyol ?? current.bio_ht,
+                    bio_en: byId.bio?.english ?? current.bio_en,
+                  }
+                : current
+            )
+          );
+        },
+        member.name || `team member ${index + 1}`
+      );
+    } finally {
+      setTranslatingTeamMemberIndex(null);
+    }
+  };
+
   const handleTranslateMinistry = async () => {
     await runBilingualTranslation(
       [
@@ -1352,6 +1384,170 @@ export default function AdminDashboardClient({
         }));
       },
       `${selectedMinistrySlug} ministry content`
+    );
+  };
+
+  const handleTranslateSchedule = async () => {
+    await runBilingualTranslation(
+      [
+        { id: 'day', kreyol: schedDayHt, english: schedDayEn },
+        { id: 'title', kreyol: schedTitleHt, english: schedTitleEn },
+        { id: 'description', kreyol: schedDescHt, english: schedDescEn },
+      ],
+      (updated) => {
+        const byId = Object.fromEntries(updated.map((field) => [field.id, field]));
+        if (byId.day) {
+          setSchedDayHt(byId.day.kreyol);
+          setSchedDayEn(byId.day.english);
+        }
+        if (byId.title) {
+          setSchedTitleHt(byId.title.kreyol);
+          setSchedTitleEn(byId.title.english);
+        }
+        if (byId.description) {
+          setSchedDescHt(byId.description.kreyol);
+          setSchedDescEn(byId.description.english);
+        }
+      },
+      'service schedule'
+    );
+  };
+
+  const handleTranslateMission = async () => {
+    await runBilingualTranslation(
+      [
+        { id: 'title', kreyol: missTitleHt, english: missTitleEn },
+        { id: 'description', kreyol: missDescHt, english: missDescEn },
+      ],
+      (updated) => {
+        const byId = Object.fromEntries(updated.map((field) => [field.id, field]));
+        if (byId.title) {
+          setPMissTitleHt(byId.title.kreyol);
+          setPMissTitleEn(byId.title.english);
+        }
+        if (byId.description) {
+          setPMissDescHt(byId.description.kreyol);
+          setPMissDescEn(byId.description.english);
+        }
+      },
+      'Haiti mission project'
+    );
+  };
+
+  const handleTranslateOutreach = async () => {
+    await runBilingualTranslation(
+      [
+        { id: 'title', kreyol: outrTitleHt, english: outrTitleEn },
+        { id: 'description', kreyol: outrDescHt, english: outrDescEn },
+        { id: 'schedule', kreyol: outrSchedHt, english: outrSchedEn },
+      ],
+      (updated) => {
+        const byId = Object.fromEntries(updated.map((field) => [field.id, field]));
+        if (byId.title) {
+          setOutrTitleHt(byId.title.kreyol);
+          setOutrTitleEn(byId.title.english);
+        }
+        if (byId.description) {
+          setOutrDescHt(byId.description.kreyol);
+          setOutrDescEn(byId.description.english);
+        }
+        if (byId.schedule) {
+          setOutrSchedHt(byId.schedule.kreyol);
+          setOutrSchedEn(byId.schedule.english);
+        }
+      },
+      'local outreach project'
+    );
+  };
+
+  const handleTranslateEvent = async () => {
+    await runBilingualTranslation(
+      [
+        { id: 'title', kreyol: evTitleHt, english: evTitleEn },
+        { id: 'location', kreyol: evLocHt, english: evLocEn },
+        { id: 'description', kreyol: evDescHt, english: evDescEn },
+      ],
+      (updated) => {
+        const byId = Object.fromEntries(updated.map((field) => [field.id, field]));
+        if (byId.title) {
+          setEvTitleHt(byId.title.kreyol);
+          setEvTitleEn(byId.title.english);
+        }
+        if (byId.location) {
+          setEvLocHt(byId.location.kreyol);
+          setEvLocEn(byId.location.english);
+        }
+        if (byId.description) {
+          setEvDescHt(byId.description.kreyol);
+          setEvDescEn(byId.description.english);
+        }
+      },
+      'church event'
+    );
+  };
+
+  const handleTranslateSermon = async () => {
+    await runBilingualTranslation(
+      [
+        { id: 'title', kreyol: sermTitleHt, english: sermTitleEn },
+        { id: 'description', kreyol: sermDescHt, english: sermDescEn },
+      ],
+      (updated) => {
+        const byId = Object.fromEntries(updated.map((field) => [field.id, field]));
+        if (byId.title) {
+          setSermTitleHt(byId.title.kreyol);
+          setSermTitleEn(byId.title.english);
+        }
+        if (byId.description) {
+          setSermDescHt(byId.description.kreyol);
+          setSermDescEn(byId.description.english);
+        }
+      },
+      'sermon archive entry'
+    );
+  };
+
+  const handleTranslateDevotional = async () => {
+    await runBilingualTranslation(
+      [
+        { id: 'verse_ref', kreyol: editDevotionalForm.verse_ref_kreyol, english: editDevotionalForm.verse_ref_english },
+        { id: 'verse_text', kreyol: editDevotionalForm.verse_text_kreyol, english: editDevotionalForm.verse_text_english },
+        { id: 'lesson', kreyol: editDevotionalForm.lesson_kreyol, english: editDevotionalForm.lesson_english },
+      ],
+      (updated) => {
+        const byId = Object.fromEntries(updated.map((field) => [field.id, field]));
+        setEditDevotionalForm((prev) => ({
+          ...prev,
+          verse_ref_kreyol: byId.verse_ref?.kreyol ?? prev.verse_ref_kreyol,
+          verse_ref_english: byId.verse_ref?.english ?? prev.verse_ref_english,
+          verse_text_kreyol: byId.verse_text?.kreyol ?? prev.verse_text_kreyol,
+          verse_text_english: byId.verse_text?.english ?? prev.verse_text_english,
+          lesson_kreyol: byId.lesson?.kreyol ?? prev.lesson_kreyol,
+          lesson_english: byId.lesson?.english ?? prev.lesson_english,
+        }));
+      },
+      'daily devotional'
+    );
+  };
+
+  const handleTranslateFreeGift = async () => {
+    await runBilingualTranslation(
+      [
+        { id: 'gift_title', kreyol: giftTitleHt, english: giftTitleEn },
+        { id: 'gift_desc', kreyol: giftDescHt, english: giftDescEn },
+      ],
+      (updated) => {
+        const byId = Object.fromEntries(updated.map((field) => [field.id, field]));
+        if (byId.gift_title) {
+          setGiftTitleHt(byId.gift_title.kreyol);
+          setGiftTitleEn(byId.gift_title.english);
+        }
+        if (byId.gift_desc) {
+          setGiftDescHt(byId.gift_desc.kreyol);
+          setGiftDescEn(byId.gift_desc.english);
+        }
+      },
+      'free spiritual gift resource'
     );
   };
 
@@ -3651,6 +3847,14 @@ export default function AdminDashboardClient({
                   </p>
                 </div>
 
+                <AdminBilingualTranslateBar
+                  language={language}
+                  direction={bilingualTranslateDirection}
+                  onDirectionChange={setBilingualTranslateDirection}
+                  onTranslate={handleTranslateFreeGift}
+                  isTranslating={isBilingualTranslating}
+                />
+
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Titre du cadeau ou de la ressource (Français)</label>
@@ -4168,14 +4372,6 @@ export default function AdminDashboardClient({
                 </button>
               </div>
 
-              <AdminBilingualTranslateBar
-                language={language}
-                direction={bilingualTranslateDirection}
-                onDirectionChange={setBilingualTranslateDirection}
-                onTranslate={handleTranslateHomeTab}
-                isTranslating={isBilingualTranslating}
-              />
-
               <form onSubmit={handleHomeTabsSubmit} className="space-y-6">
                 
                 {/* SUB-TAB: ABOUT US */}
@@ -4187,6 +4383,14 @@ export default function AdminDashboardClient({
                         <span>{language === 'fr_ht' ? 'Page « Qui sommes-nous »' : 'About Us Page Content'}</span>
                       </h4>
                     </div>
+
+                    <AdminBilingualTranslateBar
+                      language={language}
+                      direction={bilingualTranslateDirection}
+                      onDirectionChange={setBilingualTranslateDirection}
+                      onTranslate={handleTranslateHomeTab}
+                      isTranslating={isBilingualTranslating}
+                    />
 
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
@@ -4319,6 +4523,14 @@ export default function AdminDashboardClient({
                         <span>{language === 'fr_ht' ? 'Page « Nos croyances »' : 'Our Beliefs Page Content'}</span>
                       </h4>
                     </div>
+
+                    <AdminBilingualTranslateBar
+                      language={language}
+                      direction={bilingualTranslateDirection}
+                      onDirectionChange={setBilingualTranslateDirection}
+                      onTranslate={handleTranslateHomeTab}
+                      isTranslating={isBilingualTranslating}
+                    />
 
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
@@ -4543,6 +4755,17 @@ export default function AdminDashboardClient({
                       </h4>
                     </div>
 
+                    <AdminBilingualTranslateBar
+                      language={language}
+                      direction={bilingualTranslateDirection}
+                      onDirectionChange={setBilingualTranslateDirection}
+                      onTranslate={handleTranslateHomeTab}
+                      isTranslating={isBilingualTranslating && translatingTeamMemberIndex === null}
+                      hint={language === 'fr_ht'
+                        ? 'Traduit uniquement le titre de la section. Utilisez la barre dans chaque fiche membre pour traduire ce membre.'
+                        : 'Translates the section title only. Use the bar inside each member card to translate that person.'}
+                    />
+
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Section Title (Français)</label>
@@ -4571,12 +4794,16 @@ export default function AdminDashboardClient({
                       {teamMembers.map((member, index) => (
                         <div 
                           key={index}
-                          className="p-5 rounded-lg bg-slate-900/30 border border-slate-850 space-y-4 relative group/member"
+                          className={`p-5 rounded-lg bg-slate-900/30 border space-y-4 relative group/member transition-all ${
+                            translatingTeamMemberIndex === index
+                              ? 'border-amber-500 ring-2 ring-amber-500/30 bg-amber-500/5'
+                              : 'border-slate-850'
+                          }`}
                         >
                           <div className="flex items-center justify-between border-b border-slate-850 pb-2">
                             <h5 className="text-xs font-bold text-amber-400 uppercase tracking-wider">
                               {language === 'fr_ht' 
-                                ? `Manm Ekip ${index + 1}` 
+                                ? `Membre de l'équipe ${index + 1}` 
                                 : `Team Member ${index + 1}`}
                               {member.name ? ` - ${member.name}` : ''}
                             </h5>
@@ -4610,6 +4837,18 @@ export default function AdminDashboardClient({
                             </div>
                           </div>
 
+                          <AdminBilingualTranslateBar
+                            compact
+                            language={language}
+                            direction={bilingualTranslateDirection}
+                            onDirectionChange={setBilingualTranslateDirection}
+                            onTranslate={() => handleTranslateTeamMember(index)}
+                            isTranslating={isBilingualTranslating && translatingTeamMemberIndex === index}
+                            hint={language === 'fr_ht'
+                              ? `Traduit le rôle et la biographie de ${member.name || `membre ${index + 1}`} uniquement.`
+                              : `Translates only the role and biography for ${member.name || `member ${index + 1}`}.`}
+                          />
+
                           <div className="grid md:grid-cols-3 gap-4">
                             <div className="md:col-span-2 space-y-4">
                               <div className="grid md:grid-cols-2 gap-4">
@@ -4624,12 +4863,12 @@ export default function AdminDashboardClient({
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Email / Adresse courriel</label>
+                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Email / Adresse courriel (optionnel)</label>
                                   <input
-                                    type="email"
-                                    required
+                                    type="text"
                                     value={member.email || ''}
                                     onChange={(e) => handleUpdateTeamMember(index, 'email', e.target.value)}
+                                    placeholder={language === 'fr_ht' ? 'Laisser vide si non applicable' : 'Leave blank if not applicable'}
                                     className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
                                   />
                                 </div>
@@ -4705,8 +4944,21 @@ export default function AdminDashboardClient({
 
                                 {member.image_url ? (
                                   <div className="text-center z-10 w-full space-y-2">
-                                    <div className="w-20 h-20 rounded-full border-2 border-slate-800 overflow-hidden mx-auto shrink-0 shadow-lg group-hover/drop:scale-105 transition-all">
-                                      <img src={member.image_url} alt="Team member preview" className="w-full h-full object-cover" />
+                                    <div className="relative w-20 h-20 mx-auto shrink-0">
+                                      <div className="w-20 h-20 rounded-full border-2 border-slate-800 overflow-hidden shadow-lg group-hover/drop:scale-105 transition-all">
+                                        <img src={member.image_url} alt="Team member preview" className="w-full h-full object-cover" />
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleUpdateTeamMember(index, 'image_url', '');
+                                        }}
+                                        className="absolute -top-1 -right-1 p-1 rounded-full bg-slate-950 border border-rose-900 hover:border-rose-500 hover:bg-rose-950 text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
+                                        title={language === 'fr_ht' ? 'Supprimer la photo' : 'Remove photo'}
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
                                     </div>
                                     <span className="text-[10px] font-bold text-slate-300 block truncate">
                                       {member.name ? `${member.name.replace(/\s+/g, '_')}.jpg` : `Member_${index + 1}.jpg`}
@@ -4721,7 +4973,9 @@ export default function AdminDashboardClient({
                                     <span className="text-[10px] font-bold">
                                       {language === 'fr_ht' ? 'Choisir ou coller une photo' : 'Choose or Paste Photo'}
                                     </span>
-                                    <span className="text-[9px] text-slate-500">Imaj Kare (PNG/JPG)</span>
+                                    <span className="text-[9px] text-slate-500">
+                                      {language === 'fr_ht' ? 'Image carrée (PNG/JPG)' : 'Square image (PNG/JPG)'}
+                                    </span>
                                   </div>
                                 )}
                               </div>
@@ -4754,6 +5008,14 @@ export default function AdminDashboardClient({
                         <span>{language === 'fr_ht' ? 'Page « À quoi vous attendre »' : 'What to Expect Page Content'}</span>
                       </h4>
                     </div>
+
+                    <AdminBilingualTranslateBar
+                      language={language}
+                      direction={bilingualTranslateDirection}
+                      onDirectionChange={setBilingualTranslateDirection}
+                      onTranslate={handleTranslateHomeTab}
+                      isTranslating={isBilingualTranslating}
+                    />
 
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
@@ -4967,6 +5229,14 @@ export default function AdminDashboardClient({
                 <h4 className="text-xs font-bold uppercase text-amber-400">
                   {editingScheduleId ? 'Modify Schedule / Modifier' : 'Create New Schedule / Ajouter un horaire'}
                 </h4>
+
+                <AdminBilingualTranslateBar
+                  language={language}
+                  direction={bilingualTranslateDirection}
+                  onDirectionChange={setBilingualTranslateDirection}
+                  onTranslate={handleTranslateSchedule}
+                  isTranslating={isBilingualTranslating}
+                />
                 
                 <div className="grid md:grid-cols-3 gap-4">
                   <div>
@@ -5237,6 +5507,14 @@ export default function AdminDashboardClient({
                   {editingMissionId ? 'Modify Haiti Project' : 'Create New Haiti Mission'}
                 </h4>
 
+                <AdminBilingualTranslateBar
+                  language={language}
+                  direction={bilingualTranslateDirection}
+                  onDirectionChange={setBilingualTranslateDirection}
+                  onTranslate={handleTranslateMission}
+                  isTranslating={isBilingualTranslating}
+                />
+
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Project Name (Français)</label>
@@ -5438,6 +5716,14 @@ export default function AdminDashboardClient({
                   {editingOutreachId ? 'Modify Outreach Project' : 'Create New Outreach Project'}
                 </h4>
 
+                <AdminBilingualTranslateBar
+                  language={language}
+                  direction={bilingualTranslateDirection}
+                  onDirectionChange={setBilingualTranslateDirection}
+                  onTranslate={handleTranslateOutreach}
+                  isTranslating={isBilingualTranslating}
+                />
+
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Project Name (Français)</label>
@@ -5554,6 +5840,14 @@ export default function AdminDashboardClient({
                 <h4 className="text-xs font-bold uppercase text-amber-400">
                   {editingEventId ? 'Modify Event Details' : 'Create New Event'}
                 </h4>
+
+                <AdminBilingualTranslateBar
+                  language={language}
+                  direction={bilingualTranslateDirection}
+                  onDirectionChange={setBilingualTranslateDirection}
+                  onTranslate={handleTranslateEvent}
+                  isTranslating={isBilingualTranslating}
+                />
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
@@ -5808,6 +6102,14 @@ export default function AdminDashboardClient({
                 <h4 className="text-sm font-bold text-amber-400 uppercase tracking-wider">
                   {editingSermonId ? (language === 'fr_ht' ? 'Modifier le sermon' : 'Edit Sermon') : (language === 'fr_ht' ? 'Ajouter un sermon' : 'Add a New Sermon')}
                 </h4>
+
+                <AdminBilingualTranslateBar
+                  language={language}
+                  direction={bilingualTranslateDirection}
+                  onDirectionChange={setBilingualTranslateDirection}
+                  onTranslate={handleTranslateSermon}
+                  isTranslating={isBilingualTranslating}
+                />
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
@@ -6158,6 +6460,14 @@ export default function AdminDashboardClient({
                       ID: #{editingDevotionalId}
                     </span>
                   </div>
+
+                  <AdminBilingualTranslateBar
+                    language={language}
+                    direction={bilingualTranslateDirection}
+                    onDirectionChange={setBilingualTranslateDirection}
+                    onTranslate={handleTranslateDevotional}
+                    isTranslating={isBilingualTranslating}
+                  />
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* References */}

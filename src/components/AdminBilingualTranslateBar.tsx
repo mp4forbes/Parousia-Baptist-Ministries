@@ -11,6 +11,8 @@ interface AdminBilingualTranslateBarProps {
   onTranslate: () => void;
   isTranslating?: boolean;
   className?: string;
+  compact?: boolean;
+  hint?: string;
 }
 
 export default function AdminBilingualTranslateBar({
@@ -20,28 +22,37 @@ export default function AdminBilingualTranslateBar({
   onTranslate,
   isTranslating = false,
   className = '',
+  compact = false,
+  hint,
 }: AdminBilingualTranslateBarProps) {
   const isHt = language === 'fr_ht';
 
   return (
-    <div className={`rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3 ${className}`}>
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+    <div className={`rounded-2xl border border-amber-500/20 bg-amber-500/5 ${compact ? 'p-3' : 'p-4'} space-y-3 ${className}`}>
+      <div className={`flex flex-col ${compact ? 'gap-2' : 'lg:flex-row lg:items-center lg:justify-between gap-3'}`}>
         <div>
           <p className="text-xs font-bold text-amber-400 uppercase tracking-wider">
             {isHt ? 'Traduction automatique' : 'Auto-Translation'}
           </p>
-          <p className="text-[11px] text-slate-400 mt-1 leading-relaxed max-w-2xl">
-            {isHt
-              ? 'Vous pouvez écrire dans une langue et remplir automatiquement l’autre. Vérifiez toujours la traduction avant de l’enregistrer.'
-              : 'Write in one language and fill the other automatically. Always review the translation before saving.'}
-          </p>
+          {!compact && (
+            <p className="text-[11px] text-slate-400 mt-1 leading-relaxed max-w-2xl">
+              {isHt
+                ? 'Vous pouvez écrire dans une langue et remplir automatiquement l’autre. Vérifiez toujours la traduction avant de l’enregistrer.'
+                : 'Write in one language and fill the other automatically. Always review the translation before saving.'}
+            </p>
+          )}
+          {hint && (
+            <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
+              {hint}
+            </p>
+          )}
         </div>
 
         <button
           type="button"
           onClick={onTranslate}
           disabled={isTranslating}
-          className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 text-xs font-bold transition-all inline-flex items-center justify-center gap-2 cursor-pointer shrink-0"
+          className={`${compact ? 'w-full' : ''} px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 text-xs font-bold transition-all inline-flex items-center justify-center gap-2 cursor-pointer shrink-0`}
         >
           <Wand2 className={`w-3.5 h-3.5 ${isTranslating ? 'animate-spin' : ''}`} />
           <span>
