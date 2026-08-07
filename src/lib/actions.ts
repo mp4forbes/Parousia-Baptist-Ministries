@@ -28,6 +28,7 @@ import {
   normalizeAdminEmail,
   validateAdminEmailForInvite,
 } from './admin-email';
+import { getGeminiGenerateContentUrl } from './gemini';
 
 // HELPERS TO GET DATA (Server Components will call these directly)
 
@@ -1862,7 +1863,7 @@ Be extremely thorough and accurate. Only include fields that are explicitly foun
       });
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const url = getGeminiGenerateContentUrl(apiKey);
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -2200,7 +2201,7 @@ async function fetchDevotionalFromGemini(theme: string): Promise<GeminiResponse 
   }
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const url = getGeminiGenerateContentUrl(apiKey);
     
     const prompt = `You are a pastor preparing a bilingual daily devotional (in English and French) for Parousia Baptist Ministries.
 Generate a spiritual daily devotional centered on the theme: "${theme}".
@@ -3072,7 +3073,7 @@ export async function translateBlogContentAction(
   }
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const url = getGeminiGenerateContentUrl(apiKey);
     
     const sourceLangName = fromLang === 'en' ? 'English' : 'French';
     const targetLangName = fromLang === 'en' ? 'French' : 'English';
@@ -3161,7 +3162,7 @@ export async function translateAdminTextsAction(
   }
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const url = getGeminiGenerateContentUrl(apiKey);
     const sourceLangName = fromLang === 'en' ? 'English' : 'French';
     const targetLangName = fromLang === 'en' ? 'French' : 'English';
 

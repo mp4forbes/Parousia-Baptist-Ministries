@@ -1,7 +1,7 @@
 import pg from 'pg';
 
 const { Client } = pg;
-const MODEL = 'gemini-2.5-flash';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
 const force = process.argv.includes('--force');
 
 const TEAM_MEMBERS = [
