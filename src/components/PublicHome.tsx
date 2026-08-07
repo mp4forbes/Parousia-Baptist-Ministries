@@ -860,6 +860,13 @@ export default function PublicHome({
               </div>
             </div>
 
+            <a
+              href="#prayer-wall"
+              onClick={(e) => { e.preventDefault(); scrollToSection('prayer-wall'); }}
+              className={`text-sm font-semibold transition-colors ${textNav}`}
+            >
+              {t.navPrayerWall}
+            </a>
             <a href="#schedules" className={`text-sm font-semibold transition-colors ${textNav}`}>{t.navSchedules}</a>
             <a href="#sermons" className={`text-sm font-semibold transition-colors ${textNav}`}>{t.navSermons}</a>
             <a href="#blog" className={`text-sm font-semibold transition-colors ${textNav}`}>{t.navBlog}</a>
@@ -971,6 +978,13 @@ export default function PublicHome({
               </div>
             </div>
 
+            <a
+              href="#prayer-wall"
+              onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); scrollToSection('prayer-wall'); }}
+              className="hover:text-amber-500 transition-colors"
+            >
+              {t.navPrayerWall}
+            </a>
             <a href="#schedules" onClick={() => setMobileMenuOpen(false)} className="hover:text-amber-500 transition-colors">{t.navSchedules}</a>
             <a href="#sermons" onClick={() => setMobileMenuOpen(false)} className="hover:text-amber-500 transition-colors">{t.navSermons}</a>
             <a href="#blog" onClick={() => setMobileMenuOpen(false)} className="hover:text-amber-500 transition-colors">{t.navBlog}</a>

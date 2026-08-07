@@ -9,6 +9,7 @@ export const translations = {
     
     // Navigation
     navHome: "Accueil",
+    navPrayerWall: "Prayer Wall",
     navSchedules: "Horaires des cultes",
     navOutreach: "Action communautaire",
     navMissions: "Missions en Haïti",
@@ -305,6 +306,7 @@ export const translations = {
     
     // Navigation
     navHome: "Home",
+    navPrayerWall: "Prayer Wall",
     navSchedules: "Schedules",
     navOutreach: "Community Outreach",
     navMissions: "Haiti Missions",
