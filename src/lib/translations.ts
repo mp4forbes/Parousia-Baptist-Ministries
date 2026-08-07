@@ -44,7 +44,7 @@ export const translations = {
     // Home Section Sub-tabs
     tabAboutUs: "Qui sommes-nous ?",
     tabBeliefs: "Nos croyances",
-    tabTeam: "Notre équipe",
+    tabTeam: "Comité exécutif",
     tabExpect: "À quoi vous attendre",
 
     // Ministries Section Sub-tabs
@@ -340,7 +340,7 @@ export const translations = {
     // Home Section Sub-tabs
     tabAboutUs: "About Us",
     tabBeliefs: "Our Beliefs",
-    tabTeam: "Our Team",
+    tabTeam: "Executive Committee",
     tabExpect: "What to Expect",
 
     // Ministries Section Sub-tabs

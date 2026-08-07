@@ -6846,7 +6846,7 @@ export default function AdminDashboardClient({
                 <div>
                   <h3 className="text-base font-bold text-white flex items-center gap-2">
                     <Users className="w-5 h-5 text-amber-500" />
-                    <span>{language === 'en' ? 'Core Ministries Configuration' : 'Konfigirasyon Ministères'}</span>
+                    <span>{language === 'en' ? 'Core Ministries Configuration' : 'Configuration des ministères'}</span>
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
                     {language === 'en'
@@ -6908,7 +6908,7 @@ export default function AdminDashboardClient({
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                      {language === 'en' ? 'Ministry Title (French)' : 'Tit Ministè a (Français)'}
+                      {language === 'en' ? 'Ministry Title (French)' : 'Titre du ministère (français)'}
                     </label>
                     <input
                       type="text"
@@ -6935,7 +6935,7 @@ export default function AdminDashboardClient({
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                      {language === 'en' ? 'Description (French)' : 'Deskripsyon (Français)'}
+                      {language === 'en' ? 'Description (French)' : 'Description (français)'}
                     </label>
                     <textarea
                       rows={4}
