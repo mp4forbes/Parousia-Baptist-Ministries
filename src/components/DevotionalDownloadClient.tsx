@@ -48,11 +48,11 @@ export default function DevotionalDownloadClient({ settings }: DevotionalDownloa
   const borderMain = isLight ? 'border-slate-200' : 'border-slate-900';
 
   const giftTitle = language === 'fr_ht' 
-    ? (settings.free_gift_title_kreyol || 'Devosyonèl Parousie 2026') 
+    ? (settings.free_gift_title_kreyol || 'Méditations Parousie 2026')
     : (settings.free_gift_title_english || 'Parousie Devotional 2026');
 
   const giftDesc = language === 'fr_ht'
-    ? (settings.free_gift_desc_kreyol || t.leadSectionSubtitle)
+    ? (settings.free_gift_desc_kreyol || 'Recevez gratuitement ce recueil de méditations et de versets pour nourrir votre foi au quotidien.')
     : (settings.free_gift_desc_english || t.leadSectionSubtitle);
 
   const fileUrl = settings.free_gift_file_url || '/devotional_parousie_2026.txt';
@@ -64,7 +64,7 @@ export default function DevotionalDownloadClient({ settings }: DevotionalDownloa
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!leadName || !leadEmail || !leadPhone) {
-      setError(language === 'fr_ht' ? 'Tanpri ranpli tout jaden yo.' : 'Please fill out all fields.');
+      setError(language === 'fr_ht' ? 'Veuillez remplir tous les champs.' : 'Please fill out all fields.');
       return;
     }
 
@@ -83,10 +83,10 @@ export default function DevotionalDownloadClient({ settings }: DevotionalDownloa
           link.click();
           document.body.removeChild(link);
         } else {
-          setError(res.error || (language === 'fr_ht' ? 'Yon erè rive. Tanpri reye.' : 'An error occurred. Please try again.'));
+          setError(res.error || (language === 'fr_ht' ? 'Une erreur est survenue. Veuillez réessayer.' : 'An error occurred. Please try again.'));
         }
       } catch (err: any) {
-        setError(err.message || (language === 'fr_ht' ? 'Yon erè rive. Tanpri reye.' : 'An error occurred. Please try again.'));
+        setError(err.message || (language === 'fr_ht' ? 'Une erreur est survenue. Veuillez réessayer.' : 'An error occurred. Please try again.'));
       }
     });
   };
@@ -130,7 +130,7 @@ export default function DevotionalDownloadClient({ settings }: DevotionalDownloa
           }`}
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>{language === 'fr_ht' ? 'Retounen Akèy' : 'Back to Home'}</span>
+          <span>{language === 'fr_ht' ? "Retour à l'accueil" : 'Back to Home'}</span>
         </Link>
 
         <button 
@@ -140,7 +140,7 @@ export default function DevotionalDownloadClient({ settings }: DevotionalDownloa
           }`}
         >
           <Globe2 className="w-4 h-4" />
-          <span>{language === 'fr_ht' ? 'English' : 'Kreyòl'}</span>
+          <span>{language === 'fr_ht' ? 'English' : 'Français'}</span>
         </button>
       </header>
 
@@ -168,7 +168,7 @@ export default function DevotionalDownloadClient({ settings }: DevotionalDownloa
 
                 <div className="flex justify-between items-start pl-2">
                   <Sparkles className="w-5 h-5 text-amber-500 animate-pulse" />
-                  <span className="text-[10px] font-bold tracking-widest text-amber-500 uppercase">{language === 'fr_ht' ? 'Gratis' : 'Free'}</span>
+                  <span className="text-[10px] font-bold tracking-widest text-amber-500 uppercase">{language === 'fr_ht' ? 'Gratuit' : 'Free'}</span>
                 </div>
 
                 <div className="pl-2 my-auto">
@@ -177,12 +177,12 @@ export default function DevotionalDownloadClient({ settings }: DevotionalDownloa
                     {giftTitle}
                   </h5>
                   <p className={`text-[10px] mt-1 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                    {language === 'fr_ht' ? 'Meditasyon & Vèsè' : 'Meditations & Verses'}
+                    {language === 'fr_ht' ? 'Méditations et versets' : 'Meditations & Verses'}
                   </p>
                 </div>
 
                 <div className="pl-2 flex justify-between items-center text-[8px] font-semibold border-t border-slate-200/20 pt-2">
-                  <span className={isLight ? 'text-slate-500' : 'text-slate-400'}>Egliz Parousie</span>
+                  <span className={isLight ? 'text-slate-500' : 'text-slate-400'}>Église Parousie</span>
                 </div>
               </div>
 
@@ -200,10 +200,10 @@ export default function DevotionalDownloadClient({ settings }: DevotionalDownloa
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="border-l-4 border-amber-500 pl-4 py-1 mb-2">
                     <h3 className={`text-lg font-bold ${textTitle}`}>
-                      {language === 'fr_ht' ? 'Abone pou telechaje' : 'Subscribe to Download'}
+                      {language === 'fr_ht' ? 'Inscrivez-vous pour télécharger' : 'Subscribe to Download'}
                     </h3>
                     <p className="text-xs text-slate-400">
-                      {language === 'fr_ht' ? 'Kado sa a konplètman gratis pou ou' : 'This gift is completely free for you'}
+                      {language === 'fr_ht' ? 'Ce cadeau vous est offert gratuitement' : 'This gift is completely free for you'}
                     </p>
                   </div>
 
@@ -283,7 +283,7 @@ export default function DevotionalDownloadClient({ settings }: DevotionalDownloa
                   </h3>
                   <p className={`text-sm ${textBody} leading-relaxed max-w-md mb-8`}>
                     {language === 'fr_ht'
-                      ? 'Mèsi anpil! Telechajman an kòmanse otomatikman. W\'ap tounen nan paj akèy la anvan lontan.'
+                      ? "Merci ! Votre téléchargement a démarré automatiquement. Vous serez bientôt redirigé vers la page d'accueil."
                       : 'Thank you! Your download has started automatically. You will be returned to the home page shortly.'}
                   </p>
 
@@ -298,7 +298,7 @@ export default function DevotionalDownloadClient({ settings }: DevotionalDownloa
                     
                     <span className="text-xs text-slate-400 font-medium">
                       {language === 'fr_ht' 
-                        ? `Tounen nan paj akèy la nan ${countdown} segonn...`
+                        ? `Retour à la page d'accueil dans ${countdown} secondes...`
                         : `Returning to home page in ${countdown} seconds...`}
                     </span>
 
@@ -307,7 +307,7 @@ export default function DevotionalDownloadClient({ settings }: DevotionalDownloa
                       className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs shadow-lg active:scale-95 transition-all mt-4"
                     >
                       <ArrowLeft className="w-4 h-4" />
-                      <span>{language === 'fr_ht' ? 'Tounen Koulye a' : 'Return Now'}</span>
+                      <span>{language === 'fr_ht' ? 'Retourner maintenant' : 'Return Now'}</span>
                     </button>
                   </div>
                 </div>

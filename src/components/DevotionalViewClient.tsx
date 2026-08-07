@@ -29,7 +29,7 @@ export default function DevotionalViewClient({ devotional, settings }: Devotiona
   const themeMode = settings.theme_mode || 'dark';
   const isLight = themeMode === 'light';
 
-  // State to track presentation language of the devotional itself (Creole, English, or Bilingual side-by-side)
+  // State to track presentation language of the devotional itself (French, English, or bilingual side-by-side)
   const [devotionalLang, setDevotionalLang] = useState<'kreyol' | 'english' | 'bilingual'>('bilingual');
 
   // Sync state initially or on language toggle
@@ -48,11 +48,11 @@ export default function DevotionalViewClient({ devotional, settings }: Devotiona
   const fallbackDevotional: Omit<DailyDevotional, 'id' | 'status'> = {
     date: new Date().toLocaleDateString('sv'),
     verse_ref_english: "1 Thessalonians 4:16-17",
-    verse_ref_kreyol: "1 Tesalonisyen 4:16-17",
+    verse_ref_kreyol: "1 Thessaloniciens 4:16-17",
     verse_text_english: "For the Lord himself will descend from heaven with a cry of command, with the voice of an archangel, and with the sound of the trumpet of God. And the dead in Christ will rise first. Then we who are alive, who are left, will be caught up together with them in the clouds to meet the Lord in the air, and so we will always be with the Lord.",
-    verse_text_kreyol: "Paske, lè sa a, Seyè a li menm va desann soti nan syèl la ak yon gwo rèl, avèk vwa achanj lan ansanm ak kout twonpèt Bondye a. Se moun ki te mouri nan Kris yo k'ap premye resisite. Apre sa, nou menm ki vivan toujou epi ki rete sou tè a, y'ap rache nou ansanm ak yo nan nwaj yo pou n' al kontre Seyè a nan lè a. Konsa, n'ap toujou ansanm ak Seyè a.",
+    verse_text_kreyol: "Car le Seigneur lui-même, à un signal donné, à la voix d'un archange et au son de la trompette de Dieu, descendra du ciel. Les morts en Christ ressusciteront d'abord. Ensuite, nous les vivants qui serons restés, nous serons tous ensemble enlevés avec eux sur des nuées, à la rencontre du Seigneur dans les airs, et ainsi nous serons toujours avec le Seigneur.",
     lesson_english: "This powerful passage reminds us of our ultimate hope and the glorious reunion that awaits all believers. Even in times of temporary parting or earthly struggles, we are comforted by the promise of Christ's return and eternal fellowship. Let this assurance fill your heart with peace, strengthen your faith, and encourage you to serve the Lord with joyful anticipation today.",
-    lesson_kreyol: "Pasaj pisan sa a fè nou chonje espwa siprèm nou ak bèl reyinyon k ap tann tout kwayan yo. Menm nan moman separasyon pwovizwa oswa lit sou tè a, nou jwenn konsolasyon nan pwomès retou Kris la ak kominyon etènèl la. Se pou asirans sa a ranpli kè ou ak kè poze, fòtifye lafwa ou, epi ankouraje ou sèvi Seyè a ak yon bèl kè kontan jodi a."
+    lesson_kreyol: "Ce passage puissant nous rappelle notre espérance suprême et les glorieuses retrouvailles qui attendent tous les croyants. Même dans les moments de séparation ou les épreuves terrestres, la promesse du retour du Christ et de la communion éternelle nous réconforte. Que cette assurance remplisse votre cœur de paix, fortifie votre foi et vous encourage à servir le Seigneur aujourd'hui dans la joie et l'attente."
   };
 
   const activeDevotional = devotional || fallbackDevotional;
@@ -62,7 +62,7 @@ export default function DevotionalViewClient({ devotional, settings }: Devotiona
     try {
       const [year, month, day] = dateStr.split('-').map(Number);
       const date = new Date(year, month - 1, day);
-      return date.toLocaleDateString(language === 'fr_ht' ? 'ht-HT' : 'en-US', {
+      return date.toLocaleDateString(language === 'fr_ht' ? 'fr-FR' : 'en-US', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
@@ -98,7 +98,7 @@ export default function DevotionalViewClient({ devotional, settings }: Devotiona
           }`}
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>{language === 'fr_ht' ? 'Retounen Akèy' : 'Back to Home'}</span>
+          <span>{language === 'fr_ht' ? "Retour à l'accueil" : 'Back to Home'}</span>
         </a>
 
         <button 
@@ -108,7 +108,7 @@ export default function DevotionalViewClient({ devotional, settings }: Devotiona
           }`}
         >
           <Globe2 className="w-4 h-4" />
-          <span>{language === 'fr_ht' ? 'English' : 'Kreyòl'}</span>
+          <span>{language === 'fr_ht' ? 'English' : 'Français'}</span>
         </button>
       </header>
 
@@ -125,10 +125,10 @@ export default function DevotionalViewClient({ devotional, settings }: Devotiona
             <div>
               <div className="flex items-center justify-center md:justify-start gap-2 text-amber-500 font-extrabold text-xs uppercase tracking-wider mb-2">
                 <Sparkles className="w-4 h-4 animate-pulse" />
-                <span>{language === 'fr_ht' ? 'Meditation pou Jodi a' : 'Daily Devotional'}</span>
+                <span>{language === 'fr_ht' ? 'Méditation du jour' : 'Daily Devotional'}</span>
               </div>
               <h1 className={`text-3xl md:text-4xl font-extrabold font-serif ${textTitle} tracking-tight`}>
-                {language === 'fr_ht' ? 'Vèsè pou Jodi a' : 'Daily Scripture Verse'}
+                {language === 'fr_ht' ? 'Verset du jour' : 'Daily Scripture Verse'}
               </h1>
             </div>
             
@@ -150,7 +150,7 @@ export default function DevotionalViewClient({ devotional, settings }: Devotiona
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              Kreyòl Ayisyen
+              Français
             </button>
             <button
               onClick={() => setDevotionalLang('english')}
@@ -170,7 +170,7 @@ export default function DevotionalViewClient({ devotional, settings }: Devotiona
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              {language === 'fr_ht' ? 'Tou De (Bilingual)' : 'Bilingual'}
+              {language === 'fr_ht' ? 'Les deux (bilingue)' : 'Bilingual'}
             </button>
           </div>
 
@@ -185,12 +185,12 @@ export default function DevotionalViewClient({ devotional, settings }: Devotiona
               {/* Render Selected Presentation Layout */}
               <div className="space-y-8 relative z-10">
                 
-                {/* 1. Creole Presentation */}
+                {/* 1. French Presentation */}
                 {(devotionalLang === 'kreyol' || devotionalLang === 'bilingual') && (
                   <div className="space-y-6 notranslate" translate="no">
                     {devotionalLang === 'bilingual' && (
                       <span className="text-[10px] font-black uppercase tracking-widest text-blue-500 border border-blue-500/20 px-2 py-0.5 rounded">
-                        Kreyòl Ayisyen
+                        Français
                       </span>
                     )}
                     <blockquote className={`text-xl md:text-2xl font-serif leading-relaxed italic ${isLight ? 'text-slate-800' : 'text-slate-100'}`}>
@@ -240,21 +240,21 @@ export default function DevotionalViewClient({ devotional, settings }: Devotiona
             <div className="relative z-10 flex flex-col gap-6">
               <div className="border-l-4 border-amber-500 pl-4 py-1">
                 <h3 className={`text-lg md:text-xl font-bold font-serif ${textTitle}`}>
-                  {language === 'fr_ht' ? 'Meditation & Leson Pastoral' : 'Pastoral Meditation & Lesson'}
+                  {language === 'fr_ht' ? 'Méditation et enseignement pastoral' : 'Pastoral Meditation & Lesson'}
                 </h3>
                 <p className="text-xs text-slate-400">
-                  {language === 'fr_ht' ? 'Pawòl ankourajman pou bati kominote a' : 'Encouraging application words for spiritual growth'}
+                  {language === 'fr_ht' ? 'Des paroles encourageantes pour grandir dans la foi' : 'Encouraging application words for spiritual growth'}
                 </p>
               </div>
 
               <div className="grid md:grid-cols-1 gap-6 mt-2">
                 
-                {/* 1. Creole Reflection */}
+                {/* 1. French Reflection */}
                 {(devotionalLang === 'kreyol' || devotionalLang === 'bilingual') && (
                   <div className="space-y-2 notranslate" translate="no">
                     {devotionalLang === 'bilingual' && (
                       <span className="text-[10px] font-bold text-blue-500">
-                        Kreyòl Ayisyen:
+                        Français :
                       </span>
                     )}
                     <p className={`text-sm md:text-base leading-relaxed ${textBody} font-serif whitespace-pre-line`}>
@@ -290,7 +290,7 @@ export default function DevotionalViewClient({ devotional, settings }: Devotiona
           <div className="text-center py-6">
             <p className="text-xs text-slate-500 italic font-serif">
               {language === 'fr_ht' 
-                ? '“Konsa, n\'ap toujou ansanm ak Seyè a.” — Egliz Baptiste de la Parousie' 
+                ? '« Ainsi, nous serons toujours avec le Seigneur. » — Église Baptiste de la Parousie'
                 : '“And so we will always be with the Lord.” — Parousia Baptist Church'}
             </p>
           </div>

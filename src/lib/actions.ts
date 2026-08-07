@@ -309,7 +309,7 @@ export async function exportAdminSectionSpreadsheet(
       case 'haiti_missions': {
         const missions = await db.prepare('SELECT * FROM haiti_missions ORDER BY id ASC').all() as HaitiMission[];
         sheetTitle = 'Haiti Missions';
-        headers = ['ID', 'Title (English)', 'Title (Creole)', 'Date', 'Funds Raised', 'Goal', 'Description (English)'];
+        headers = ['ID', 'Title (English)', 'Title (French)', 'Date', 'Funds Raised', 'Goal', 'Description (English)'];
         rows = missions.map((mission) => [
           String(mission.id),
           mission.title_english,
@@ -324,7 +324,7 @@ export async function exportAdminSectionSpreadsheet(
       case 'local_outreach': {
         const outreaches = await db.prepare('SELECT * FROM local_outreach ORDER BY id ASC').all() as LocalOutreach[];
         sheetTitle = 'Local Outreach';
-        headers = ['ID', 'Title (English)', 'Title (Creole)', 'Schedule (English)', 'Schedule (Creole)', 'Description (English)'];
+        headers = ['ID', 'Title (English)', 'Title (French)', 'Schedule (English)', 'Schedule (French)', 'Description (English)'];
         rows = outreaches.map((item) => [
           String(item.id),
           item.title_english,
@@ -338,7 +338,7 @@ export async function exportAdminSectionSpreadsheet(
       case 'events': {
         const events = await db.prepare('SELECT * FROM events ORDER BY date ASC').all() as EventRecord[];
         sheetTitle = 'Events';
-        headers = ['ID', 'Title (English)', 'Title (Creole)', 'Date', 'Time', 'Location (English)', 'Description (English)'];
+        headers = ['ID', 'Title (English)', 'Title (French)', 'Date', 'Time', 'Location (English)', 'Description (English)'];
         rows = events.map((event) => [
           String(event.id),
           event.title_english,
@@ -1337,7 +1337,7 @@ function parsePublishedTime(timeText: string): string {
   return now.toISOString().split('T')[0];
 }
 
-// Helper to translate Creole titles or common terms to English for bilingual alignment
+// Helper to translate French titles or common terms to English for bilingual alignment
 function translateTitleToEnglish(title: string): string {
   let english = title;
   
@@ -1775,7 +1775,7 @@ export async function automateWebsiteContentFromPdf(
     const systemInstruction = `You are a helpful bilingual assistant for "Eglise Baptiste de la Parousie" church.
 Your job is to extract scheduling and church program information from the provided text (which is extracted from a weekly schedule or bulletin PDF) and format it as structured JSON matching the provided schema.
 
-Ensure high-quality Haitian Creole (Kreyòl) translations for Kreyòl fields and English translations for English fields.
+Ensure high-quality French translations for legacy fields whose names end in "_kreyol", and English translations for English fields. The legacy database field names must not change.
 For service schedules, make sure to extract each individual time block as a separate schedule entry. Translate days:
 SUNDAY -> Dimanch
 SATURDAY -> Samdi
@@ -1795,10 +1795,10 @@ Be extremely thorough and accurate. Only include fields that are explicitly foun
           items: {
             type: "OBJECT",
             properties: {
-              day_kreyol: { type: "STRING", description: "Day in Creole, e.g. Dimanch, Samdi, Lendi, etc." },
+              day_kreyol: { type: "STRING", description: "Day in French, e.g. Dimanche, Samedi, Lundi, etc. (legacy field name)" },
               day_english: { type: "STRING", description: "Day in English, e.g. Sunday, Saturday, Monday, etc." },
               time: { type: "STRING", description: "Time range, e.g. 6:00 AM - 7:00 AM, 7:00 PM - 9:00 PM" },
-              title_kreyol: { type: "STRING", description: "Service title in Creole, e.g. Premye Sèvis, Lekòl Dimanch, Dezyèm Sèvis" },
+              title_kreyol: { type: "STRING", description: "Service title in French, e.g. Premier culte, École du dimanche, Deuxième culte (legacy field name)" },
               title_english: { type: "STRING", description: "Service title in English, e.g. 1st Service, Sunday School, 2nd Service" },
               description_kreyol: { type: "STRING" },
               description_english: { type: "STRING" }
@@ -2202,21 +2202,21 @@ async function fetchDevotionalFromGemini(theme: string): Promise<GeminiResponse 
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     
-    const prompt = `You are a pastor preparing a bilingual daily devotional (in English and Haitian Creole) for Parousia Baptist Ministries.
+    const prompt = `You are a pastor preparing a bilingual daily devotional (in English and French) for Parousia Baptist Ministries.
 Generate a spiritual daily devotional centered on the theme: "${theme}".
 
 Choose a real, well-known Bible verse and reference that clearly relates to this theme (for example, forgiveness might use Ephesians 4:32 or Matthew 6:14; Easter might use 1 Corinthians 15:20; Christmas might use Luke 2:11).
 The scripture must be authentic and appropriate for the theme.
-Provide the content in both English and Haitian Creole.
+Provide the content in both English and natural, polished French. Keep the legacy JSON property names ending in "_kreyol" exactly as specified, but put French text in those properties.
 
 Return a JSON object conforming to this exact structure:
 {
   "verse_ref_english": "The scripture reference in English, e.g. John 3:16",
-  "verse_ref_kreyol": "The scripture reference in Haitian Creole, e.g. Jan 3:16",
+  "verse_ref_kreyol": "The scripture reference in French, e.g. Jean 3:16 (legacy property name)",
   "verse_text_english": "The exact bible verse text in English",
-  "verse_text_kreyol": "The exact bible verse text in Haitian Creole",
+  "verse_text_kreyol": "The exact Bible verse text in French (legacy property name)",
   "lesson_english": "A short, rich pastoral reflection and spiritual lesson in English (2-4 sentences) tied to the theme",
-  "lesson_kreyol": "An equivalent short, rich pastoral reflection and spiritual lesson in Haitian Creole (2-4 sentences) tied to the theme"
+  "lesson_kreyol": "An equivalent short, rich pastoral reflection and spiritual lesson in French (2-4 sentences) tied to the theme; legacy property name"
 }`;
 
     const response = await fetch(url, {
@@ -3001,9 +3001,9 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
 
 export async function saveBlogPost(
   id: number | null,
-  titleKreyol: string,
+  titleFrench: string,
   titleEnglish: string,
-  contentKreyol: string,
+  contentFrench: string,
   contentEnglish: string,
   date: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -3011,7 +3011,7 @@ export async function saveBlogPost(
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
-    if (!titleKreyol.trim() || !titleEnglish.trim() || !contentKreyol.trim() || !contentEnglish.trim() || !date.trim()) {
+    if (!titleFrench.trim() || !titleEnglish.trim() || !contentFrench.trim() || !contentEnglish.trim() || !date.trim()) {
       return { success: false, error: 'All fields are required' };
     }
 
@@ -3021,7 +3021,7 @@ export async function saveBlogPost(
       await db.prepare(`
         INSERT INTO blog_posts (title_kreyol, title_english, content_kreyol, content_english, date, created_at)
         VALUES (?, ?, ?, ?, ?, ?)
-      `).run(titleKreyol.trim(), titleEnglish.trim(), contentKreyol.trim(), contentEnglish.trim(), date.trim(), today);
+      `).run(titleFrench.trim(), titleEnglish.trim(), contentFrench.trim(), contentEnglish.trim(), date.trim(), today);
     } else {
       await db.prepare(`
         UPDATE blog_posts
@@ -3031,7 +3031,7 @@ export async function saveBlogPost(
             content_english = ?,
             date = ?
         WHERE id = ?
-      `).run(titleKreyol.trim(), titleEnglish.trim(), contentKreyol.trim(), contentEnglish.trim(), date.trim(), id);
+      `).run(titleFrench.trim(), titleEnglish.trim(), contentFrench.trim(), contentEnglish.trim(), date.trim(), id);
     }
 
     revalidatePath('/');
@@ -3074,8 +3074,8 @@ export async function translateBlogContentAction(
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     
-    const sourceLangName = fromLang === 'en' ? 'English' : 'Haitian Creole';
-    const targetLangName = fromLang === 'en' ? 'Haitian Creole' : 'English';
+    const sourceLangName = fromLang === 'en' ? 'English' : 'French';
+    const targetLangName = fromLang === 'en' ? 'French' : 'English';
 
     const prompt = `You are a professional Christian translator translating a pastor's blog post from ${sourceLangName} to ${targetLangName} for Parousia Baptist Ministries.
 Please translate the following blog post title and body content. Keep the markdown formatting of the content completely intact (e.g. headers, bold, list items, paragraphs, etc.).
@@ -3162,8 +3162,8 @@ export async function translateAdminTextsAction(
 
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-    const sourceLangName = fromLang === 'en' ? 'English' : 'Haitian Creole';
-    const targetLangName = fromLang === 'en' ? 'Haitian Creole' : 'English';
+    const sourceLangName = fromLang === 'en' ? 'English' : 'French';
+    const targetLangName = fromLang === 'en' ? 'French' : 'English';
 
     const prompt = `You are a professional Christian translator for Parousia Baptist Ministries.
 Translate the following ${contextLabel} fields from ${sourceLangName} to ${targetLangName}.

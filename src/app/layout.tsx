@@ -22,7 +22,7 @@ const playfair = Playfair_Display({
 
 export const metadata: Metadata = {
   title: "Eglise Baptiste de la Parousie",
-  description: "Eglise Baptiste de la Parousie - Kominote kwayan k'ap sèvi Seyè a epi k'ap tann retou li. Defaulting in Haitian Creole with English fallback.",
+  description: "Église Baptiste de la Parousie — une communauté de croyants au service du Seigneur, dans l'attente de son retour. Le français est la langue par défaut, avec l'anglais comme seconde langue.",
   icons: {
     icon: [
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
@@ -44,11 +44,11 @@ export default async function RootLayout({
   const cookieStore = await cookies();
   const savedLang = cookieStore.get('church_lang')?.value as Language | undefined;
   
-  // Validate language preference, default to Haitian Creole ('fr_ht')
+  // Validate the language preference, defaulting to French ('fr_ht')
   const defaultLanguage: Language = (savedLang === 'fr_ht' || savedLang === 'en') ? savedLang : 'fr_ht';
   
-  // Set html element lang to "en" or "ht"
-  const htmlLang = defaultLanguage === 'en' ? 'en' : 'ht';
+  // Set the HTML language to English or French
+  const htmlLang = defaultLanguage === 'en' ? 'en' : 'fr';
   const isAdmin = await checkAdminAuth();
 
   return (

@@ -1,6 +1,6 @@
 <div class="letter-title-row">
 <img class="letter-brand-logo" src="/admin-guide/straight-line-holdings-logo.png" alt="Straight-Line Holdings, Inc." />
-<h1>Lèt Ofisyèl Fini Pwojè a</h1>
+<h1>Lettre officielle d’achèvement du projet</h1>
 </div>
 
 ---
@@ -11,92 +11,92 @@ Straight-Line Holdings, Inc.
 Princeton, NJ 08540  
 [mp4forbes@straightlineholdings.com](mailto:mp4forbes@straightlineholdings.com) | 609-540-6556
 
-29 jiyè 2026
+29 juillet 2026
 
-**Pastè Yvan Dalzon**  
-**Sponsor Pwojè a: Micheline Mesidor**  
+**Pasteur Yvan Dalzon**\
+**Commanditaire du projet : Micheline Mesidor**\
 **Parousia Baptist Ministries**  
 227-10 Merrick Blvd  
 Laurelton, NY 11413  
 [franckyvan@gmail.com](mailto:franckyvan@gmail.com) | (929) 398-2829
 
-**Objè: Avi Ofisyèl Fini Pwojè — Sit Wèb Parousia Baptist Ministries**
+**Objet : Avis officiel d’achèvement du projet — Site Web de Parousia Baptist Ministries**
 
-Bonjou Pastè Yvan Dalzon ak ekip lidèchip la,
+Pasteur Yvan Dalzon et membres de l’équipe de direction,
 
-Mwen kontan fòmèlman enfòme nou ke tout travay ki te kontra sou **sit wèb Parousia Baptist Ministries** la fini, teste, epi mete an pwodiksyon. Sit la kounye a ap fonksyone epi pare pou legliz la itilize l chak jou.
-
----
-
-## Travay ki Te Fini
-
-Tout pwen yo nan kontra nou an (6 jen ak 9 jen 2026) delivre:
-
-### Mak ak Design
-
-1. Non legliz la mete ajou kòm **Parousia Baptist Ministries** sou tout sit la ak sistèm admin an.
-2. Koulè sit la mete an **ble pastel klè**, ak yon Ajistè Koulè nan admin pou chanjman pita.
-3. Background hero a mete ajou pou retire eleman floral yo; logo ak artwork kounye a parèt pwòp.
-4. Devosyonèl chak jou sipòte yon **tèm konfigirab**; lè pa gen tèm, vèsè yo chwazi pa chans.
-
-### Navigasyon & Estrikti Kontni
-
-5. Sit la parèt byen sou **telefòn, tablèt, ak òdinatè**.
-6. Tab **Akèy** gen: Konsènan Nou, Kwayans Nou, Ekip la, Kisa pou Atann.
-7. Tab **Ministè** gen: Fanm, Gason, Timoun, Misyon.
-8. Tab **Community Outreach** ranplase pa tab **Blòg** pou pwen de vi pastè a.
-9. Tab **Administrasyon** ranplase pa **ikon angranaj**, vizib sèlman pou administratè ki konekte.
-
-### Sekirite & Administrasyon
-
-10. Pòtay admin sipòte **ajoute administratè pa imel**. Premye koneksyon ak nouvo aparèy mande **verifikasyon OTP**.
-11. **Fòm kontakte** ajoute pou moun ki vle legliz la kontakte yo.
-12. **Miray lapriyè** ajoute ak opsyon anonim.
+J’ai le plaisir de vous informer officiellement que tous les travaux prévus au contrat pour le **site Web de Parousia Baptist Ministries** ont été achevés, testés et mis en production. Le site est désormais opérationnel et prêt à être utilisé quotidiennement par l’église.
 
 ---
 
-## Delivrab
+## Travaux réalisés
 
-| Delivrab | Estati | Detay |
+Tous les éléments prévus dans notre contrat (6 juin et 9 juin 2026) ont été livrés :
+
+### Image de marque et conception
+
+1. Le nom de l’église a été mis à jour sous la forme **Parousia Baptist Ministries** sur l’ensemble du site et dans le système d’administration.
+2. La palette du site a été définie dans des tons **bleu pastel clair**, avec un outil de réglage des couleurs dans l’interface d’administration pour permettre de futures modifications.
+3. L’arrière-plan de la bannière a été mis à jour afin de retirer les éléments floraux; le logo et les éléments graphiques s’affichent désormais clairement.
+4. La méditation quotidienne prend en charge un **thème configurable**; lorsqu’aucun thème n’est défini, les versets sont sélectionnés au hasard.
+
+### Navigation et structure du contenu
+
+5. Le site s’affiche correctement sur les **téléphones, les tablettes et les ordinateurs**.
+6. L’onglet **Accueil** comprend : À propos de nous, Nos croyances, L’équipe, À quoi s’attendre.
+7. L’onglet **Ministères** comprend : Femmes, Hommes, Enfants, Mission.
+8. L’onglet **Community Outreach** a été remplacé par l’onglet **Blogue**, consacré au point de vue du pasteur.
+9. L’onglet **Administration** a été remplacé par une **icône d’engrenage**, visible uniquement par les administrateurs connectés.
+
+### Sécurité et administration
+
+10. Le portail d’administration permet d’**ajouter des administrateurs par courriel**. La première connexion et l’utilisation d’un nouvel appareil exigent une **vérification OTP**.
+11. Un **formulaire de contact** a été ajouté pour les personnes qui souhaitent être contactées par l’église.
+12. Un **mur de prière** a été ajouté avec la possibilité de soumettre une demande de façon anonyme.
+
+---
+
+## Livrables
+
+| Livrable | État | Détails |
 |----------|--------|-------|
-| Sit bileng (Kreyòl + Angle) | ✅ Fini | Kreyòl prensipal; Angle disponib |
-| URL sit la | ✅ Fini | https://ParousiaBaptistChurch.org |
-| Hosting | ✅ Fini | **Google Cloud Platform** — Cloud Run ak Cloud SQL |
-| Gid administrasyon | ✅ Fini | Gid Administrasyon (bay apa) |
-| Akò antretyen | ✅ Dakò | Gade kondisyon yo anba a |
+| Site bilingue (français + anglais) | ✅ Terminé | Français par défaut; anglais disponible |
+| URL du site | ✅ Terminé | https://ParousiaBaptistChurch.org |
+| Hébergement | ✅ Terminé | **Google Cloud Platform** — Cloud Run et Cloud SQL |
+| Guide d’administration | ✅ Terminé | Guide d’administration (fourni séparément) |
+| Accord de maintenance | ✅ Convenu | Voir les conditions ci-dessous |
 
 ---
 
-## Aksè Sit la
+## Accès au site
 
-- **Sit piblik:** https://ParousiaBaptistChurch.org
-- **Pòtay admin:** https://ParousiaBaptistChurch.org/admin
-
----
-
-## Kondisyon Antretyen (Jan nou te dakò)
-
-- **Premye peryòd:** Sesyon sipò chak semèn pou ede ekip la navige admin an.
-- **Apre sa:** Sesyon sipò chak de semèn.
-- **Peman:** Zelle bay **Straight-Line Holdings, Inc.** — **609-540-6556**
+- **Site public :** https://ParousiaBaptistChurch.org
+- **Portail d’administration :** https://ParousiaBaptistChurch.org/admin
 
 ---
 
-## Pwochen Etap Rekòmande
+## Conditions de maintenance (selon notre entente)
 
-1. Li **Gid Administrasyon Sit Wèb la** epi sove URL admin an.
-2. Konekte nan pòtay admin an epi verifye imel ak modpas ou.
-3. Verifye logo, imaj hero, ak foto ekip la.
-4. Pibliye premye atik blòg pastè a.
-5. Planifye premye sesyon fòmasyon semènè a.
+- **Période initiale :** séances d’assistance hebdomadaires pour aider l’équipe à utiliser l’interface d’administration.
+- **Par la suite :** séances d’assistance toutes les deux semaines.
+- **Paiement :** par Zelle à **Straight-Line Holdings, Inc.** — **609-540-6556**
 
 ---
 
-## Akseptasyon
+## Prochaines étapes recommandées
 
-Lèt sa a sèvi kòm avi ofisyèl ke pwojè sit **Parousia Baptist Ministries** la **fini** depi **29 jiyè 2026**. Si gen nenpòt bagay ki pa koresponn ak sa nou te dakò, tanpri fè nou konnen nan **14 jou**.
+1. Lisez le **Guide d’administration du site Web** et enregistrez l’URL d’administration dans vos favoris.
+2. Connectez-vous au portail d’administration et vérifiez votre adresse courriel et votre mot de passe.
+3. Vérifiez le logo, l’image de la bannière et les photos de l’équipe.
+4. Publiez le premier article du blogue du pasteur.
+5. Planifiez la première séance de formation hebdomadaire.
 
-Avèk respè,
+---
+
+## Acceptation
+
+La présente lettre constitue un avis officiel attestant que le projet de site Web de **Parousia Baptist Ministries** est **achevé** depuis le **29 juillet 2026**. Si un élément ne correspond pas à notre entente, veuillez nous en informer dans un délai de **14 jours**.
+
+Respectueusement,
 
 <div class="letter-signature">
 <img class="letter-brand-logo" src="/admin-guide/straight-line-holdings-logo.png" alt="Straight-Line Holdings, Inc." />
@@ -112,4 +112,4 @@ Princeton, NJ 08540<br />
 
 ---
 
-*Anèks: Gid Administrasyon Parousia Baptist Ministries (v1.0)*
+*Pièce jointe : Guide d’administration de Parousia Baptist Ministries (v1.0)*

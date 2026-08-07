@@ -75,7 +75,7 @@ export default function MinistrySignupForm({
     setSuccess(false);
 
     if (!name.trim() || !email.trim()) {
-      setError(language === 'fr_ht' ? 'Tanpri ranpli non ak imel ou.' : 'Please enter your name and email.');
+      setError(language === 'fr_ht' ? 'Veuillez saisir votre nom et votre adresse e-mail.' : 'Please enter your name and email.');
       return;
     }
 
@@ -83,7 +83,7 @@ export default function MinistrySignupForm({
       if (field.required && !responses[field.key]?.trim()) {
         setError(
           language === 'fr_ht'
-            ? `Tanpri ranpli jaden obligatwa: ${field.label_ht}`
+            ? `Veuillez remplir le champ obligatoire : ${field.label_ht}`
             : `Please complete required field: ${field.label_en}`
         );
         return;
@@ -100,7 +100,7 @@ export default function MinistrySignupForm({
       });
 
       if (!result.success) {
-        setError(result.error || (language === 'fr_ht' ? 'Yon erè rive.' : 'Something went wrong.'));
+        setError(result.error || (language === 'fr_ht' ? 'Une erreur est survenue.' : 'Something went wrong.'));
         return;
       }
 
@@ -110,7 +110,7 @@ export default function MinistrySignupForm({
       setPhone('');
       setResponses({});
     } catch (err: any) {
-      setError(err.message || (language === 'fr_ht' ? 'Yon erè rive.' : 'Something went wrong.'));
+      setError(err.message || (language === 'fr_ht' ? 'Une erreur est survenue.' : 'Something went wrong.'));
     } finally {
       setSubmitting(false);
     }
@@ -140,19 +140,19 @@ export default function MinistrySignupForm({
             {!success ? (
               <form onSubmit={handleSubmit}>
                 <h5 className={`text-2xl font-extrabold font-serif ${textTitle} mb-2`}>
-                  {language === 'fr_ht' ? 'Enskripsyon Ministè' : 'Ministry Signup'}
+                  {language === 'fr_ht' ? 'Inscription au ministère' : 'Ministry Signup'}
                 </h5>
                 <p className="text-sm text-amber-400 font-medium mb-2">{ministryTitle}</p>
                 <p className={`${textMuted} text-sm mb-6 leading-relaxed`}>
                   {language === 'fr_ht'
-                    ? 'Ranpli fòm sa a epi yon responsab komite a ap kontakte w byento.'
+                    ? 'Remplissez ce formulaire et un responsable du ministère vous contactera bientôt.'
                     : 'Fill out this form and a ministry leader will reach out soon.'}
                 </p>
 
                 {ministry?.contact_name && (
                   <div className={`mb-4 rounded-xl border ${isLight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-950/50'} px-4 py-3 text-sm ${textBody}`}>
                     <p className="font-semibold mb-1">
-                      {language === 'fr_ht' ? 'Kontak Komite a' : 'Ministry Committee Contact'}
+                      {language === 'fr_ht' ? 'Contact du ministère' : 'Ministry Committee Contact'}
                     </p>
                     <p>{ministry.contact_name}</p>
                     {ministry.contact_email && <p>{ministry.contact_email}</p>}
@@ -169,7 +169,7 @@ export default function MinistrySignupForm({
                 <div className="space-y-4 mb-6 max-h-[50vh] overflow-y-auto pr-1">
                   <div>
                     <label className={`block text-xs font-bold uppercase ${textMuted} mb-1.5`}>
-                      {language === 'fr_ht' ? 'Non Konplè' : 'Full Name'} *
+                      {language === 'fr_ht' ? 'Nom complet' : 'Full Name'} *
                     </label>
                     <input
                       type="text"
@@ -183,7 +183,7 @@ export default function MinistrySignupForm({
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
                       <label className={`block text-xs font-bold uppercase ${textMuted} mb-1.5`}>
-                        {language === 'fr_ht' ? 'Imel' : 'Email'} *
+                        {language === 'fr_ht' ? 'Adresse e-mail' : 'Email'} *
                       </label>
                       <input
                         type="email"
@@ -195,7 +195,7 @@ export default function MinistrySignupForm({
                     </div>
                     <div>
                       <label className={`block text-xs font-bold uppercase ${textMuted} mb-1.5`}>
-                        {language === 'fr_ht' ? 'Telefòn' : 'Phone'}
+                        {language === 'fr_ht' ? 'Téléphone' : 'Phone'}
                       </label>
                       <input
                         type="tel"
@@ -254,7 +254,7 @@ export default function MinistrySignupForm({
                     className="px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-sm transition-all cursor-pointer inline-flex items-center gap-2"
                   >
                     {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                    <span>{submitting ? (language === 'fr_ht' ? 'Y ap voye...' : 'Submitting...') : submitLabel}</span>
+                    <span>{submitting ? (language === 'fr_ht' ? 'Envoi en cours...' : 'Submitting...') : submitLabel}</span>
                   </button>
                 </div>
               </form>
@@ -264,11 +264,11 @@ export default function MinistrySignupForm({
                   <CheckCircle className="w-8 h-8" />
                 </div>
                 <h5 className={`text-2xl font-extrabold font-serif ${textTitle} mb-2`}>
-                  {language === 'fr_ht' ? 'Enskripsyon Resevwa!' : 'Signup Received!'}
+                  {language === 'fr_ht' ? 'Inscription reçue !' : 'Signup Received!'}
                 </h5>
                 <p className={`${textBody} text-sm mb-8 leading-relaxed`}>
                   {language === 'fr_ht'
-                    ? 'Mèsi! Yon responsab komite a ap kontakte w byento.'
+                    ? 'Merci ! Un responsable du ministère vous contactera bientôt.'
                     : 'Thank you! A ministry leader will reach out to you soon.'}
                 </p>
                 <button

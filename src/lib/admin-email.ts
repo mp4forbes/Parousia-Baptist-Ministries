@@ -76,7 +76,7 @@ export async function validateAdminEmailForInvite(
     return {
       valid: false,
       error: language === 'fr_ht'
-        ? 'Tanpri antre yon adrès imel ki valab.'
+        ? 'Veuillez saisir une adresse courriel valide.'
         : 'Please enter a valid email address.',
     };
   }
@@ -85,7 +85,7 @@ export async function validateAdminEmailForInvite(
     return {
       valid: false,
       error: language === 'fr_ht'
-        ? 'Domèn imel sa a pa ka itilize pou yon administratè.'
+        ? 'Ce domaine de messagerie ne peut pas être utilisé pour un compte administrateur.'
         : 'This email domain cannot be used for an administrator account.',
     };
   }
@@ -95,7 +95,7 @@ export async function validateAdminEmailForInvite(
     return {
       valid: false,
       error: language === 'fr_ht'
-        ? 'Domèn imel la pa parèt konfigire pou resevwa imel. Verifye adrès la.'
+        ? 'Ce domaine de messagerie ne semble pas configuré pour recevoir des courriels. Veuillez vérifier l’adresse.'
         : 'This email domain does not appear configured to receive mail. Please verify the address.',
     };
   }
@@ -134,13 +134,13 @@ export function getAdminEmailFormatError(
 ): string | null {
   if (!normalizeAdminEmail(email)) {
     return language === 'fr_ht'
-      ? 'Tanpri antre adrès imel ou.'
+      ? 'Veuillez saisir votre adresse courriel.'
       : 'Please enter your email address.';
   }
 
   if (!isValidAdminEmailFormat(email)) {
     return language === 'fr_ht'
-      ? 'Tanpri antre yon adrès imel ki valab.'
+      ? 'Veuillez saisir une adresse courriel valide.'
       : 'Please enter a valid email address.';
   }
 
@@ -149,6 +149,6 @@ export function getAdminEmailFormatError(
 
 export function getUnauthorizedAdminEmailError(language: 'en' | 'fr_ht' = 'en'): string {
   return language === 'fr_ht'
-    ? 'Imel sa a pa anrejistre kòm yon administratè otorize.'
+    ? 'Cette adresse courriel n’est pas enregistrée comme administrateur autorisé.'
     : 'This email is not registered as an authorized administrator.';
 }

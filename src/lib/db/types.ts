@@ -1,3 +1,7 @@
+/**
+ * Legacy `*_kreyol` property names are retained for database compatibility.
+ * These properties now contain French-language content.
+ */
 export interface AdminRecord {
   id: number;
   email: string;

@@ -26,7 +26,7 @@
 14. [Contact Form Submissions](#14-contact-form-submissions)
 15. [Prayer Wall Moderation](#15-prayer-wall-moderation)
 16. [Managing Additional Administrators](#16-managing-additional-administrators)
-17. [Language Toggle (Kreyòl / English)](#17-language-toggle-kreyòl--english)
+17. [Language Toggle (French / English)](#17-language-toggle--bilingual-content-french--english)
 18. [Creating a Site Backup](#18-creating-a-site-backup)
 19. [Signing Out](#19-signing-out)
 20. [Quick Reference & Support](#20-quick-reference--support)
@@ -37,7 +37,7 @@
 
 Welcome to the **Parousia Baptist Ministries** website administration guide. This document explains how to manage and update your church website without technical knowledge.
 
-The website is designed to be used primarily in **Kreyòl (Haitian Creole)**, with a one-click switch to **English** for visitors and administrators.
+The website is designed to be used primarily in **French**, with a one-click switch to **English** for visitors and administrators.
 
 **Your live website:**  
 https://ParousiaBaptistChurch.org
@@ -49,23 +49,35 @@ https://ParousiaBaptistChurch.org/admin
 
 ## 2. Accessing the Admin Portal
 
-There are two ways to reach the admin area:
+There are three ways to reach the admin area:
 
 **Option A — Direct URL**  
 Type the admin URL above into your browser.
 
-**Option B — From the public website (after you are logged in)**  
-After you log in as an administrator, a **gear (⚙) settings icon** appears in the website navigation bar (desktop and mobile). This icon is **only visible to logged-in administrators** and is not shown to regular visitors. Click it anytime to return to the admin dashboard.
+**Option B — Footer link (to log in)**
+Before you are logged in, scroll to the bottom of the public website and click **Administration** under **Portals & Links**. This opens the admin login page.
+
+**Option C — Gear icon (after you are logged in)**
+After you log in, use the **gear (⚙) settings icon** on the main website to return to the admin portal. See the step-by-step instructions below.
+
+### Moving between the Admin Portal and the Main Website
+
+Use this workflow whenever you want to preview the public site while staying logged in as an administrator:
+
+1. **Log in** to the Admin Portal (Option A or Option B above).
+2. At the **top of the Admin page**, in the header bar on the right, click the **View Website** button (next to the language switcher).
+3. The **main church website** opens. While you are still logged in, a **gear (⚙) icon** appears in the top navigation bar — between the **French** / **English** language button and the **Contact Us** button. (On mobile, the gear appears in the top bar as well.)
+4. Browse the public site as needed. The gear icon is **only visible to logged-in administrators**; regular visitors do not see it.
+5. When you are ready to make changes again, **click the gear icon**. This takes you **back to the Admin Portal** dashboard.
 
 ![Public website navigation with admin gear icon](screenshots/01-public-nav-gear.png)
 
-*Figure 1 — After logging in as admin, the gear icon appears in the top navigation.*
+*Figure 1 — After you click **View Website**, the gear icon appears in the top navigation so you can return to the Admin Portal.*
 
-**Option C — Footer link (to log in)**  
-Before you are logged in, scroll to the bottom of the public website and click **Administration** under **Portals & Links**. This opens the admin login page. After you sign in, use the **gear icon** in the top navigation instead — the footer link is hidden while you are logged in.
+**Important:** The gear icon does **not** appear until you have logged in and opened the main website (for example, by clicking **View Website**). If you sign out, the gear icon disappears — that is normal.
 
 **Signing out**  
-When you sign out of the admin portal, you are returned to the **main church website** if that is where you started. If you opened the admin URL directly (bookmark or typed address), you remain on the admin login page after signing out.
+When you sign out of the admin portal, you are returned to the **main church website** if that is where you started (for example, after using **View Website**). If you opened the admin URL directly (bookmark or typed address), you remain on the admin login page after signing out.
 
 ---
 
@@ -132,7 +144,7 @@ After logging in, you arrive at the **Admin Command Center**. The left sidebar l
 *Figure 4 — Admin dashboard overview.*
 
 **Language toggle:**  
-Use the **globe icon** in the top-right corner to switch the admin interface between Kreyòl and English at any time.
+Use the **globe icon** in the top-right corner to switch the admin interface between French and English at any time.
 
 ---
 
@@ -145,7 +157,7 @@ This is the most important section for overall site appearance and church inform
 ### Church Information
 
 - **Pastor's Name** — displayed on the website
-- **Pastor Message** — welcome message in both Kreyòl and English
+- **Pastor Message** — welcome message in both French and English
 - **Church Phone, Email, and Address** — shown in the footer and contact areas
 
 ### Church Logo
@@ -197,7 +209,7 @@ This section controls the four sub-tabs under **Home** on the public website:
 
 | Sub-Tab | Content |
 |--------|---------|
-| **About Us** | Church history and mission (Kreyòl + English) |
+| **About Us** | Church history and mission (French + English) |
 | **Our Beliefs** | Statement of faith |
 | **Our Team** | Pastor and Assistant Pastor profiles with photo, bio, and email |
 | **What to Expect** | First-time visitor information |
@@ -205,7 +217,7 @@ This section controls the four sub-tabs under **Home** on the public website:
 For each sub-tab:
 
 1. Click the sub-tab pill at the top (About Us, Beliefs, Team, Expect)
-2. Fill in titles and body text in **both Kreyòl and English**
+2. Fill in titles and body text in **both French and English**
 3. Upload images by clicking, dragging, or pasting into the image zone
 4. Click **Save**
 
@@ -224,7 +236,7 @@ For each sub-tab:
 Manage your weekly worship and service times.
 
 - Click **+ Add** to create a new service entry
-- Enter the day, time, service name, and description (Kreyòl + English)
+- Enter the day, time, service name, and description (French + English)
 - Mark a service as **Live Stream** if it should appear in the live stream section
 - Click the **pencil icon** to edit or the **trash icon** to delete
 
@@ -254,7 +266,7 @@ Configure the four ministry pages accessible from the **Ministries** tab on the 
 For each ministry:
 
 1. Select the ministry tab at the top
-2. Enter title and description in Kreyòl and English
+2. Enter title and description in French and English
 3. Upload a ministry image
 4. Add bullet points (one per line) in both languages
 5. Set **committee contact** name, email, and phone
@@ -330,7 +342,7 @@ Publish your weekly point of view articles (replaces the old "Community Outreach
 **To create a new blog post:**
 
 1. Click **Create New Article**
-2. Enter the title in English and Kreyòl
+2. Enter the title in English and French
 3. Write the article content in both languages (Markdown formatting supported)
 4. Set the publication date
 5. Click **Save Article**
@@ -400,21 +412,21 @@ To remove an administrator, click the **trash icon** next to their email.
 
 ---
 
-## 17. Language Toggle & Bilingual Content (Kreyòl / English)
+## 17. Language Toggle & Bilingual Content (French / English)
 
-The website and admin dashboard both support **Kreyòl** and **English**.
+The website and admin dashboard both support **French** and **English**.
 
 ### Visitor Language Toggle (Public Website)
 
 - Click the **globe icon (🌐)** in the top-right corner of the public site
-- Toggle between **Kreyòl** and **English**
+- Toggle between **French** and **English**
 - This only changes how the site is displayed — it does not create content for you
 
 ### How Bilingual Content Works in Admin
 
 Most admin sections show **two fields** for the same content:
 
-- one field for **Kreyòl**
+- one field for **French**
 - one field for **English**
 
 Visitors will only see the correct language when both sides have been filled in (either manually or with auto-translation).
@@ -423,7 +435,7 @@ You have **two ways** to manage bilingual content:
 
 #### Option A — Manual Entry (Traditional)
 
-1. Type the Kreyòl version in the left/Kreyòl field
+1. Type the French version in the left/French field
 2. Type the English version in the right/English field
 3. Click **Save**
 
@@ -435,9 +447,9 @@ Several admin sections now include an **Auto-Translation** panel with three choi
 
 | Mode | What It Does |
 |------|----------------|
-| **Auto (fill empty language)** | If you only filled in Kreyòl, it translates to English. If you only filled in English, it translates to Kreyòl. |
-| **Kreyòl → English** | Always uses the Kreyòl text as the source and fills/overwrites the English fields |
-| **English → Kreyòl** | Always uses the English text as the source and fills/overwrites the Kreyòl fields |
+| **Auto (fill empty language)** | If you only filled in French, it translates to English. If you only filled in English, it translates to French. |
+| **French → English** | Always uses the French text as the source and fills/overwrites the English fields |
+| **English → French** | Always uses the English text as the source and fills/overwrites the French fields |
 
 **Steps:**
 
@@ -459,11 +471,11 @@ Several admin sections now include an **Auto-Translation** panel with three choi
 | **Pastor's Blog** | ✅ Yes |
 | Service Schedules, Events, Missions, Outreach | Manual entry for now |
 
-### Example Workflow (Pastor writes in Kreyòl only)
+### Example Workflow (Pastor writes in French only)
 
 1. Open **Configure Home Tabs** → **About Us**
-2. Fill in only the Kreyòl fields
-3. Set translation mode to **Kreyòl → English**
+2. Fill in only the French fields
+3. Set translation mode to **French → English**
 4. Click **Translate Now**
 5. Review the English fields that were filled in automatically
 6. Click **Save**
@@ -472,9 +484,9 @@ Several admin sections now include an **Auto-Translation** panel with three choi
 
 1. Open **Pastor's Blog**
 2. Write the article in English only
-3. Set translation mode to **English → Kreyòl**
+3. Set translation mode to **English → French**
 4. Click **Translate Now**
-5. Review the Kreyòl version
+5. Review the French version
 6. Click **Save Article**
 
 ![Auto-translation controls](screenshots/12-auto-translate-panel.png)
@@ -503,7 +515,7 @@ Click **Sign Out** / *Dekonekte* in the top-right corner of the admin dashboard 
 |------|--------|
 | **Website URL** | https://ParousiaBaptistChurch.org |
 | **Admin URL** | https://ParousiaBaptistChurch.org/admin |
-| **Primary Language** | Kreyòl (Haitian Creole) with English toggle |
+| **Primary Language** | French with English toggle |
 | **Hosting** | Google Cloud Platform (Cloud Run) |
 | **Maintenance Contact** | Straight-Line Holdings, Inc. |
 | **Support Schedule** | Weekly assistance initially, then biweekly |

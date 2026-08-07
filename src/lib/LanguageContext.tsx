@@ -20,7 +20,7 @@ export function LanguageProvider({
   defaultLanguage?: Language;
 }) {
   const router = useRouter();
-  // Default to server-rendered language prop
+  // Default to the server-rendered language preference (French when unset)
   const [language, setLanguageState] = useState<Language>(defaultLanguage);
 
   // Load selected language from localStorage as fallback on mount
@@ -43,7 +43,7 @@ export function LanguageProvider({
   // Sync document.documentElement.lang with state changes
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      document.documentElement.lang = language === 'en' ? 'en' : 'ht';
+      document.documentElement.lang = language === 'en' ? 'en' : 'fr';
     }
   }, [language]);
 

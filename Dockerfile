@@ -30,6 +30,7 @@ RUN apt-get update \
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/src/lib/db/schema.sql ./db/schema.sql
+COPY --from=builder /app/scripts/convert-site-language-to-french.mjs ./scripts/convert-site-language-to-french.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/data/assets /data/assets
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static

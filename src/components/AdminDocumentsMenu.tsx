@@ -56,7 +56,7 @@ export default function AdminDocumentsMenu({ language }: AdminDocumentsMenuProps
             className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-slate-800 bg-slate-950 text-[10px] font-semibold text-slate-300 hover:border-amber-500 hover:text-amber-400"
           >
             <Printer className="w-3 h-3" />
-            <span>{isHt ? 'Enprime' : 'Print'}</span>
+            <span>{isHt ? 'Imprimer' : 'Print'}</span>
           </a>
           {outlookUrl && (
             <a
@@ -85,7 +85,7 @@ export default function AdminDocumentsMenu({ language }: AdminDocumentsMenuProps
         aria-haspopup="menu"
       >
         <FileText className="w-3.5 h-3.5" />
-        <span>{isHt ? 'Dokiman' : 'Documents'}</span>
+        <span>{isHt ? 'Documents' : 'Documents'}</span>
         <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -93,20 +93,20 @@ export default function AdminDocumentsMenu({ language }: AdminDocumentsMenuProps
         <div className="absolute right-0 mt-2 w-80 rounded-xl border border-slate-800 bg-slate-950 shadow-2xl z-50 overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-800">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              {isHt ? 'Gid & Dokiman Ofisyèl' : 'Official Guides & Documents'}
+              {isHt ? 'Gid & Documents Ofisyèl' : 'Official Guides & Documents'}
             </p>
           </div>
 
           <div className="py-2">
             <p className="px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              {isHt ? 'Gid Administrasyon' : 'Administration Guides'}
+              {isHt ? 'Guides d’administration' : 'Administration Guides'}
             </p>
             {guides.map(renderDocRow)}
           </div>
 
           <div className="py-2 border-t border-slate-800">
             <p className="px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              {isHt ? 'Lèt Pwojè' : 'Project Letters'}
+              {isHt ? 'Lettres de projet' : 'Project Letters'}
             </p>
             {letters.map(renderDocRow)}
           </div>

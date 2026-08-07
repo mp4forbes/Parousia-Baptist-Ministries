@@ -28,11 +28,11 @@ export default function AdminBilingualTranslateBar({
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
         <div>
           <p className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-            {isHt ? 'Tradiksyon Otomatik' : 'Auto-Translation'}
+            {isHt ? 'Traduction automatique' : 'Auto-Translation'}
           </p>
           <p className="text-[11px] text-slate-400 mt-1 leading-relaxed max-w-2xl">
             {isHt
-              ? 'Ou ka ekri nan yon sèl lang epi ranpli lòt lang lan otomatikman. Toujou revize tradiksyon an anvan ou sove.'
+              ? 'Vous pouvez écrire dans une langue et remplir automatiquement l’autre. Vérifiez toujours la traduction avant de l’enregistrer.'
               : 'Write in one language and fill the other automatically. Always review the translation before saving.'}
           </p>
         </div>
@@ -47,10 +47,10 @@ export default function AdminBilingualTranslateBar({
           <span>
             {isTranslating
               ? isHt
-                ? 'Y ap Tradui...'
+                ? 'Traduction en cours...'
                 : 'Translating...'
               : isHt
-                ? 'Tradui Kounye a'
+                ? 'Traduire maintenant'
                 : 'Translate Now'}
           </span>
         </button>
@@ -58,9 +58,9 @@ export default function AdminBilingualTranslateBar({
 
       <div className="flex flex-wrap gap-2">
         {([
-          { value: 'auto' as const, labelHt: 'Otomatik (ranpli lang vid la)', labelEn: 'Auto (fill empty language)' },
-          { value: 'fr_ht_to_en' as const, labelHt: 'Kreyòl → Angle', labelEn: 'Kreyòl → English' },
-          { value: 'en_to_fr_ht' as const, labelHt: 'Angle → Kreyòl', labelEn: 'English → Kreyòl' },
+          { value: 'auto' as const, labelHt: 'Automatique (remplir la langue vide)', labelEn: 'Auto (fill empty language)' },
+          { value: 'fr_ht_to_en' as const, labelHt: 'Français → Anglais', labelEn: 'French → English' },
+          { value: 'en_to_fr_ht' as const, labelHt: 'Anglais → Français', labelEn: 'English → French' },
         ]).map((option) => (
           <button
             key={option.value}

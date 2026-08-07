@@ -44,19 +44,19 @@ const bilingualDocuments = [
   {
     id: 'admin-guide',
     inputEn: 'Parousia-Admin-Guide-en.md',
-    inputHt: 'Parousia-Admin-Guide-ht.md',
+    inputFr: 'Parousia-Admin-Guide-ht.md',
     output: 'Parousia-Admin-Guide.html',
     titleEn: 'Parousia Baptist Ministries — Administration Guide',
-    titleHt: 'Parousia Baptist Ministries — Gid Administrasyon',
+    titleFr: 'Parousia Baptist Ministries — Guide d’administration',
     kind: 'guide',
   },
   {
     id: 'completion-letter',
     inputEn: 'Parousia-Completion-Letter-en.md',
-    inputHt: 'Parousia-Completion-Letter-ht.md',
+    inputFr: 'Parousia-Completion-Letter-ht.md',
     output: 'Parousia-Completion-Letter.html',
     titleEn: 'Parousia Baptist Ministries — Project Completion Letter',
-    titleHt: 'Parousia Baptist Ministries — Lèt Fini Pwojè',
+    titleFr: 'Parousia Baptist Ministries — Lettre d’achèvement du projet',
     kind: 'letter',
   },
 ];
@@ -120,12 +120,12 @@ function renderDocActions(isLetter) {
         <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
         <path d="M2 12h20"></path>
       </svg>
-      <span id="lang-toggle-label">Kreyòl</span>
+      <span id="lang-toggle-label">Français</span>
     </button>
   </div>`;
 }
 
-function wrapBilingualDocument({ titleEn, titleHt, enBody, htBody, logoPath, kind = 'guide' }) {
+function wrapBilingualDocument({ titleEn, titleFr, enBody, frBody, logoPath, kind = 'guide' }) {
   const escapeAttr = (value) =>
     value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
@@ -369,8 +369,8 @@ function wrapBilingualDocument({ titleEn, titleHt, enBody, htBody, logoPath, kin
     <article class="doc-lang is-active" id="doc-en" lang="en" data-title="${escapeAttr(titleEn)}">
       ${enBody}
     </article>
-    <article class="doc-lang" id="doc-ht" lang="ht" data-title="${escapeAttr(titleHt)}">
-      ${htBody}
+    <article class="doc-lang" id="doc-fr" lang="fr" data-title="${escapeAttr(titleFr)}">
+      ${frBody}
     </article>
   </main>
 
@@ -382,7 +382,7 @@ function wrapBilingualDocument({ titleEn, titleHt, enBody, htBody, logoPath, kin
         to: 'franckyvan@gmail.com',
         from: 'mp4forbes@straightlineholdings.com',
         subjectEn: 'Formal Notice of Project Completion — Parousia Baptist Ministries Website',
-        subjectHt: 'Avi Ofisyèl Fini Pwojè — Sit Wèb Parousia Baptist Ministries'
+        subjectFr: 'Avis officiel d’achèvement du projet — Site Web de Parousia Baptist Ministries'
       };
       var toggle = document.getElementById('lang-toggle');
       var label = document.getElementById('lang-toggle-label');
@@ -391,10 +391,10 @@ function wrapBilingualDocument({ titleEn, titleHt, enBody, htBody, logoPath, kin
       var outlookBtn = document.getElementById('outlook-btn');
       var outlookLabel = document.getElementById('outlook-btn-label');
       var en = document.getElementById('doc-en');
-      var ht = document.getElementById('doc-ht');
+      var fr = document.getElementById('doc-fr');
 
       function normalizeLang(value) {
-        return value === 'fr_ht' || value === 'ht' ? 'ht' : 'en';
+        return value === 'fr' || value === 'fr_ht' || value === 'ht' ? 'fr' : 'en';
       }
 
       function readLang() {
@@ -407,30 +407,30 @@ function wrapBilingualDocument({ titleEn, titleHt, enBody, htBody, logoPath, kin
 
       function writeLang(lang) {
         try {
-          localStorage.setItem(STORAGE_KEY, lang === 'ht' ? 'fr_ht' : 'en');
+          localStorage.setItem(STORAGE_KEY, lang === 'fr' ? 'fr_ht' : 'en');
         } catch (e) {}
       }
 
-      function updateActionLabels(isHt) {
-        label.textContent = isHt ? 'English' : 'Kreyòl';
-        toggle.setAttribute('aria-label', isHt ? 'Switch to English' : 'Chanje an Kreyòl');
-        if (printLabel) printLabel.textContent = isHt ? 'Enprime' : 'Print';
-        if (printBtn) printBtn.setAttribute('aria-label', isHt ? 'Enprime dokiman an' : 'Print document');
+      function updateActionLabels(isFr) {
+        label.textContent = isFr ? 'English' : 'Français';
+        toggle.setAttribute('aria-label', isFr ? 'Passer à l’anglais' : 'Switch to French');
+        if (printLabel) printLabel.textContent = isFr ? 'Imprimer' : 'Print';
+        if (printBtn) printBtn.setAttribute('aria-label', isFr ? 'Imprimer le document' : 'Print document');
         if (outlookLabel) outlookLabel.textContent = 'Outlook';
-        if (outlookBtn) outlookBtn.setAttribute('aria-label', isHt ? 'Ouvri nan Outlook' : 'Open in Outlook');
+        if (outlookBtn) outlookBtn.setAttribute('aria-label', isFr ? 'Ouvrir dans Outlook' : 'Open in Outlook');
       }
 
       function applyLang(lang) {
-        var isHt = lang === 'ht';
-        en.classList.toggle('is-active', !isHt);
-        ht.classList.toggle('is-active', isHt);
-        document.documentElement.lang = isHt ? 'ht' : 'en';
-        document.title = isHt ? ht.getAttribute('data-title') : en.getAttribute('data-title');
-        updateActionLabels(isHt);
+        var isFr = lang === 'fr';
+        en.classList.toggle('is-active', !isFr);
+        fr.classList.toggle('is-active', isFr);
+        document.documentElement.lang = isFr ? 'fr' : 'en';
+        document.title = isFr ? fr.getAttribute('data-title') : en.getAttribute('data-title');
+        updateActionLabels(isFr);
       }
 
       function getActiveArticle() {
-        return ht.classList.contains('is-active') ? ht : en;
+        return fr.classList.contains('is-active') ? fr : en;
       }
 
       function absolutizeHtml(html) {
@@ -441,8 +441,8 @@ function wrapBilingualDocument({ titleEn, titleHt, enBody, htBody, logoPath, kin
           .replace(/href="\\/admin-guide\\//g, 'href="' + origin + '/admin-guide/');
       }
 
-      function buildEml(isHt) {
-        var subject = isHt ? OUTLOOK.subjectHt : OUTLOOK.subjectEn;
+      function buildEml(isFr) {
+        var subject = isFr ? OUTLOOK.subjectFr : OUTLOOK.subjectEn;
         var bodyHtml = absolutizeHtml(getActiveArticle().innerHTML);
         var htmlDoc = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Georgia,serif;color:#1e293b;line-height:1.6;} img{max-width:100%;} table{border-collapse:collapse;width:100%;} td,th{border:1px solid #e2e8f0;padding:8px;}</style></head><body>' + bodyHtml + '</body></html>';
         var lines = [
@@ -460,25 +460,25 @@ function wrapBilingualDocument({ titleEn, titleHt, enBody, htBody, logoPath, kin
       }
 
       function openInOutlook() {
-        var isHt = ht.classList.contains('is-active');
-        var blob = new Blob([buildEml(isHt)], { type: 'message/rfc822' });
+        var isFr = fr.classList.contains('is-active');
+        var blob = new Blob([buildEml(isFr)], { type: 'message/rfc822' });
         var url = URL.createObjectURL(blob);
         var link = document.createElement('a');
         link.href = url;
-        link.download = isHt ? 'Parousia-Completion-Letter-ht.eml' : 'Parousia-Completion-Letter-en.eml';
+        link.download = isFr ? 'Parousia-Completion-Letter-fr.eml' : 'Parousia-Completion-Letter-en.eml';
         document.body.appendChild(link);
         link.click();
         link.remove();
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-        window.alert(isHt
-          ? 'Fichye Outlook la telechaje. Louvri li pou w ka revize epi voye lèt la.'
+        window.alert(isFr
+          ? 'Le fichier Outlook a été téléchargé. Ouvrez-le pour relire et envoyer la lettre.'
           : 'Outlook file downloaded. Open it to review and send the letter.');
       }
 
       applyLang(readLang());
 
       toggle.addEventListener('click', function () {
-        var next = en.classList.contains('is-active') ? 'ht' : 'en';
+        var next = en.classList.contains('is-active') ? 'fr' : 'en';
         writeLang(next);
         applyLang(next);
       });
@@ -509,19 +509,19 @@ function wrapBilingualDocument({ titleEn, titleHt, enBody, htBody, logoPath, kin
 
 for (const doc of bilingualDocuments) {
   const enPath = path.join(docsDir, doc.inputEn);
-  const htPath = path.join(docsDir, doc.inputHt);
+  const frPath = path.join(docsDir, doc.inputFr);
   const outputPath = path.join(publicDir, doc.output);
 
-  if (!fs.existsSync(enPath) || !fs.existsSync(htPath)) {
+  if (!fs.existsSync(enPath) || !fs.existsSync(frPath)) {
     console.warn(`Skipping ${doc.output}: missing source file(s)`);
     continue;
   }
 
   const html = wrapBilingualDocument({
     titleEn: doc.titleEn,
-    titleHt: doc.titleHt,
+    titleFr: doc.titleFr,
     enBody: pandocFragment(enPath),
-    htBody: pandocFragment(htPath),
+    frBody: pandocFragment(frPath),
     logoPath: churchLogoPath,
     kind: doc.kind || 'guide',
   });
@@ -550,17 +550,17 @@ const indexHtml = `<!DOCTYPE html>
 <body>
   <img class="logo" src="${churchLogoPath}" alt="Église Baptiste de la Parousie" />
   <h1>Parousia Baptist Ministries</h1>
-  <p>Official administration documents — English &amp; Kreyòl (toggle inside each document)</p>
+  <p>Official administration documents — English &amp; Français (toggle inside each document)</p>
   <div class="section">
     <h2>Administration Guide</h2>
     <ul>
-      <li><a href="/admin-guide/Parousia-Admin-Guide.html">Website Administration Guide / Gid Administrasyon</a></li>
+      <li><a href="/admin-guide/Parousia-Admin-Guide.html">Website Administration Guide / Guide d’administration</a></li>
     </ul>
   </div>
   <div class="section">
     <h2>Project Letter</h2>
     <ul>
-      <li><a href="/admin-guide/Parousia-Completion-Letter.html">Project Completion Letter / Lèt Fini Pwojè</a></li>
+      <li><a href="/admin-guide/Parousia-Completion-Letter.html">Project Completion Letter / Lettre d’achèvement du projet</a></li>
     </ul>
   </div>
 </body>

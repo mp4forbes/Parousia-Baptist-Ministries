@@ -59,7 +59,7 @@ All items from our agreed scope of work (June 6 and June 9, 2026) have been deli
 
 | Deliverable | Status | Detail |
 |------------|--------|--------|
-| Bilingual website (Kreyòl + English) | ✅ Complete | Primary display in Kreyòl; English available via language toggle |
+| Bilingual website (French + English) | ✅ Complete | Primary display in French; English available via language toggle |
 | Live website URL | ✅ Complete | https://ParousiaBaptistChurch.org |
 | Web hosting | ✅ Complete | **Google Cloud Platform** — Cloud Run (application) and Cloud SQL (database), region: US West |
 | Admin tutorial | ✅ Complete | Administration Guide (provided separately) |

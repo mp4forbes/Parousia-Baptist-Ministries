@@ -69,6 +69,7 @@ import AdminDocumentsMenu from '@/components/AdminDocumentsMenu';
 import { MINISTRY_SIGNUP_FIELDS, MinistrySignupSlug } from '@/lib/ministry-signup-fields';
 import { useRouter } from 'next/navigation';
 import { clearAdminUiClient, setAdminUiClient } from '@/lib/admin-cookies';
+import { EXECUTIVE_COMMITTEE_MEMBERS } from '@/lib/executive-committee';
 import { getYouTubeThumbnailUrl } from '@/lib/youtube';
 import {
   BilingualTextField,
@@ -457,7 +458,7 @@ export default function AdminDashboardClient({
     try {
       const res = await addAdminEmail(newAdminEmail.trim());
       if (res.success) {
-        triggerAlert(language === 'fr_ht' ? 'Admin otorize avèk siksè!' : 'Admin authorized successfully!', 'success');
+        triggerAlert(language === 'fr_ht' ? 'Administrateur autorisé avec succès !' : 'Admin authorized successfully!', 'success');
         setNewAdminEmail('');
         setNewAdminEmailError('');
         const list = await getAdmins();
@@ -472,11 +473,11 @@ export default function AdminDashboardClient({
   };
 
   const handleDeleteAdminEmail = async (id: number) => {
-    if (!confirm(language === 'fr_ht' ? 'Èske ou sèten ou vle siprime admin sa a?' : 'Are you sure you want to revoke this admin?')) return;
+    if (!confirm(language === 'fr_ht' ? 'Êtes-vous sûr de vouloir révoquer cet administrateur ?' : 'Are you sure you want to revoke this admin?')) return;
     try {
       const res = await deleteAdminEmail(id);
       if (res.success) {
-        triggerAlert(language === 'fr_ht' ? 'Admin siprime avèk siksè!' : 'Admin revoked successfully!', 'success');
+        triggerAlert(language === 'fr_ht' ? 'Administrateur révoqué avec succès !' : 'Admin revoked successfully!', 'success');
         const list = await getAdmins();
         setAdminList(list);
         router.refresh();
@@ -497,8 +498,8 @@ export default function AdminDashboardClient({
         router.refresh();
         triggerAlert(
           checked
-            ? (language === 'fr_ht' ? 'Aksè super admin aktive.' : 'Super-admin access enabled.')
-            : (language === 'fr_ht' ? 'Aksè super admin retire.' : 'Super-admin access removed.'),
+            ? (language === 'fr_ht' ? 'Accès super-administrateur activé.' : 'Super-admin access enabled.')
+            : (language === 'fr_ht' ? 'Accès super-administrateur supprimé.' : 'Super-admin access removed.'),
           'success'
         );
       } else {
@@ -517,7 +518,7 @@ export default function AdminDashboardClient({
     try {
       let finalImgUrl = minForm.image_url;
       if (minForm.image_url && minForm.image_url.startsWith('data:')) {
-        triggerAlert(language === 'en' ? 'Uploading ministry image...' : 'Y ap chaje imaj ministè a...', 'success');
+        triggerAlert(language === 'en' ? 'Uploading ministry image...' : 'Téléversement de l’image du ministère...', 'success');
         const uploadRes = await clientUploadAsset(`ministry_${selectedMinistrySlug}_bg.jpg`, minForm.image_url);
         if (uploadRes.success && uploadRes.url) {
           finalImgUrl = uploadRes.url;
@@ -533,7 +534,7 @@ export default function AdminDashboardClient({
       const res = await saveMinistry(selectedMinistrySlug, formToSave);
       if (res.success) {
         setMinistriesList(prev => prev.map(m => m.slug === selectedMinistrySlug ? { ...m, ...formToSave } : m));
-        triggerAlert(language === 'en' ? 'Ministry saved successfully!' : 'Ministè sove avèk siksè!', 'success');
+        triggerAlert(language === 'en' ? 'Ministry saved successfully!' : 'Ministère enregistré avec succès !', 'success');
       } else {
         triggerAlert(res.error || 'Failed to save ministry', 'error');
       }
@@ -544,12 +545,12 @@ export default function AdminDashboardClient({
   };
 
   const handleDeleteMinistrySignup = async (id: number) => {
-    if (!confirm(language === 'fr_ht' ? 'Siprime enskripsyon sa a?' : 'Delete this signup?')) return;
+    if (!confirm(language === 'fr_ht' ? 'Supprimer cette inscription ?' : 'Delete this signup?')) return;
     try {
       const res = await deleteMinistrySignup(id);
       if (res.success) {
         setMinistrySignups((prev) => prev.filter((row) => row.id !== id));
-        triggerAlert(language === 'en' ? 'Signup deleted.' : 'Enskripsyon siprime.', 'success');
+        triggerAlert(language === 'en' ? 'Signup deleted.' : 'Inscription supprimée.', 'success');
       } else {
         triggerAlert(res.error || 'Failed to delete signup', 'error');
       }
@@ -580,7 +581,7 @@ export default function AdminDashboardClient({
       triggerAlert(
         language === 'en'
           ? 'Spreadsheet downloaded. Open it in Excel or Google Sheets.'
-          : 'Fichye telechaje. Ou ka louvri li nan Excel oswa Google Sheets.',
+          : 'Fichier téléchargé. Vous pouvez l’ouvrir dans Excel ou Google Sheets.',
         'success'
       );
     } catch (err: any) {
@@ -591,11 +592,11 @@ export default function AdminDashboardClient({
   };
 
   const handleDeleteContactLog = async (id: number) => {
-    if (!confirm(language === 'fr_ht' ? 'Siprime mesaj sa a?' : 'Delete this message?')) return;
+    if (!confirm(language === 'fr_ht' ? 'Supprimer ce message ?' : 'Delete this message?')) return;
     try {
       const res = await deleteContactSubmission(id);
       if (res.success) {
-        triggerAlert(language === 'fr_ht' ? 'Mesaj siprime!' : 'Message deleted successfully!', 'success');
+        triggerAlert(language === 'fr_ht' ? 'Message supprimé !' : 'Message deleted successfully!', 'success');
         const list = await getContactSubmissions();
         setContactLogs(list);
       } else {
@@ -607,11 +608,11 @@ export default function AdminDashboardClient({
   };
 
   const handleDeletePrayer = async (id: number) => {
-    if (!confirm(language === 'fr_ht' ? 'Èske ou vle siprime demann sa a sou miray la?' : 'Delete this prayer request from the wall?')) return;
+    if (!confirm(language === 'fr_ht' ? 'Voulez-vous supprimer cette demande du mur de prière ?' : 'Delete this prayer request from the wall?')) return;
     try {
       const res = await deletePrayerRequest(id);
       if (res.success) {
-        triggerAlert(language === 'fr_ht' ? 'Demann siprime avèk siksè!' : 'Prayer request deleted successfully!', 'success');
+        triggerAlert(language === 'fr_ht' ? 'Demande de prière supprimée avec succès !' : 'Prayer request deleted successfully!', 'success');
         const list = await getPrayerRequests();
         setModerationPrayers(list);
       } else {
@@ -656,7 +657,7 @@ export default function AdminDashboardClient({
         blogForm.date
       );
       if (res.success) {
-        triggerAlert(language === 'fr_ht' ? 'Atik blòg sove avèk siksè!' : 'Blog post saved successfully!', 'success');
+        triggerAlert(language === 'fr_ht' ? 'Article de blogue enregistré avec succès !' : 'Blog post saved successfully!', 'success');
         setEditingBlogPostId(null);
         const list = await getBlogPosts();
         setBlogPostsList(list);
@@ -669,11 +670,11 @@ export default function AdminDashboardClient({
   };
 
   const handleDeleteBlog = async (id: number) => {
-    if (!confirm(language === 'fr_ht' ? 'Siprime atik sa a?' : 'Are you sure you want to delete this blog post?')) return;
+    if (!confirm(language === 'fr_ht' ? 'Supprimer cet article ?' : 'Are you sure you want to delete this blog post?')) return;
     try {
       const res = await deleteBlogPost(id);
       if (res.success) {
-        triggerAlert(language === 'fr_ht' ? 'Atik la siprime!' : 'Blog post deleted successfully!', 'success');
+        triggerAlert(language === 'fr_ht' ? 'Article supprimé !' : 'Blog post deleted successfully!', 'success');
         const list = await getBlogPosts();
         setBlogPostsList(list);
       } else {
@@ -686,9 +687,9 @@ export default function AdminDashboardClient({
 
 
   // Free Giveaway Customizable E-Book / Devotional settings
-  const [giftTitleHt, setGiftTitleHt] = useState(settings.free_gift_title_kreyol || 'Devosyonèl Parousie 2026');
+  const [giftTitleHt, setGiftTitleHt] = useState(settings.free_gift_title_kreyol || 'Livre de dévotion Parousie 2026');
   const [giftTitleEn, setGiftTitleEn] = useState(settings.free_gift_title_english || 'Parousie Devotional 2026');
-  const [giftDescHt, setGiftDescHt] = useState(settings.free_gift_desc_kreyol || 'Mete non ou, imel, ak telefòn ou pou w ka telechaje bèl liv Devosyonèl nou an ki gen meditasyon ak vèsè pou ede w grandi chak jou nan Pawòl la.');
+  const [giftDescHt, setGiftDescHt] = useState(settings.free_gift_desc_kreyol || 'Indiquez votre nom, votre adresse courriel et votre numéro de téléphone pour télécharger notre magnifique livre de dévotion, qui contient des méditations et des versets pour vous aider à grandir chaque jour dans la Parole.');
   const [giftDescEn, setGiftDescEn] = useState(settings.free_gift_desc_english || 'Enter your name, email, and phone to receive our beautiful Daily Devotional booklet containing scripture plans and prayers designed to help you grow daily in Christ.');
   const [giftFileUrl, setGiftFileUrl] = useState(settings.free_gift_file_url || '/devotional_parousie_2026.txt');
   const [giftAdminNotes, setGiftAdminNotes] = useState(settings.free_gift_admin_notes || '');
@@ -704,38 +705,38 @@ export default function AdminDashboardClient({
 
   // 12. HOME SUB-TABS EDITING STATE
   const [aboutUsTitleEn, setAboutUsTitleEn] = useState(settings.about_us_title_en || 'About Us');
-  const [aboutUsTitleHt, setAboutUsTitleHt] = useState(settings.about_us_title_ht || 'Ki Moun Nou Ye');
+  const [aboutUsTitleHt, setAboutUsTitleHt] = useState(settings.about_us_title_ht || 'Qui sommes-nous');
   const [aboutUsP1En, setAboutUsP1En] = useState(settings.about_us_p1_en || 'Parousia Baptist Ministries is a vibrant community of believers devoted to worshiping God and anticipating the second coming (Parousia) of our Lord Jesus Christ. Our mission is to preach the true Gospel, foster deep discipleship, and serve our local and diaspora community.');
-  const [aboutUsP1Ht, setAboutUsP1Ht] = useState(settings.about_us_p1_ht || 'Parousia Baptist Ministries se yon kominote dore pèp Bondye k ap tann retou Jezi-Kri. Nou gen yon vizyon klè pou gaye mesaj Levanjil la, fè disip, epi sèvi diaspora nou an atravè divès kalite pwojè kominotè ak edikasyon espirityèl.');
+  const [aboutUsP1Ht, setAboutUsP1Ht] = useState(settings.about_us_p1_ht || 'Parousia Baptist Ministries est une communauté de croyants qui attend le retour de Jésus-Christ. Notre vision est claire : proclamer l’Évangile, former des disciples et servir notre diaspora au moyen de projets communautaires et d’une formation spirituelle.');
   const [aboutUsP2En, setAboutUsP2En] = useState(settings.about_us_p2_en || 'From our inception, we have focused on authentic biblical living, establishing direct educational and healthcare mission support in Haiti, and cultivating a welcoming space where everyone can experience genuine spiritual family.');
-  const [aboutUsP2Ht, setAboutUsP2Ht] = useState(settings.about_us_p2_ht || 'Depi nou te kòmanse, nou konsantre sou bati yon lafwa solid ak transparan, sipòte pwojè lekòl ak swen sante an Ayiti, epi ofri yon kote kote chak frè ak sè kapab jwenn yon vrè fanmi espirityèl.');
+  const [aboutUsP2Ht, setAboutUsP2Ht] = useState(settings.about_us_p2_ht || 'Depuis nos débuts, nous nous consacrons à bâtir une foi solide et authentique, à soutenir des projets scolaires et de santé en Haïti, et à offrir un lieu où chaque frère et chaque sœur peut trouver une véritable famille spirituelle.');
   const [aboutUsImageUrl, setAboutUsImageUrl] = useState(settings.about_us_image_url || 'https://images.unsplash.com/photo-1438032005730-c779502df39b?q=80&w=800&auto=format&fit=crop');
 
   const [beliefsTitleEn, setBeliefsTitleEn] = useState(settings.beliefs_title_en || 'Our Beliefs');
-  const [beliefsTitleHt, setBeliefsTitleHt] = useState(settings.beliefs_title_ht || 'Kwayans Nou Yo');
+  const [beliefsTitleHt, setBeliefsTitleHt] = useState(settings.beliefs_title_ht || 'Nos croyances');
   
   const [belief1TitleEn, setBelief1TitleEn] = useState(settings.belief_1_title_en || 'Infallible Scripture');
-  const [belief1TitleHt, setBelief1TitleHt] = useState(settings.belief_1_title_ht || 'Labib kòm Verite Absoli');
+  const [belief1TitleHt, setBelief1TitleHt] = useState(settings.belief_1_title_ht || 'La Bible, vérité absolue');
   const [belief1DescEn, setBelief1DescEn] = useState(settings.belief_1_desc_en || 'We believe the Bible is the inspired, infallible, and inerrant Word of God, serving as our final authority in all matters of faith, doctrine, and conduct.');
-  const [belief1DescHt, setBelief1DescHt] = useState(settings.belief_1_desc_ht || 'Nou kwè tout Bib la se Pawòl enspire Bondye ye. Se sèl otorite siprèm pou lafwa nou ak jan n ap mennen lavi nou chak jou.');
+  const [belief1DescHt, setBelief1DescHt] = useState(settings.belief_1_desc_ht || 'Nous croyons que toute la Bible est la Parole inspirée de Dieu. Elle est l’autorité suprême pour notre foi et notre conduite quotidienne.');
 
   const [belief2TitleEn, setBelief2TitleEn] = useState(settings.belief_2_title_en || 'Holy Trinity');
-  const [belief2TitleHt, setBelief2TitleHt] = useState(settings.belief_2_title_ht || 'Trinite Sen An');
+  const [belief2TitleHt, setBelief2TitleHt] = useState(settings.belief_2_title_ht || 'La Sainte Trinité');
   const [belief2DescEn, setBelief2DescEn] = useState(settings.belief_2_desc_en || 'We believe in one God, eternally existing in three co-equal persons: God the Father, God the Son (Jesus Christ), and God the Holy Spirit.');
-  const [belief2DescHt, setBelief2DescHt] = useState(settings.belief_2_desc_ht || 'Nou kwè nan yon sèl Bondye ki egziste nan twa pèsòn: Papa a, Pitit la (Jezi-Kri), ak Sentespri a, ki gen menm pouvwa ak glwa.');
+  const [belief2DescHt, setBelief2DescHt] = useState(settings.belief_2_desc_ht || 'Nous croyons en un seul Dieu qui existe en trois personnes : le Père, le Fils (Jésus-Christ) et le Saint-Esprit, égaux en puissance et en gloire.');
 
   const [belief3TitleEn, setBelief3TitleEn] = useState(settings.belief_3_title_en || 'Salvation by Grace');
-  const [belief3TitleHt, setBelief3TitleHt] = useState(settings.belief_3_title_ht || 'Sali pa la Gras sèlman');
+  const [belief3TitleHt, setBelief3TitleHt] = useState(settings.belief_3_title_ht || 'Le salut par la grâce seule');
   const [belief3DescEn, setBelief3DescEn] = useState(settings.belief_3_desc_en || "Salvation is a gift of God received through repentance and faith in Christ's substitutionary sacrifice on the cross. It is entirely by grace alone, not works.");
-  const [belief3DescHt, setBelief3DescHt] = useState(settings.belief_3_desc_ht || 'Sali a se yon kado Bondye fè moun pa mwayen lafwa nan Jezikri. Se pa pa mwayen bon zèv, men se pa gras sèlman nou sove.');
+  const [belief3DescHt, setBelief3DescHt] = useState(settings.belief_3_desc_ht || 'Le salut est un don de Dieu reçu par la foi en Jésus-Christ. Il ne vient pas des bonnes œuvres : nous sommes sauvés par la grâce seule.');
 
   const [belief4TitleEn, setBelief4TitleEn] = useState(settings.belief_4_title_en || 'The Blessed Hope (Parousia)');
-  const [belief4TitleHt, setBelief4TitleHt] = useState(settings.belief_4_title_ht || 'Retou Seyè a (Parousia)');
+  const [belief4TitleHt, setBelief4TitleHt] = useState(settings.belief_4_title_ht || 'Le retour du Seigneur (Parousie)');
   const [belief4DescEn, setBelief4DescEn] = useState(settings.belief_4_desc_en || 'We eagerly anticipate the personal, visible, and glorious return of Jesus Christ to gather His Church and establish His righteous kingdom.');
-  const [belief4DescHt, setBelief4DescHt] = useState(settings.belief_4_desc_ht || 'Nou gen gwo espwa nan retou vizib ak gloriye Jezikri pou rache legliz la epi jije mond lan daprè jistis li.');
+  const [belief4DescHt, setBelief4DescHt] = useState(settings.belief_4_desc_ht || 'Nous plaçons notre grande espérance dans le retour visible et glorieux de Jésus-Christ, qui enlèvera l’Église et jugera le monde selon sa justice.');
 
-  const [teamTitleEn, setTeamTitleEn] = useState(settings.team_title_en || 'Our Team');
-  const [teamTitleHt, setTeamTitleHt] = useState(settings.team_title_ht || 'Ekip Nou An');
+  const [teamTitleEn, setTeamTitleEn] = useState(settings.team_title_en || 'Executive Committee');
+  const [teamTitleHt, setTeamTitleHt] = useState(settings.team_title_ht || 'Comité exécutif');
 
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => {
     try {
@@ -748,61 +749,24 @@ export default function AdminDashboardClient({
     } catch (e) {
       console.error('Error parsing team_members_json:', e);
     }
-    return [
-      {
-        name: settings.team_p1_name || 'Pastor Maxon Francois',
-        role_en: settings.team_p1_role_en || 'Senior Pastor',
-        role_ht: settings.team_p1_role_ht || 'Pastè Prensipal',
-        bio_en: settings.team_p1_bio_en || "Pastor Maxon Francois has served in pastoral ministry for over 15 years, with a deep passion for preaching expository biblical truth and preparing the church for Christ's return.",
-        bio_ht: settings.team_p1_bio_ht || 'Pastè Maxon Francois gen plis pase 15 ane ap preche Pawòl Bondye a ak yon vizyon klè pou anseye verite biblik la san chanjman epi prepare kominote a pou retou Seyè a.',
-        image_url: settings.team_p1_image_url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=300&auto=format&fit=crop',
-        email: settings.team_p1_email || 'pastor@parousiabaptist.org'
-      },
-      {
-        name: settings.team_p2_name || 'Pastor Jean-Pierre Louis',
-        role_en: settings.team_p2_role_en || 'Assistant Pastor',
-        role_ht: settings.team_p2_role_ht || 'Asistan Pastè',
-        bio_en: settings.team_p2_bio_en || "Pastor Jean-Pierre coordinates youth discipleship, counseling, and direct operations of our missionary schools and medical outposts in Okay, Haiti.",
-        bio_ht: settings.team_p2_bio_ht || 'Pastè Jean-Pierre konsantre sou devlopman jèn yo, vizit fraternel yo, ak sipò dirèk nan lekòl ak klinik misyon nou yo an Ayiti.',
-        image_url: settings.team_p2_image_url || 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=300&auto=format&fit=crop',
-        email: settings.team_p2_email || 'it@parousiabaptist.org'
-      }
-    ];
+    return EXECUTIVE_COMMITTEE_MEMBERS;
   });
   const [draggingMemberIndex, setDraggingMemberIndex] = useState<number | null>(null);
 
-  const [teamP1Name, setTeamP1Name] = useState(settings.team_p1_name || 'Pastor Maxon Francois');
-  const [teamP1RoleEn, setTeamP1RoleEn] = useState(settings.team_p1_role_en || 'Senior Pastor');
-  const [teamP1RoleHt, setTeamP1RoleHt] = useState(settings.team_p1_role_ht || 'Pastè Prensipal');
-  const [teamP1BioEn, setTeamP1BioEn] = useState(settings.team_p1_bio_en || "Pastor Maxon Francois has served in pastoral ministry for over 15 years, with a deep passion for preaching expository biblical truth and preparing the church for Christ's return.");
-  const [teamP1BioHt, setTeamP1BioHt] = useState(settings.team_p1_bio_ht || 'Pastè Maxon Francois gen plis pase 15 ane ap preche Pawòl Bondye a ak yon vizyon klè pou anseye verite biblik la san chanjman epi prepare kominote a pou retou Seyè a.');
-  const [teamP1ImageUrl, setTeamP1ImageUrl] = useState(settings.team_p1_image_url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=300&auto=format&fit=crop');
-  const [teamP1Email, setTeamP1Email] = useState(settings.team_p1_email || 'pastor@parousiabaptist.org');
-
-  const [teamP2Name, setTeamP2Name] = useState(settings.team_p2_name || 'Pastor Jean-Pierre Louis');
-  const [teamP2RoleEn, setTeamP2RoleEn] = useState(settings.team_p2_role_en || 'Assistant Pastor');
-  const [teamP2RoleHt, setTeamP2RoleHt] = useState(settings.team_p2_role_ht || 'Asistan Pastè');
-  const [teamP2BioEn, setTeamP2BioEn] = useState(settings.team_p2_bio_en || "Pastor Jean-Pierre coordinates youth discipleship, counseling, and direct operations of our missionary schools and medical outposts in Okay, Haiti.");
-  const [teamP2BioHt, setTeamP2BioHt] = useState(settings.team_p2_bio_ht || 'Pastè Jean-Pierre konsantre sou devlopman jèn yo, vizit fraternel yo, ak sipò dirèk nan lekòl ak klinik misyon nou yo an Ayiti.');
-  const [teamP2ImageUrl, setTeamP2ImageUrl] = useState(settings.team_p2_image_url || 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=300&auto=format&fit=crop');
-  const [teamP2Email, setTeamP2Email] = useState(settings.team_p2_email || 'it@parousiabaptist.org');
-
   const [expectTitleEn, setExpectTitleEn] = useState(settings.expect_title_en || 'What to Expect');
-  const [expectTitleHt, setExpectTitleHt] = useState(settings.expect_title_ht || 'Kisa pou Atann');
+  const [expectTitleHt, setExpectTitleHt] = useState(settings.expect_title_ht || 'À quoi vous attendre');
   const [expectP1En, setExpectP1En] = useState(settings.expect_p1_en || 'When you step into a service at Parousia Baptist Ministries, you will experience a warm, friendly, and reverent atmosphere. Our worship is spirit-filled and biblical, and our bilingual environment welcomes all.');
-  const [expectP1Ht, setExpectP1Ht] = useState(settings.expect_p1_ht || 'Lè w vin adore avèk nou nan Parousia Baptist Ministries, w ap jwenn yon anbyans cho, kote yo adore Bondye ak reverans e ak kè kontan. Sèvis nou yo se an Kreyòl ak an Angle pou pèmèt tout moun patisipe fasilman.');
+  const [expectP1Ht, setExpectP1Ht] = useState(settings.expect_p1_ht || 'Lorsque vous venez adorer avec nous à Parousia Baptist Ministries, vous découvrez une atmosphère chaleureuse où Dieu est célébré avec révérence et joie. Nos cultes sont offerts en français et en anglais afin que chacun puisse y participer pleinement.');
   const [expectImageUrl, setExpectImageUrl] = useState(settings.expect_image_url || 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=800&auto=format&fit=crop');
   const [expectBullet1En, setExpectBullet1En] = useState(settings.expect_bullet1_en || 'Christ-centered praise, blending traditional hymns and modern worship');
-  const [expectBullet1Ht, setExpectBullet1Ht] = useState(settings.expect_bullet1_ht || 'Adorasyon ak Louwanj ki edifye kè ou');
+  const [expectBullet1Ht, setExpectBullet1Ht] = useState(settings.expect_bullet1_ht || 'Une adoration et des louanges qui édifient');
   const [expectBullet2En, setExpectBullet2En] = useState(settings.expect_bullet2_en || 'Expository, practical teaching straight from the holy scriptures');
-  const [expectBullet2Ht, setExpectBullet2Ht] = useState(settings.expect_bullet2_ht || 'Mesaj solid ki baze sèlman sou Bib la');
+  const [expectBullet2Ht, setExpectBullet2Ht] = useState(settings.expect_bullet2_ht || 'Des messages solides, fondés sur la Bible');
   const [expectBullet3En, setExpectBullet3En] = useState(settings.expect_bullet3_en || 'A supportive, tight-knit family that will welcome you with open arms');
-  const [expectBullet3Ht, setExpectBullet3Ht] = useState(settings.expect_bullet3_ht || 'Yon kominote k ap resevwa w ak bra louvri');
+  const [expectBullet3Ht, setExpectBullet3Ht] = useState(settings.expect_bullet3_ht || 'Une communauté qui vous accueille à bras ouverts');
 
   // Drag visual feedback states for Home Tabs
   const [isDraggingAboutUs, setIsDraggingAboutUs] = useState(false);
-  const [isDraggingTeamP1, setIsDraggingTeamP1] = useState(false);
-  const [isDraggingTeamP2, setIsDraggingTeamP2] = useState(false);
   const [isDraggingExpect, setIsDraggingExpect] = useState(false);
 
   // Home sub-tab state for editing
@@ -812,12 +776,12 @@ export default function AdminDashboardClient({
   const [isBackingUp, setIsBackingUp] = useState(false);
   const handleBackupClick = async () => {
     setIsBackingUp(true);
-    triggerAlert(language === 'fr_ht' ? 'Y ap kreye sovgad la...' : 'Creating website backup...', 'success');
+    triggerAlert(language === 'fr_ht' ? 'Création de la sauvegarde...' : 'Creating website backup...', 'success');
     try {
       const res = await backupWebsite();
       if (res.success) {
         triggerAlert(language === 'fr_ht' 
-          ? `Sovgad kreye nan Parousie/backups/backup_${res.timestamp}!` 
+          ? `Sauvegarde créée dans Parousie/backups/backup_${res.timestamp}!`
           : `Backup created successfully in Parousie/backups/backup_${res.timestamp}!`, 
           'success'
         );
@@ -833,18 +797,18 @@ export default function AdminDashboardClient({
 
   const handleSyncYoutube = async () => {
     if (!ytChannelUrl) {
-      triggerAlert(language === 'fr_ht' ? 'Tanpri mete yon URL chanèl anvan.' : 'Please enter a channel URL first.', 'error');
+      triggerAlert(language === 'fr_ht' ? 'Veuillez d’abord saisir l’URL d’une chaîne.' : 'Please enter a channel URL first.', 'error');
       return;
     }
     
     setIsSyncing(true);
-    triggerAlert(language === 'fr_ht' ? 'Y ap senkronize videyo depi YouTube...' : 'Syncing streams from YouTube...', 'success');
+    triggerAlert(language === 'fr_ht' ? 'Synchronisation des vidéos depuis YouTube...' : 'Syncing streams from YouTube...', 'success');
     
     try {
       const result = await syncSermonsFromYoutube(ytChannelUrl);
       if (result.success) {
         triggerAlert(language === 'fr_ht' 
-          ? `Senkronizasyon fini! Enpòte ${result.count} nouvo videyo siksè.` 
+          ? `Synchronisation terminée ! ${result.count} nouvelles vidéos importées avec succès.`
           : `Sync complete! Imported ${result.count} new videos successfully.`, 
           'success'
         );
@@ -1146,13 +1110,13 @@ export default function AdminDashboardClient({
     if (teamMembers.length <= 1) {
       triggerAlert(
         language === 'fr_ht' 
-          ? 'Ou dwe genyen omwen yon manm ekip.' 
+          ? 'Vous devez conserver au moins un membre dans l’équipe.'
           : 'You must have at least one team member.', 
         'error'
       );
       return;
     }
-    if (!confirm(language === 'fr_ht' ? 'Èske ou vle siprime manm sa a nan ekip la?' : 'Are you sure you want to delete this team member?')) {
+    if (!confirm(language === 'fr_ht' ? 'Voulez-vous supprimer ce membre de l’équipe ?' : 'Are you sure you want to delete this team member?')) {
       return;
     }
     setTeamMembers(prev => prev.filter((_, i) => i !== index));
@@ -1188,7 +1152,7 @@ export default function AdminDashboardClient({
     if (!payload) {
       triggerAlert(
         language === 'fr_ht'
-          ? 'Tanpri mete tèks nan lang sous la anvan ou tradui.'
+          ? 'Veuillez saisir du texte dans la langue source avant de lancer la traduction.'
           : 'Please enter source-language text before translating.',
         'error'
       );
@@ -1197,7 +1161,7 @@ export default function AdminDashboardClient({
 
     setIsBilingualTranslating(true);
     triggerAlert(
-      language === 'fr_ht' ? 'Tradiksyon entèlijan an kouran...' : 'Smart translation in progress...',
+      language === 'fr_ht' ? 'Traduction intelligente en cours...' : 'Smart translation in progress...',
       'success'
     );
 
@@ -1206,14 +1170,14 @@ export default function AdminDashboardClient({
       if (res.success && res.translations) {
         onApply(applyTranslatedFields(fields, res.translations, payload.fromLang));
         triggerAlert(
-          language === 'fr_ht' ? 'Tradiksyon fini ak siksè!' : 'Translation completed successfully!',
+          language === 'fr_ht' ? 'Traduction terminée avec succès !' : 'Translation completed successfully!',
           'success'
         );
       } else {
-        triggerAlert(res.error || (language === 'fr_ht' ? 'Tradiksyon echwe.' : 'Translation failed.'), 'error');
+        triggerAlert(res.error || (language === 'fr_ht' ? 'Échec de la traduction.' : 'Translation failed.'), 'error');
       }
     } catch (err: any) {
-      triggerAlert(err.message || (language === 'fr_ht' ? 'Erè pandan tradiksyon an.' : 'An error occurred during translation.'), 'error');
+      triggerAlert(err.message || (language === 'fr_ht' ? 'Une erreur est survenue pendant la traduction.' : 'An error occurred during translation.'), 'error');
     } finally {
       setIsBilingualTranslating(false);
     }
@@ -1398,8 +1362,8 @@ export default function AdminDashboardClient({
     if (!hasHt && !hasEn) {
       triggerAlert(
         language === 'fr_ht'
-          ? 'Tanpri mete tèks an kreyòl oswa an anglè anvan ou tradui.'
-          : 'Please enter content in either Creole or English before translating.',
+          ? 'Veuillez saisir du texte en français ou en anglais avant de lancer la traduction.'
+          : 'Please enter content in either French or English before translating.',
         'error'
       );
       return;
@@ -1415,8 +1379,8 @@ export default function AdminDashboardClient({
     if (!fromLang) {
       triggerAlert(
         language === 'fr_ht'
-          ? 'Tanpri mete tèks an kreyòl oswa an anglè anvan ou tradui.'
-          : 'Please enter content in either Creole or English before translating.',
+          ? 'Veuillez saisir du texte en français ou en anglais avant de lancer la traduction.'
+          : 'Please enter content in either French or English before translating.',
         'error'
       );
       return;
@@ -1425,7 +1389,7 @@ export default function AdminDashboardClient({
     setIsTranslating(true);
     triggerAlert(
       language === 'fr_ht'
-        ? 'Tradiksyon entèlijan an kouran...'
+        ? 'Traduction intelligente en cours...'
         : 'Smart translation in progress...',
       'success'
     );
@@ -1453,7 +1417,7 @@ export default function AdminDashboardClient({
         });
         triggerAlert(
           language === 'fr_ht'
-            ? 'Tradiksyon fini ak siksè!'
+            ? 'Traduction terminée avec succès !'
             : 'Translation completed successfully!',
           'success'
         );
@@ -1464,60 +1428,6 @@ export default function AdminDashboardClient({
       triggerAlert(err.message || 'An error occurred during translation', 'error');
     } finally {
       setIsTranslating(false);
-    }
-  };
-
-  const handleTeamP1File = (file: File | undefined) => {
-    if (!file) return;
-    compressAndResizeImage(file, 400, 400, 0.85, (b64) => {
-      setTeamP1ImageUrl(b64);
-    });
-  };
-
-  const handlePasteTeamP1 = (e: React.ClipboardEvent) => {
-    const items = e.clipboardData.items;
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf('image') !== -1) {
-        const file = items[i].getAsFile();
-        if (file) handleTeamP1File(file);
-        break;
-      }
-    }
-  };
-
-  const handleDropTeamP1 = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingTeamP1(false);
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      handleTeamP1File(files[0]);
-    }
-  };
-
-  const handleTeamP2File = (file: File | undefined) => {
-    if (!file) return;
-    compressAndResizeImage(file, 400, 400, 0.85, (b64) => {
-      setTeamP2ImageUrl(b64);
-    });
-  };
-
-  const handlePasteTeamP2 = (e: React.ClipboardEvent) => {
-    const items = e.clipboardData.items;
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf('image') !== -1) {
-        const file = items[i].getAsFile();
-        if (file) handleTeamP2File(file);
-        break;
-      }
-    }
-  };
-
-  const handleDropTeamP2 = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingTeamP2(false);
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      handleTeamP2File(files[0]);
     }
   };
 
@@ -1553,7 +1463,7 @@ export default function AdminDashboardClient({
     try {
       let finalAboutUsImg = aboutUsImageUrl;
       if (aboutUsImageUrl && aboutUsImageUrl.startsWith('data:')) {
-        triggerAlert(language === 'fr_ht' ? 'Y ap chaje imaj "Ki Moun Nou Ye" a...' : 'Uploading "About Us" image...', 'success');
+        triggerAlert(language === 'fr_ht' ? 'Téléversement de l’image « Qui sommes-nous »...' : 'Uploading "About Us" image...', 'success');
         const res = await clientUploadAsset('home_about_us_bg.jpg', aboutUsImageUrl);
         if (res.success && res.url) {
           finalAboutUsImg = res.url;
@@ -1571,7 +1481,7 @@ export default function AdminDashboardClient({
         if (member.image_url && member.image_url.startsWith('data:')) {
           triggerAlert(
             language === 'fr_ht' 
-              ? `Y ap chaje foto pou ${member.name || 'lidè ' + (i + 1)}...` 
+              ? `Téléversement de la photo de ${member.name || 'responsable ' + (i + 1)}...`
               : `Uploading photo for ${member.name || 'leader ' + (i + 1)}...`, 
             'success'
           );
@@ -1588,7 +1498,7 @@ export default function AdminDashboardClient({
 
       let finalExpectImg = expectImageUrl;
       if (expectImageUrl && expectImageUrl.startsWith('data:')) {
-        triggerAlert(language === 'fr_ht' ? 'Y ap chaje imaj "Kisa pou Atann" lan...' : 'Uploading "What to Expect" image...', 'success');
+        triggerAlert(language === 'fr_ht' ? 'Téléversement de l’image « À quoi vous attendre »...' : 'Uploading "What to Expect" image...', 'success');
         const res = await clientUploadAsset('home_expect_bg.jpg', expectImageUrl);
         if (res.success && res.url) {
           finalExpectImg = res.url;
@@ -1599,7 +1509,7 @@ export default function AdminDashboardClient({
         }
       }
 
-      triggerAlert(language === 'fr_ht' ? 'Y ap sove chanjman yo...' : 'Saving changes...', 'success');
+      triggerAlert(language === 'fr_ht' ? 'Enregistrement des modifications...' : 'Saving changes...', 'success');
 
       const settingsMap: Record<string, string> = {
         about_us_title_en: aboutUsTitleEn,
@@ -1663,7 +1573,7 @@ export default function AdminDashboardClient({
 
       const res = await updateGlobalSettings(settingsMap);
       if (res.success) {
-        triggerAlert(language === 'fr_ht' ? 'Paj Akèy konfigire avèk siksè!' : 'Home tabs configured successfully!', 'success');
+        triggerAlert(language === 'fr_ht' ? 'Onglets de la page d’accueil configurés avec succès !' : 'Home tabs configured successfully!', 'success');
       } else {
         triggerAlert(res.error || 'Failed to save configuration', 'error');
       }
@@ -1681,7 +1591,7 @@ export default function AdminDashboardClient({
     reader.onload = async (e) => {
       if (e.target?.result) {
         setGiftFileUrl(e.target.result as string);
-        triggerAlert(language === 'fr_ht' ? 'Fichye chaje avèk siksè nan memwa kach!' : 'File loaded into cache successfully!', 'success');
+        triggerAlert(language === 'fr_ht' ? 'Fichier chargé dans le cache avec succès !' : 'File loaded into cache successfully!', 'success');
       }
       setGiftIsUploading(false);
     };
@@ -1713,19 +1623,19 @@ export default function AdminDashboardClient({
   const handleCopySubscribersEmails = () => {
     const emails = subscriberList.map(s => s.email).filter(Boolean).join(', ');
     if (!emails) {
-      triggerAlert(language === 'fr_ht' ? 'Pa gen okenn imel ki disponib.' : 'No email addresses available.', 'error');
+      triggerAlert(language === 'fr_ht' ? 'Aucune adresse courriel n’est disponible.' : 'No email addresses available.', 'error');
       return;
     }
     navigator.clipboard.writeText(emails);
     setCopiedSubscribers(true);
-    triggerAlert(language === 'fr_ht' ? 'Lis imel yo kopye!' : 'Emails list copied!', 'success');
+    triggerAlert(language === 'fr_ht' ? 'Liste des adresses courriel copiée !' : 'Emails list copied!', 'success');
     setTimeout(() => {
       setCopiedSubscribers(false);
     }, 2000);
   };
 
   const handleDeleteSubscriber = async (id: number) => {
-    if (!confirm(language === 'fr_ht' ? 'Èske ou sèten ou vle efase abònman sa a?' : 'Are you sure you want to delete this subscriber?')) {
+    if (!confirm(language === 'fr_ht' ? 'Êtes-vous sûr de vouloir supprimer cet abonnement ?' : 'Are you sure you want to delete this subscriber?')) {
       return;
     }
     
@@ -1735,10 +1645,10 @@ export default function AdminDashboardClient({
     try {
       const res = await deleteLead(id);
       if (!res.success) {
-        triggerAlert(language === 'fr_ht' ? 'Ere: ' + res.error : 'Error: ' + res.error, 'error');
+        triggerAlert(language === 'fr_ht' ? 'Erreur : ' + res.error : 'Error: ' + res.error, 'error');
         setSubscriberList(previousList);
       } else {
-        triggerAlert(language === 'fr_ht' ? 'Abònman an efase avèk siksè!' : 'Subscriber deleted successfully!', 'success');
+        triggerAlert(language === 'fr_ht' ? 'Abonnement supprimé avec succès !' : 'Subscriber deleted successfully!', 'success');
       }
     } catch (err: any) {
       triggerAlert(err.message || 'Error occurred', 'error');
@@ -1756,7 +1666,7 @@ export default function AdminDashboardClient({
       if (res.success) {
         triggerAlert(
           language === 'fr_ht'
-            ? 'Anfòm! Chanjman konfigirasyon sove.'
+            ? 'Parfait ! Les paramètres ont été enregistrés.'
             : 'Settings updated successfully.',
           'success'
         );
@@ -1803,7 +1713,7 @@ export default function AdminDashboardClient({
         );
         setEditingDevotionalId(null);
         triggerAlert(
-          language === 'fr_ht' ? 'Devosyonèl sove avèk siksè!' : 'Devotional saved successfully!',
+          language === 'fr_ht' ? 'Dévotion enregistrée avec succès !' : 'Devotional saved successfully!',
           'success'
         );
       } else {
@@ -1822,7 +1732,7 @@ export default function AdminDashboardClient({
           prev.map(d => (d.id === id ? { ...d, status: 'approved' } : d))
         );
         triggerAlert(
-          language === 'fr_ht' ? 'Devosyonèl apwouve epi pibliye!' : 'Devotional approved and published!',
+          language === 'fr_ht' ? 'Dévotion approuvée et publiée !' : 'Devotional approved and published!',
           'success'
         );
       } else {
@@ -1837,7 +1747,7 @@ export default function AdminDashboardClient({
     if (
       !confirm(
         language === 'fr_ht'
-          ? 'Èske ou sèten ou vle efase devosyonèl sa a?'
+          ? 'Êtes-vous sûr de vouloir supprimer cette dévotion ?'
           : 'Are you sure you want to delete this devotional?'
       )
     ) {
@@ -1849,7 +1759,7 @@ export default function AdminDashboardClient({
       if (res.success) {
         setDevotionalList(prev => prev.filter(d => d.id !== id));
         triggerAlert(
-          language === 'fr_ht' ? 'Devosyonèl efase!' : 'Devotional deleted successfully!',
+          language === 'fr_ht' ? 'Dévotion supprimée !' : 'Devotional deleted successfully!',
           'success'
         );
       } else {
@@ -1881,7 +1791,7 @@ export default function AdminDashboardClient({
       });
 
       triggerAlert(
-        language === 'fr_ht' ? 'Y ap jenere nouvo devosyonèl...' : 'Generating new devotional...',
+        language === 'fr_ht' ? 'Génération d’une nouvelle dévotion...' : 'Generating new devotional...',
         'success'
       );
       const res = await generateDevotionalAction(dateStr, {
@@ -1896,7 +1806,7 @@ export default function AdminDashboardClient({
         });
         triggerAlert(
           language === 'fr_ht'
-            ? 'Nouvo devosyonèl jenere avèk siksè!'
+            ? 'Nouvelle dévotion générée avec succès !'
             : 'New devotional generated successfully!',
           'success'
         );
@@ -1925,12 +1835,12 @@ export default function AdminDashboardClient({
   const handleKbFile = async (file: File | undefined) => {
     if (!file) return;
     if (!file.name.toLowerCase().endsWith('.pdf')) {
-      triggerAlert(language === 'fr_ht' ? 'Sèlman dosye PDF yo sipòte pou drag & drop.' : 'Only PDF files are supported for drag & drop.', 'error');
+      triggerAlert(language === 'fr_ht' ? 'Seuls les fichiers PDF sont acceptés par glisser-déposer.' : 'Only PDF files are supported for drag & drop.', 'error');
       return;
     }
 
     setKbIsUploading(true);
-    triggerAlert(language === 'fr_ht' ? 'Y ap chaje dosye PDF sa a...' : 'Uploading PDF file...', 'success');
+    triggerAlert(language === 'fr_ht' ? 'Téléversement du fichier PDF...' : 'Uploading PDF file...', 'success');
 
     try {
       const res = await clientUploadAsset(file.name, file);
@@ -1938,11 +1848,11 @@ export default function AdminDashboardClient({
         const title = file.name.replace(/\.[^/.]+$/, "").replace(/_/g, ' ');
         const saveRes = await addKnowledgeBaseItem(title, 'pdf', res.url);
         if (saveRes.success) {
-          triggerAlert(language === 'fr_ht' ? 'PDF ajoute nan konesans kominotè!' : 'PDF successfully added to Knowledge Base!', 'success');
+          triggerAlert(language === 'fr_ht' ? 'PDF ajouté à la base de connaissances !' : 'PDF successfully added to Knowledge Base!', 'success');
           
           if (automateWithDoc) {
             triggerAlert(language === 'fr_ht' 
-              ? 'AI ap analize PDF la epi mete sit la ajou otomatikman...' 
+              ? 'L’IA analyse le PDF et met automatiquement le site à jour...'
               : 'AI is extracting PDF contents and automating website updates...', 'success');
             
             const autoRes = await automateWebsiteContentFromPdf(res.url);
@@ -1971,28 +1881,28 @@ export default function AdminDashboardClient({
     if (!text) return;
     const cleanUrl = text.trim();
     if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
-      triggerAlert(language === 'fr_ht' ? 'Sèlman URL ki kòmanse ak http/https sipòte.' : 'Only URLs starting with http/https are supported.', 'error');
+      triggerAlert(language === 'fr_ht' ? 'Seules les URL commençant par http/https sont acceptées.' : 'Only URLs starting with http/https are supported.', 'error');
       return;
     }
 
     setKbIsUploading(true);
     let type = 'link';
-    let title = 'Referans Lyen';
+    let title = 'Lien de référence';
 
     if (cleanUrl.includes('docs.google.com/document')) {
       type = 'google_doc';
-      title = language === 'fr_ht' ? 'Dokiman Google' : 'Google Doc Reference';
+      title = language === 'fr_ht' ? 'Document Google' : 'Google Doc Reference';
     } else if (cleanUrl.includes('docs.google.com/spreadsheets')) {
       type = 'google_sheet';
-      title = language === 'fr_ht' ? 'Fèy Google' : 'Google Sheet Reference';
+      title = language === 'fr_ht' ? 'Feuille Google' : 'Google Sheet Reference';
     } else {
-      title = language === 'fr_ht' ? 'Lyen Referans' : 'Web Resource Link';
+      title = language === 'fr_ht' ? 'Lien de référence' : 'Web Resource Link';
     }
 
     try {
       const saveRes = await addKnowledgeBaseItem(title, type, cleanUrl);
       if (saveRes.success) {
-        triggerAlert(language === 'fr_ht' ? 'Lyen referans ajoute!' : 'Link successfully added to Knowledge Base!', 'success');
+        triggerAlert(language === 'fr_ht' ? 'Lien de référence ajouté !' : 'Link successfully added to Knowledge Base!', 'success');
         router.refresh();
       } else {
         triggerAlert(saveRes.error || 'Failed to save link', 'error');
@@ -2028,7 +1938,7 @@ export default function AdminDashboardClient({
   const handleManualKbSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!kbManualTitle || !kbManualUrl) {
-      triggerAlert(language === 'fr_ht' ? 'Tit ak URL yo obligatwa.' : 'Title and URL are required.', 'error');
+      triggerAlert(language === 'fr_ht' ? 'Le titre et l’URL sont obligatoires.' : 'Title and URL are required.', 'error');
       return;
     }
 
@@ -2036,7 +1946,7 @@ export default function AdminDashboardClient({
     try {
       const saveRes = await addKnowledgeBaseItem(kbManualTitle, kbManualType, kbManualUrl);
       if (saveRes.success) {
-        triggerAlert(language === 'fr_ht' ? 'Resource ajoute avèk siksè!' : 'Resource added successfully!', 'success');
+        triggerAlert(language === 'fr_ht' ? 'Ressource ajoutée avec succès !' : 'Resource added successfully!', 'success');
         setKbManualTitle('');
         setKbManualUrl('');
         router.refresh();
@@ -2051,14 +1961,14 @@ export default function AdminDashboardClient({
   };
 
   const handleDeleteKb = async (id: number) => {
-    if (!confirm(language === 'fr_ht' ? 'Èske ou sèten ou vle siprime resous sa a?' : 'Are you sure you want to delete this resource?')) {
+    if (!confirm(language === 'fr_ht' ? 'Êtes-vous sûr de vouloir supprimer cette ressource ?' : 'Are you sure you want to delete this resource?')) {
       return;
     }
 
     try {
       const res = await deleteKnowledgeBaseItem(id);
       if (res.success) {
-        triggerAlert(language === 'fr_ht' ? 'Resous la siprime!' : 'Resource deleted successfully!', 'success');
+        triggerAlert(language === 'fr_ht' ? 'Ressource supprimée !' : 'Resource deleted successfully!', 'success');
         router.refresh();
       } else {
         triggerAlert(res.error || 'Failed to delete resource', 'error');
@@ -2070,13 +1980,13 @@ export default function AdminDashboardClient({
 
   const handleResetContentFromPdf = async (pdfUrl: string, documentTitle: string) => {
     const warningMessage = language === 'fr_ht'
-      ? `AVÈTISMAN KRITIK: Sa pral efase epi ranplase tout orè sèvis, pwojè kominote, aktivite, ak paramèt aktyèl yo ak enfòmasyon ki nan dokiman "${documentTitle}" sa a. Èske ou sèten ou vle efase paramèt aktyèl yo epi kontinye?`
+      ? `AVERTISSEMENT CRITIQUE : cette opération effacera et remplacera tous les horaires de culte, projets communautaires, événements et paramètres actuels par les données du document « ${documentTitle} ». Toutes les modifications manuelles seront perdues. Voulez-vous vraiment continuer ?`
       : `CRITICAL WARNING: This will overwrite and completely replace your current service schedules, community outreach projects, upcoming events, and global configurations with the content extracted from "${documentTitle}". Any manual edits made will be lost. Are you sure you want to continue?`;
     
     if (window.confirm(warningMessage)) {
       setKbIsUploading(true);
       triggerAlert(language === 'fr_ht' 
-        ? 'AI ap analize PDF la epi mete sit la ajou otomatikman...' 
+        ? 'L’IA analyse le PDF et met automatiquement le site à jour...'
         : 'AI is extracting PDF contents and automating website updates...', 'success');
       
       try {
@@ -2215,7 +2125,7 @@ export default function AdminDashboardClient({
         finalLogoUrl = uploadRes.url;
         setLogoUrl(uploadRes.url); // Update state
       } else {
-        triggerAlert(language === 'fr_ht' ? 'Ere pandan uploade logo: ' + uploadRes.error : 'Error uploading logo: ' + uploadRes.error, 'error');
+        triggerAlert(language === 'fr_ht' ? 'Erreur lors du téléversement du logo : ' + uploadRes.error : 'Error uploading logo: ' + uploadRes.error, 'error');
         return;
       }
     }
@@ -2227,7 +2137,7 @@ export default function AdminDashboardClient({
         finalBgUrl = uploadRes.url;
         setBgUrl(uploadRes.url); // Update state
       } else {
-        triggerAlert(language === 'fr_ht' ? 'Ere pandan uploade background: ' + uploadRes.error : 'Error uploading background: ' + uploadRes.error, 'error');
+        triggerAlert(language === 'fr_ht' ? 'Erreur lors du téléversement de l’arrière-plan : ' + uploadRes.error : 'Error uploading background: ' + uploadRes.error, 'error');
         return;
       }
     }
@@ -2243,7 +2153,7 @@ export default function AdminDashboardClient({
         finalGiftFileUrl = uploadRes.url;
         setGiftFileUrl(uploadRes.url); // Update state
       } else {
-        triggerAlert(language === 'fr_ht' ? 'Ere pandan chajman kado a: ' + uploadRes.error : 'Error uploading free gift: ' + uploadRes.error, 'error');
+        triggerAlert(language === 'fr_ht' ? 'Erreur lors du téléversement du cadeau : ' + uploadRes.error : 'Error uploading free gift: ' + uploadRes.error, 'error');
         return;
       }
     }
@@ -2256,7 +2166,7 @@ export default function AdminDashboardClient({
         finalCustomLiveEventThumbnailUrl = uploadRes.url;
         setCustomLiveEventThumbnailUrl(uploadRes.url); // Update state
       } else {
-        triggerAlert(language === 'fr_ht' ? 'Ere pandan uploade thumbnail: ' + uploadRes.error : 'Error uploading custom live stream event thumbnail: ' + uploadRes.error, 'error');
+        triggerAlert(language === 'fr_ht' ? 'Erreur lors du téléversement de la miniature : ' + uploadRes.error : 'Error uploading custom live stream event thumbnail: ' + uploadRes.error, 'error');
         return;
       }
     }
@@ -2310,7 +2220,7 @@ export default function AdminDashboardClient({
       const backupRes = await backupWebsite();
       if (backupRes.success) {
         triggerAlert(language === 'fr_ht' 
-          ? `Sit la sovgade nan Parousie/backups/backup_${backupRes.timestamp}!` 
+          ? `Site sauvegardé dans Parousie/backups/backup_${backupRes.timestamp}!`
           : `Website backed up successfully in Parousie/backups/backup_${backupRes.timestamp}!`, 
           'success'
         );
@@ -2407,7 +2317,7 @@ export default function AdminDashboardClient({
     if (conflict) {
       const confirmSave = confirm(
         language === 'fr_ht'
-          ? `Atansyon: gen yon lòt sèvis an dirèk ki planifye nan menm lè sa a (${conflict.time}). Èske ou vle sove li kanmenm?`
+          ? `Attention : un autre événement diffusé en direct est prévu à la même heure (${conflict.time}). Voulez-vous tout de même l’enregistrer ?`
           : `Warning: cannot schedule 2 live stream events at the same time. This overlaps with "${conflict.title_english}" (${conflict.time}). Do you want to proceed anyway?`
       );
       if (!confirmSave) return;
@@ -2415,7 +2325,7 @@ export default function AdminDashboardClient({
 
     let finalImgUrl = schedImg;
     if (schedImg && schedImg.startsWith('data:')) {
-      triggerAlert(language === 'en' ? 'Uploading schedule image...' : 'Y ap chaje imaj orè a...', 'success');
+      triggerAlert(language === 'en' ? 'Uploading schedule image...' : 'Téléversement de l’image de l’horaire...', 'success');
       const uploadRes = await clientUploadAsset(`schedule_${Date.now()}.jpg`, schedImg);
       if (uploadRes.success && uploadRes.url) {
         finalImgUrl = uploadRes.url;
@@ -2475,7 +2385,7 @@ export default function AdminDashboardClient({
   };
 
   const handleDeleteSchedule = async (id: number) => {
-    if (!confirm(language === 'fr_ht' ? 'Èske ou sèten ou vle siprime orè sa a?' : 'Are you sure you want to delete this schedule?')) return;
+    if (!confirm(language === 'fr_ht' ? 'Êtes-vous sûr de vouloir supprimer cet horaire ?' : 'Are you sure you want to delete this schedule?')) return;
     const res = await deleteServiceSchedule(id);
     if (res.success) {
       triggerAlert(t.adminSaveSuccess, 'success');
@@ -2500,7 +2410,7 @@ export default function AdminDashboardClient({
     e.preventDefault();
     let finalImgUrl = missImg;
     if (missImg && missImg.startsWith('data:')) {
-      triggerAlert(language === 'en' ? 'Uploading project image...' : 'Y ap chaje imaj pwojè a...', 'success');
+      triggerAlert(language === 'en' ? 'Uploading project image...' : 'Téléversement de l’image du projet...', 'success');
       const uploadRes = await clientUploadAsset(`mission_${Date.now()}.jpg`, missImg);
       if (uploadRes.success && uploadRes.url) {
         finalImgUrl = uploadRes.url;
@@ -2555,7 +2465,7 @@ export default function AdminDashboardClient({
   };
 
   const handleDeleteMission = async (id: number) => {
-    if (!confirm(language === 'fr_ht' ? 'Èske ou sèten ou vle siprime pwojè sa a?' : 'Are you sure you want to delete this project?')) return;
+    if (!confirm(language === 'fr_ht' ? 'Êtes-vous sûr de vouloir supprimer ce projet ?' : 'Are you sure you want to delete this project?')) return;
     const res = await deleteHaitiMission(id);
     if (res.success) {
       triggerAlert(t.adminSaveSuccess, 'success');
@@ -2614,7 +2524,7 @@ export default function AdminDashboardClient({
   };
 
   const handleDeleteOutreach = async (id: number) => {
-    if (!confirm(language === 'fr_ht' ? 'Èske ou vle siprime pwojè kominote sa a?' : 'Are you sure you want to delete this community project?')) return;
+    if (!confirm(language === 'fr_ht' ? 'Voulez-vous supprimer ce projet communautaire ?' : 'Are you sure you want to delete this community project?')) return;
     const res = await deleteLocalOutreach(id);
     if (res.success) {
       triggerAlert(t.adminSaveSuccess, 'success');
@@ -2681,7 +2591,7 @@ export default function AdminDashboardClient({
   };
 
   const handleDeleteEvent = async (id: number) => {
-    if (!confirm(language === 'fr_ht' ? 'Èske ou vle siprime evènman sa a?' : 'Are you sure you want to delete this event?')) return;
+    if (!confirm(language === 'fr_ht' ? 'Voulez-vous supprimer cet événement ?' : 'Are you sure you want to delete this event?')) return;
     const res = await deleteEvent(id);
     if (res.success) {
       triggerAlert(t.adminSaveSuccess, 'success');
@@ -2693,7 +2603,7 @@ export default function AdminDashboardClient({
 
   // 6. EVENT REGISTRATION DELETIONS
   const handleDeleteRegistration = async (id: number) => {
-    if (!confirm(language === 'fr_ht' ? 'Èske ou vle siprime enskripsyon sa a?' : 'Are you sure you want to delete this registration?')) return;
+    if (!confirm(language === 'fr_ht' ? 'Voulez-vous supprimer cette inscription ?' : 'Are you sure you want to delete this registration?')) return;
     const res = await deleteRegistration(id);
     if (res.success) {
       triggerAlert(t.adminSaveSuccess, 'success');
@@ -2756,7 +2666,7 @@ export default function AdminDashboardClient({
   };
 
   const handleDeleteSermon = async (id: number) => {
-    if (!confirm(language === 'fr_ht' ? 'Èske ou vle siprime sèmon sa a?' : 'Are you sure you want to delete this sermon?')) return;
+    if (!confirm(language === 'fr_ht' ? 'Voulez-vous supprimer ce sermon ?' : 'Are you sure you want to delete this sermon?')) return;
     const res = await deleteSermon(id);
     if (res.success) {
       triggerAlert(t.adminSaveSuccess, 'success');
@@ -2807,7 +2717,7 @@ export default function AdminDashboardClient({
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs font-semibold hover:border-amber-500 text-amber-400 cursor-pointer"
             >
               <Globe2 className="w-3.5 h-3.5" />
-              <span>{language === 'fr_ht' ? 'English' : 'Kreyòl'}</span>
+              <span>{language === 'fr_ht' ? 'English' : 'Français'}</span>
             </button>
 
             {/* Logout */}
@@ -2881,7 +2791,7 @@ export default function AdminDashboardClient({
             className={`w-full text-left px-4 py-3.5 rounded-xl border flex items-center gap-3 text-sm font-semibold transition-all cursor-pointer ${activeTab === 'ministries' ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-lg shadow-amber-500/10' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
           >
             <Users className="w-4 h-4" />
-            <span>{language === 'en' ? 'Ministries' : 'Ministè yo'}</span>
+            <span>{language === 'en' ? 'Ministries' : 'Ministères'}</span>
           </button>
 
           <button 
@@ -3012,8 +2922,8 @@ export default function AdminDashboardClient({
           </button>
 
           <div className="mt-8 p-4 rounded-xl bg-slate-900/30 border border-slate-850 text-xs text-slate-500">
-            <span className="font-bold block text-slate-400 uppercase tracking-wider mb-1">Pòtay Pèmanan</span>
-            <span>Pou nenpòt kòd modifikasyon dirèk nan sistèm nan.</span>
+            <span className="font-bold block text-slate-400 uppercase tracking-wider mb-1">Accès permanent</span>
+            <span>Pour toute modification directe du code du système.</span>
           </div>
 
         </aside>
@@ -3029,7 +2939,7 @@ export default function AdminDashboardClient({
               </h3>
 
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-850">
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Pastor&apos;s Name / Non Pastè a</label>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Pastor&apos;s Name / Nom du pasteur</label>
                 <input 
                   type="text" 
                   value={pastorName}
@@ -3041,7 +2951,7 @@ export default function AdminDashboardClient({
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Pastor Message (Kreyòl)</label>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Pastor Message (Français)</label>
                   <textarea 
                     rows={4}
                     value={pMsgHt}
@@ -3361,7 +3271,7 @@ export default function AdminDashboardClient({
                   <div>
                     <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Home Page Hero Background Image</label>
                     <p className="text-[10px] text-slate-500 mb-3">
-                      Trennen, kole, oswa chwazi yon nouvo imaj background isit la. (Drag/drop, copy/paste, or browse hero bg image).
+                      Faites glisser, collez ou choisissez une nouvelle image d’arrière-plan ici. (Drag/drop, copy/paste, or browse hero bg image).
                     </p>
                   </div>
 
@@ -3392,25 +3302,25 @@ export default function AdminDashboardClient({
                         </div>
                         <div className="flex-1 text-left">
                           <span className="text-xs font-bold text-slate-200 block truncate">Fondo_Home_Page.jpg</span>
-                          <span className="text-[9px] text-slate-400 block mt-1">Klike pou chanje, trennen yon lòt imaj, oswa kòpye-kole la a</span>
+                          <span className="text-[9px] text-slate-400 block mt-1">Cliquez pour modifier, faites glisser une autre image ou collez-en une ici</span>
                         </div>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center gap-1 text-slate-400">
                         <UploadCloud className="w-6 h-6 group-hover:text-amber-400 transition-all" />
-                        <span className="text-[11px] font-semibold">Trennen oswa Kole Imaj la</span>
+                        <span className="text-[11px] font-semibold">Glisser ou coller l’image</span>
                       </div>
                     )}
                   </div>
 
                   <div className="mt-2.5">
-                    <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1">Direct URL Input (Opsyonèl / Optional)</label>
+                    <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1">Direct URL Input (Facultatif / Optional)</label>
                     <input 
                       type="text" 
                       value={bgUrl}
                       onChange={(e) => setBgUrl(e.target.value)}
                       className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-[10px] text-slate-100 transition-all font-mono"
-                      placeholder="Anplis uploade, ou ka kòpye yon URL imaj isit la..."
+                      placeholder="Vous pouvez également coller l’URL d’une image ici..."
                     />
                   </div>
                 </div>
@@ -3419,7 +3329,7 @@ export default function AdminDashboardClient({
                   <div>
                     <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Live Stream Broadcast Settings</label>
                     <p className="text-[10px] text-slate-500 mb-3">
-                      Ajiste epi aktive difizyon dirèk sèvis yo sou sit la.
+                      Configurez et activez la diffusion en direct des cultes sur le site.
                     </p>
                   </div>
                   
@@ -3432,7 +3342,7 @@ export default function AdminDashboardClient({
                           onChange={(e) => setLiveActive(e.target.value)}
                           className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all font-semibold"
                         >
-                          <option value="true">Active (En Dirèk / Live)</option>
+                          <option value="true">Active (En direct / Live)</option>
                           <option value="false">Inactive (Offline)</option>
                         </select>
                       </div>
@@ -3449,13 +3359,13 @@ export default function AdminDashboardClient({
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase">Streamed Event / Evènman ki pral difize</label>
+                      <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase">Streamed Event / Événement à diffuser</label>
                       <select 
                         value={liveStreamEventId}
                         onChange={(e) => setLiveStreamEventId(e.target.value)}
                         className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all font-semibold"
                       >
-                        <option value="default">Default: Sunday Services (Sèvis Dimanch - Otomatik)</option>
+                        <option value="default">Default: Sunday Services (Cultes du dimanche – Automatique)</option>
                         {events.map((evt) => (
                           <option key={evt.id} value={String(evt.id)}>
                             {evt.date} - {language === 'fr_ht' ? evt.title_kreyol : evt.title_english}
@@ -3467,7 +3377,7 @@ export default function AdminDashboardClient({
                     {liveStreamEventId !== 'default' && (
                       <>
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase">Event Thumbnail Preset / Modèl Thumbnail</label>
+                          <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase">Event Thumbnail Preset / Modèle de miniature</label>
                           <select 
                             value={
                               customLiveEventThumbnailUrl === 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=600&auto=format&fit=crop' ? 'wedding' :
@@ -3494,12 +3404,12 @@ export default function AdminDashboardClient({
                             }}
                             className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all font-semibold"
                           >
-                            <option value="none">No Thumbnail / Pa gen Thumbnail</option>
+                            <option value="none">No Thumbnail / Aucune miniature</option>
                             <option value="wedding">💍 Wedding / Maryaj (Preset)</option>
                             <option value="funeral">🕊️ Funeral & Memorial / Fineral (Preset)</option>
-                            <option value="seminar">📚 Seminar & Conference / Seminè (Preset)</option>
+                            <option value="seminar">📚 Seminar & Conference / Séminaire (Preset)</option>
                             <option value="worship">🎸 Special Worship & Concert / Adorasyon (Preset)</option>
-                            <option value="custom">🖼️ Custom Upload / Telechaje Imaj Pa Ou</option>
+                            <option value="custom">🖼️ Custom Upload / Téléverser votre image</option>
                           </select>
                         </div>
 
@@ -3508,7 +3418,7 @@ export default function AdminDashboardClient({
                            'https://images.unsplash.com/photo-1515187029135-18ee286d815b?q=80&w=600&auto=format&fit=crop',
                            'https://images.unsplash.com/photo-1444212477490-ca407925329e?q=80&w=600&auto=format&fit=crop'].includes(customLiveEventThumbnailUrl) && customLiveEventThumbnailUrl !== '') && (
                           <div className="mt-2 w-full">
-                            <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase">Custom Event Thumbnail / Chwazi Thumbnail pa w</label>
+                            <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase">Custom Event Thumbnail / Choisir votre miniature</label>
                             <div 
                               onClick={() => document.getElementById('custom-thumbnail-file-input')?.click()}
                               onPaste={handlePasteCustomThumbnail}
@@ -3536,25 +3446,25 @@ export default function AdminDashboardClient({
                                   </div>
                                   <div className="flex-1 text-left">
                                     <span className="text-xs font-bold text-slate-200 block truncate">Custom_Thumbnail.jpg</span>
-                                    <span className="text-[9px] text-slate-400 block mt-1">Klike pou chanje, trennen yon lòt imaj, oswa kòpye-kole la a</span>
+                                    <span className="text-[9px] text-slate-400 block mt-1">Cliquez pour modifier, faites glisser une autre image ou collez-en une ici</span>
                                   </div>
                                 </div>
                               ) : (
                                 <div className="flex flex-col items-center gap-1 text-slate-400">
                                   <UploadCloud className="w-6 h-6 group-hover:text-amber-400 transition-all" />
-                                  <span className="text-[11px] font-semibold">Trennen oswa Kole Imaj la</span>
+                                  <span className="text-[11px] font-semibold">Glisser ou coller l’image</span>
                                 </div>
                               )}
                             </div>
 
                             <div className="mt-2.5">
-                              <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1">Direct Thumbnail URL / Lyen Imaj Dirèk</label>
+                              <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1">Direct Thumbnail URL / URL directe de l’image</label>
                               <input 
                                 type="text" 
                                 value={customLiveEventThumbnailUrl === 'custom_upload_placeholder' ? '' : customLiveEventThumbnailUrl}
                                 onChange={(e) => setCustomLiveEventThumbnailUrl(e.target.value)}
                                 className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-[10px] text-slate-100 transition-all font-mono"
-                                placeholder="Kòpye yon URL imaj isit la..."
+                                placeholder="Collez l’URL d’une image ici..."
                               />
                             </div>
                           </div>
@@ -3563,7 +3473,7 @@ export default function AdminDashboardClient({
                     )}
                   </div>
                   
-                  <span className="text-[10px] text-slate-500 mt-2 block">Lè li aktif, yon bannière &apos;En Dirèk / Live Now&apos; ak jwè videyo a ap parèt sou paj akèy la.</span>
+                  <span className="text-[10px] text-slate-500 mt-2 block">Lorsqu’elle est activée, une bannière « En direct / Live Now » et le lecteur vidéo apparaissent sur la page d’accueil.</span>
                 </div>
               </div>
 
@@ -3571,7 +3481,7 @@ export default function AdminDashboardClient({
 
               {/* Stripe & Cash Transfer Payment Panel Control */}
               <div className="p-5 rounded-xl bg-slate-950 border border-slate-850 shadow-inner">
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Tithes & Offerings / Tit ak Ofann</label>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Tithes & Offerings / Dîmes et offrandes</label>
                 <div className="flex items-start gap-3 mt-3">
                   <input 
                     type="checkbox" 
@@ -3583,12 +3493,12 @@ export default function AdminDashboardClient({
                   <div className="flex-1">
                     <label htmlFor="hide-stripe-checkbox" className="text-sm text-slate-200 font-semibold cursor-pointer block">
                       {language === 'fr_ht' 
-                        ? "Kache panèl Stripe (Kat Kredi) sou paj Tit ak Ofann nan" 
+                        ? "Masquer le panneau Stripe (carte de crédit) sur la page Dîmes et offrandes"
                         : "Hide Stripe panel (Credit Card form) on the Tithes & Offerings page"}
                     </label>
                     <p className="text-xs text-slate-500 mt-1">
                       {language === 'fr_ht'
-                        ? "Si legliz la pa gen kont Stripe, vire opsyon sa a pou retire fòm kat kredi a epi montre metòd transfè mobil yo (Zelle, CashApp, etc.)."
+                        ? "Si l’église n’a pas de compte Stripe, activez cette option pour masquer le formulaire de carte de crédit et afficher les modes de transfert mobile (Zelle, Cash App, etc.)."
                         : "If the church does not have a Stripe merchant account, turn this on to hide the credit card inputs and prominently display direct mobile transfer options."}
                     </p>
                   </div>
@@ -3605,7 +3515,7 @@ export default function AdminDashboardClient({
                           onChange={(e) => setShowCashapp(e.target.checked ? 'true' : 'false')}
                           className="w-3.5 h-3.5 rounded border-slate-800 bg-slate-900 text-amber-500 focus:ring-0 cursor-pointer"
                         />
-                        {language === 'fr_ht' ? 'Montre' : 'Show'}
+                        {language === 'fr_ht' ? 'Afficher' : 'Show'}
                       </label>
                     </div>
                     <input 
@@ -3627,7 +3537,7 @@ export default function AdminDashboardClient({
                           onChange={(e) => setShowVenmo(e.target.checked ? 'true' : 'false')}
                           className="w-3.5 h-3.5 rounded border-slate-800 bg-slate-900 text-amber-500 focus:ring-0 cursor-pointer"
                         />
-                        {language === 'fr_ht' ? 'Montre' : 'Show'}
+                        {language === 'fr_ht' ? 'Afficher' : 'Show'}
                       </label>
                     </div>
                     <input 
@@ -3649,7 +3559,7 @@ export default function AdminDashboardClient({
                           onChange={(e) => setShowApplePay(e.target.checked ? 'true' : 'false')}
                           className="w-3.5 h-3.5 rounded border-slate-800 bg-slate-900 text-amber-500 focus:ring-0 cursor-pointer"
                         />
-                        {language === 'fr_ht' ? 'Montre' : 'Show'}
+                        {language === 'fr_ht' ? 'Afficher' : 'Show'}
                       </label>
                     </div>
                     <input 
@@ -3666,7 +3576,7 @@ export default function AdminDashboardClient({
                 <div className="grid md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-900/40">
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-[10px] font-bold uppercase text-slate-400">Zelle Recipient Name / Non Benefisyè Zelle</label>
+                      <label className="block text-[10px] font-bold uppercase text-slate-400">Zelle Recipient Name / Nom du bénéficiaire Zelle</label>
                     </div>
                     <input 
                       type="text"
@@ -3678,7 +3588,7 @@ export default function AdminDashboardClient({
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-[10px] font-bold uppercase text-slate-400">Zelle Phone Number or Email / Nimewo Zelle oswa Imèl</label>
+                      <label className="block text-[10px] font-bold uppercase text-slate-400">Zelle Phone Number or Email / Numéro ou adresse courriel Zelle</label>
                     </div>
                     <input 
                       type="text"
@@ -3693,7 +3603,7 @@ export default function AdminDashboardClient({
                 <div className="grid md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-900/40">
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-[10px] font-bold uppercase text-slate-400">Pay to the order of (Check / Money Order) / Fè Chèk oswa Mandat sou non</label>
+                      <label className="block text-[10px] font-bold uppercase text-slate-400">Pay to the order of (Check / Money Order) / Libeller le chèque ou le mandat à l’ordre de</label>
                       <label className="flex items-center gap-1.5 cursor-pointer text-[10px] text-slate-500 hover:text-slate-300 font-semibold select-none">
                         <input 
                           type="checkbox"
@@ -3701,7 +3611,7 @@ export default function AdminDashboardClient({
                           onChange={(e) => setShowCheck(e.target.checked ? 'true' : 'false')}
                           className="w-3.5 h-3.5 rounded border-slate-800 bg-slate-900 text-amber-500 focus:ring-0 cursor-pointer"
                         />
-                        {language === 'fr_ht' ? 'Montre' : 'Show'}
+                        {language === 'fr_ht' ? 'Afficher' : 'Show'}
                       </label>
                     </div>
                     <input 
@@ -3715,7 +3625,7 @@ export default function AdminDashboardClient({
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-[10px] font-bold uppercase text-slate-400">Mailing Address / Adrès pou Chèk ak Mandat-Kat yo</label>
+                      <label className="block text-[10px] font-bold uppercase text-slate-400">Mailing Address / Adresse postale pour les chèques et mandats</label>
                     </div>
                     <input 
                       type="text"
@@ -3734,21 +3644,21 @@ export default function AdminDashboardClient({
                 <div>
                   <h3 className="text-sm font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-2">
                     <BookOpen className="w-4 h-4 text-amber-500" />
-                    <span>Resous Devosyonèl & Kado Espirityèl (Configurable Giveaway)</span>
+                    <span>Ressource de dévotion et cadeau spirituel (Configurable Giveaway)</span>
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Moun k ap vizite sit la epi ki vle abòne pou grandi nan lafwa ap resevwa kado espirityèl sa a (liv elektwonik, plan meditasyon, vèsè, elatriye).
+                    Les visiteurs qui s’abonnent pour grandir dans la foi recevront ce cadeau spirituel (livre numérique, plan de méditation, versets, etc.).
                   </p>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Kado / Resous Tit (Kreyòl)</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Titre du cadeau ou de la ressource (Français)</label>
                     <input 
                       type="text" 
                       value={giftTitleHt} 
                       onChange={(e) => setGiftTitleHt(e.target.value)}
-                      placeholder="e.g. Devosyonèl Parousie 2026"
+                      placeholder="e.g. Livre de dévotion Parousie 2026"
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all"
                     />
                   </div>
@@ -3766,12 +3676,12 @@ export default function AdminDashboardClient({
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Kado / Resous Deskripsyon (Kreyòl)</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Description du cadeau ou de la ressource (Français)</label>
                     <textarea 
                       rows={3}
                       value={giftDescHt} 
                       onChange={(e) => setGiftDescHt(e.target.value)}
-                      placeholder="Mete yon ti deskripsyon tou kout sou benediksyon liv sa a ap pote..."
+                      placeholder="Ajoutez une brève description des bienfaits que ce livre apportera..."
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all resize-none"
                     />
                   </div>
@@ -3788,7 +3698,7 @@ export default function AdminDashboardClient({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1.5">Fichye Kado a (Giveaway E-Book/PDF/File Resource)</label>
+                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1.5">Fichier cadeau (Giveaway E-Book/PDF/File Resource)</label>
                   
                   <div 
                     onClick={() => document.getElementById('gift-file-input')?.click()}
@@ -3817,10 +3727,10 @@ export default function AdminDashboardClient({
                         </div>
                         <div className="flex-1 text-left">
                           <span className="text-xs font-bold text-slate-200 block truncate">
-                            {giftFileUrl.startsWith('data:') ? 'Fichye_Nouvo_Chaje.pdf' : giftFileUrl.split('/').pop()}
+                            {giftFileUrl.startsWith('data:') ? 'Nouveau_Fichier_Téléversé.pdf' : giftFileUrl.split('/').pop()}
                           </span>
                           <span className="text-[10px] text-slate-400 mt-0.5 block">
-                            Trennen yon lòt fichye, oswa kopye-kole la a pou chanje
+                            Faites glisser un autre fichier ou collez-en un ici pour le remplacer
                           </span>
                           {giftFileUrl.startsWith('/') && (
                             <a 
@@ -3830,7 +3740,7 @@ export default function AdminDashboardClient({
                               onClick={(e) => e.stopPropagation()} 
                               className="text-[10px] text-amber-500 hover:underline mt-1 inline-block"
                             >
-                              Gade fichye aktyèl la
+                              Afficher le fichier actuel
                             </a>
                           )}
                         </div>
@@ -3838,15 +3748,15 @@ export default function AdminDashboardClient({
                     ) : (
                       <div className="flex flex-col items-center gap-2 text-slate-400">
                         <UploadCloud className="w-8 h-8 group-hover:text-amber-400 transition-all animate-bounce" />
-                        <span className="text-xs font-bold">Chwazi, Trennen oswa Kole Liv/PDF kado a</span>
-                        <span className="text-[10px] text-slate-500">Sipòte PDF, TXT, oubyen DOCX</span>
+                        <span className="text-xs font-bold">Choisir, glisser ou coller le livre ou PDF cadeau</span>
+                        <span className="text-[10px] text-slate-500">Formats acceptés : PDF, TXT ou DOCX</span>
                       </div>
                     )}
 
                     {giftIsUploading && (
                       <div className="absolute inset-0 bg-slate-950/80 flex items-center justify-center gap-3">
                         <RefreshCw className="w-5 h-5 text-amber-500 animate-spin" />
-                        <span className="text-xs text-slate-300 font-semibold">Ap chaje fichye a nan memwa kach...</span>
+                        <span className="text-xs text-slate-300 font-semibold">Chargement du fichier dans le cache...</span>
                       </div>
                     )}
                   </div>
@@ -3856,16 +3766,16 @@ export default function AdminDashboardClient({
                 <div className="pt-4 border-t border-slate-900">
                   <label className="block text-[10px] font-bold uppercase text-amber-500 mb-1 flex items-center gap-1.5">
                     <Lock className="w-3 h-3" />
-                    <span>Nòt Referans Admin (Private Admin Reference Notes) — Pa vizib sou paj prensipal la</span>
+                    <span>Notes de référence de l’administrateur (Private Admin Reference Notes) — Non visible sur la page principale</span>
                   </label>
                   <p className="text-[10px] text-slate-500 mb-2">
-                    Sove kontèks, lyen sou orijin materyèl sa a, oswa nòt sou kijan li te kreye pou referans ou pita.
+                    Conservez le contexte, les liens vers la source de ce contenu ou des notes sur sa création pour consultation ultérieure.
                   </p>
                   <textarea 
                     rows={4}
                     value={giftAdminNotes} 
                     onChange={(e) => setGiftAdminNotes(e.target.value)}
-                    placeholder="Mete lyen, nòt referans, oswa enfòmasyon sou kreyasyon kado espirityèl sa a la a..."
+                    placeholder="Ajoutez ici des liens, des notes de référence ou des renseignements sur la création de ce cadeau spirituel..."
                     className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all font-mono"
                   />
                 </div>
@@ -3906,7 +3816,7 @@ export default function AdminDashboardClient({
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 font-bold transition-all text-xs cursor-pointer disabled:opacity-50"
                 >
                   <Database className="w-3.5 h-3.5 text-amber-500" />
-                  <span>{isBackingUp ? (language === 'fr_ht' ? 'Y ap sovgade...' : 'Backing up...') : (language === 'fr_ht' ? 'Sove yon Sovgard' : 'Create Site Backup')}</span>
+                  <span>{isBackingUp ? (language === 'fr_ht' ? 'Sauvegarde en cours...' : 'Backing up...') : (language === 'fr_ht' ? 'Créer une sauvegarde du site' : 'Create Site Backup')}</span>
                 </button>
 
                 <button 
@@ -3926,11 +3836,11 @@ export default function AdminDashboardClient({
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-white font-serif">
-                      {language === 'fr_ht' ? 'Sant Konesans & Kontèks Global' : 'Knowledge Base & Global Context'}
+                      {language === 'fr_ht' ? 'Base de connaissances et contexte global' : 'Knowledge Base & Global Context'}
                     </h3>
                     <p className="text-xs text-slate-400 mt-0.5">
                       {language === 'fr_ht' 
-                        ? 'Administre dokiman ak referans ki defini baz konesans egliz la.' 
+                        ? 'Gérez les documents et les références qui alimentent la base de connaissances de l’église.'
                         : 'Manage documents and references that define the church knowledge base.'}
                     </p>
                   </div>
@@ -3944,12 +3854,12 @@ export default function AdminDashboardClient({
                       <div className="flex flex-col gap-0.5 max-w-[75%]">
                         <span className="text-xs font-bold text-slate-200">
                           {language === 'fr_ht' 
-                            ? 'Mete kontni sit la ajou otomatikman' 
+                            ? 'Mettre automatiquement le site à jour'
                             : 'Automate Website Updates'}
                         </span>
                         <span className="text-[10px] text-slate-500 leading-normal">
                           {language === 'fr_ht' 
-                            ? 'Itilize AI Extractor pou mete orè ak enfòmasyon ajou otomatikman lè w ap uploade yon nouvo PDF' 
+                            ? 'Utilisez l’extracteur IA pour actualiser automatiquement les horaires et le contenu lors du téléversement d’un nouveau PDF'
                             : 'Use AI Extractor to automatically refresh schedules and content upon uploading a new PDF'}
                         </span>
                       </div>
@@ -3995,7 +3905,7 @@ export default function AdminDashboardClient({
                           <div className="flex flex-col items-center gap-3">
                             <div className="w-8 h-8 border-3 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
                             <span className="text-xs font-bold text-amber-500">
-                              {language === 'fr_ht' ? 'Y ap trete dokiman...' : 'Processing document...'}
+                              {language === 'fr_ht' ? 'Traitement du document...' : 'Processing document...'}
                             </span>
                           </div>
                         ) : (
@@ -4004,11 +3914,11 @@ export default function AdminDashboardClient({
                               <UploadCloud className="w-8 h-8 animate-pulse" />
                             </div>
                             <span className="text-xs font-bold text-slate-200">
-                              {language === 'fr_ht' ? 'Trennen oswa Kole Dokiman/Lyen yo' : 'Drag & Drop PDF or Paste Links'}
+                              {language === 'fr_ht' ? 'Glissez un PDF ou collez un lien' : 'Drag & Drop PDF or Paste Links'}
                             </span>
                             <span className="text-[10px] text-slate-500 max-w-[200px] leading-relaxed">
                               {language === 'fr_ht' 
-                                ? 'PDF, lyen Google Docs/Sheets, oswa kòpye-kole tèks isit la' 
+                                ? 'PDF, liens Google Docs/Sheets ou texte à coller ici'
                                 : 'Supports local PDFs, Google Docs/Sheets URL pasting'}
                             </span>
                           </>
@@ -4019,7 +3929,7 @@ export default function AdminDashboardClient({
                         onClick={() => document.getElementById('kb-pdf-file-input')?.click()}
                         className="mt-1 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[10px] font-bold text-slate-300 transition-all cursor-pointer"
                       >
-                        {language === 'fr_ht' ? 'Chwazi PDF nan Odinatè' : 'Browse Local PDF'}
+                        {language === 'fr_ht' ? 'Choisir un PDF sur l’ordinateur' : 'Browse Local PDF'}
                       </button>
                     </div>
 
@@ -4027,24 +3937,24 @@ export default function AdminDashboardClient({
                     <form onSubmit={handleManualKbSubmit} className="p-5 rounded-2xl bg-slate-950 border border-slate-850 space-y-4">
                       <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                         <Plus className="w-3.5 h-3.5 text-amber-500" />
-                        <span>{language === 'fr_ht' ? 'Ajoute Manyèlman' : 'Manual Resource Registration'}</span>
+                        <span>{language === 'fr_ht' ? 'Ajouter manuellement' : 'Manual Resource Registration'}</span>
                       </h4>
 
                       <div>
-                        <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1">Resource Title / Tit Resous la</label>
+                        <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1">Resource Title / Titre de la ressource</label>
                         <input 
                           type="text"
                           required
                           value={kbManualTitle}
                           onChange={(e) => setKbManualTitle(e.target.value)}
-                          placeholder="e.g. Istorik Egliz la"
+                          placeholder="e.g. Histoire de l’église"
                           className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-white"
                         />
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1">Resource Type / Kalite</label>
+                          <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1">Resource Type / Type</label>
                           <select 
                             value={kbManualType}
                             onChange={(e) => setKbManualType(e.target.value)}
@@ -4063,13 +3973,13 @@ export default function AdminDashboardClient({
                             className="w-full py-1.5 rounded bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 font-bold text-xs transition-all cursor-pointer shadow flex items-center justify-center gap-1"
                           >
                             <Check className="w-3.5 h-3.5" />
-                            <span>{language === 'fr_ht' ? 'Anrejistre' : 'Register'}</span>
+                            <span>{language === 'fr_ht' ? 'Enregistrer' : 'Register'}</span>
                           </button>
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1">Resource URL / Lyen an</label>
+                        <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1">Resource URL / Lien</label>
                         <input 
                           type="text"
                           required
@@ -4087,7 +3997,7 @@ export default function AdminDashboardClient({
                     <div className="p-4 rounded-2xl bg-slate-950 border border-slate-850 h-full flex flex-col justify-between">
                       <div>
                         <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center justify-between">
-                          <span>{language === 'fr_ht' ? 'Resous ki Sove yo' : 'Registered Knowledge Assets'}</span>
+                          <span>{language === 'fr_ht' ? 'Ressources enregistrées' : 'Registered Knowledge Assets'}</span>
                           <span className="px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-[9px] font-mono text-slate-400">
                             {kbList.length} total
                           </span>
@@ -4096,10 +4006,10 @@ export default function AdminDashboardClient({
                         {kbList.length === 0 ? (
                           <div className="h-[260px] border border-dashed border-slate-850 rounded-xl flex flex-col items-center justify-center text-center p-6 text-slate-500 gap-2">
                             <BookOpen className="w-8 h-8 text-slate-700 animate-pulse" />
-                            <span className="text-xs font-bold">{language === 'fr_ht' ? 'Pa gen resous konesans ankò' : 'No knowledge assets found'}</span>
+                            <span className="text-xs font-bold">{language === 'fr_ht' ? 'Aucune ressource dans la base de connaissances' : 'No knowledge assets found'}</span>
                             <span className="text-[10px] max-w-[200px] leading-relaxed">
                               {language === 'fr_ht' 
-                                ? 'Uploade PDF oswa sove lyen yo pou anrichi kontèks egliz la.' 
+                                ? 'Téléversez des PDF ou enregistrez des liens pour enrichir le contexte de l’église.'
                                 : 'Upload PDFs or link reference materials to feed church context.'}
                             </span>
                           </div>
@@ -4159,7 +4069,7 @@ export default function AdminDashboardClient({
                                         type="button"
                                         onClick={() => handleResetContentFromPdf(item.url, item.title)}
                                         className="p-2 rounded-lg hover:bg-amber-500/10 text-slate-500 hover:text-amber-500 border border-transparent hover:border-amber-500/20 transition-all cursor-pointer"
-                                        title={language === 'fr_ht' ? 'Mete kontni ajou ak PDF sa a' : 'Reset content using this PDF'}
+                                        title={language === 'fr_ht' ? 'Actualiser le contenu à partir de ce PDF' : 'Reset content using this PDF'}
                                       >
                                         <Wand2 className="w-3.5 h-3.5" />
                                       </button>
@@ -4168,7 +4078,7 @@ export default function AdminDashboardClient({
                                       type="button"
                                       onClick={() => handleDeleteKb(item.id)}
                                       className="p-2 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 border border-transparent hover:border-red-500/20 transition-all cursor-pointer"
-                                      title={language === 'fr_ht' ? 'Siprime' : 'Delete'}
+                                      title={language === 'fr_ht' ? 'Supprimer' : 'Delete'}
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
                                     </button>
@@ -4182,10 +4092,10 @@ export default function AdminDashboardClient({
 
                       <div className="mt-4 p-3 rounded-xl bg-slate-900/20 border border-slate-850/60 text-[10px] text-slate-500 leading-relaxed">
                         <span className="font-bold text-slate-400 uppercase block mb-0.5 tracking-wider">
-                          {language === 'fr_ht' ? 'Konsènan Baz Konesans' : 'About the Knowledge Base'}
+                          {language === 'fr_ht' ? 'À propos de la base de connaissances' : 'About the Knowledge Base'}
                         </span>
                         {language === 'fr_ht' 
-                          ? 'Resous sa yo sèvi pou verifye ak anrichi enfòmasyon otomatik yo nan sit la (pastè, oratè, aktivite, elatriye).'
+                          ? 'Ces ressources servent à vérifier et à enrichir les données automatisées du site (pasteurs, intervenants, activités, etc.).'
                           : 'These resources enrich the context used for auto-populating summaries, stream ingestion, and pastor details.'}
                       </div>
                     </div>
@@ -4200,11 +4110,11 @@ export default function AdminDashboardClient({
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
                 <div>
                   <h3 className="text-xl font-bold text-white font-serif">
-                    {language === 'fr_ht' ? 'Konfigire Onglè Paj Akèy' : 'Configure Home Page Tabs'}
+                    {language === 'fr_ht' ? 'Configurer les onglets de la page d’accueil' : 'Configure Home Page Tabs'}
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
                     {language === 'fr_ht' 
-                      ? 'Konfigire kontni dinamik ak imaj pou onglè "Konsènan Nou", "Kwayans", "Ekip", ak "Kisa pou Atann".'
+                      ? 'Configurez le contenu dynamique et les images des onglets « Qui sommes-nous », « Nos croyances », « Notre équipe » et « À quoi vous attendre ».'
                       : 'Configure dynamic content and premium image uploads for "About Us", "Beliefs", "Our Team", and "What to Expect".'}
                   </p>
                 </div>
@@ -4221,7 +4131,7 @@ export default function AdminDashboardClient({
                       : 'text-slate-400 hover:text-white hover:bg-slate-900'
                   }`}
                 >
-                  {language === 'fr_ht' ? 'Konsènan Nou' : 'About Us'}
+                  {language === 'fr_ht' ? 'Qui sommes-nous' : 'About Us'}
                 </button>
                 <button
                   type="button"
@@ -4232,7 +4142,7 @@ export default function AdminDashboardClient({
                       : 'text-slate-400 hover:text-white hover:bg-slate-900'
                   }`}
                 >
-                  {language === 'fr_ht' ? 'Kwayans Nou' : 'Our Beliefs'}
+                  {language === 'fr_ht' ? 'Nos croyances' : 'Our Beliefs'}
                 </button>
                 <button
                   type="button"
@@ -4243,7 +4153,7 @@ export default function AdminDashboardClient({
                       : 'text-slate-400 hover:text-white hover:bg-slate-900'
                   }`}
                 >
-                  {language === 'fr_ht' ? 'Ekip la' : 'Our Team'}
+                  {language === 'fr_ht' ? 'Notre équipe' : 'Our Team'}
                 </button>
                 <button
                   type="button"
@@ -4254,7 +4164,7 @@ export default function AdminDashboardClient({
                       : 'text-slate-400 hover:text-white hover:bg-slate-900'
                   }`}
                 >
-                  {language === 'fr_ht' ? 'Kisa pou Atann' : 'What to Expect'}
+                  {language === 'fr_ht' ? 'À quoi vous attendre' : 'What to Expect'}
                 </button>
               </div>
 
@@ -4274,13 +4184,13 @@ export default function AdminDashboardClient({
                     <div className="border-b border-slate-900 pb-3">
                       <h4 className="text-sm font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
                         <Church className="w-4 h-4" />
-                        <span>{language === 'fr_ht' ? 'Paj "Konsènan Nou" (About Us)' : 'About Us Page Content'}</span>
+                        <span>{language === 'fr_ht' ? 'Page « Qui sommes-nous »' : 'About Us Page Content'}</span>
                       </h4>
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Title (Kreyòl)</label>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Title (Français)</label>
                         <input
                           type="text"
                           required
@@ -4304,7 +4214,7 @@ export default function AdminDashboardClient({
                     <div className="space-y-4">
                       <div className="grid md:grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Paragraph 1 (Kreyòl)</label>
+                          <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Paragraph 1 (Français)</label>
                           <textarea
                             required
                             value={aboutUsP1Ht}
@@ -4325,7 +4235,7 @@ export default function AdminDashboardClient({
 
                       <div className="grid md:grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Paragraph 2 (Kreyòl)</label>
+                          <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Paragraph 2 (Français)</label>
                           <textarea
                             required
                             value={aboutUsP2Ht}
@@ -4377,7 +4287,7 @@ export default function AdminDashboardClient({
                               <span className="text-xs font-bold text-slate-200 block truncate">about_us_bg.jpg</span>
                               <span className="text-[10px] text-slate-400 mt-1 block">
                                 {language === 'fr_ht' 
-                                  ? 'Klike pou chanje, trennen yon lòt imaj, oswa kòpye-kole la a.' 
+                                  ? 'Cliquez pour modifier, faites glisser une autre image ou collez-en une ici.'
                                   : 'Click to choose, drag and drop another image, or paste an image here.'}
                               </span>
                               <input 
@@ -4391,8 +4301,8 @@ export default function AdminDashboardClient({
                         ) : (
                           <div className="flex flex-col items-center gap-2 text-slate-400">
                             <UploadCloud className="w-8 h-8 group-hover:text-amber-400 transition-all animate-bounce" />
-                            <span className="text-xs font-bold">{language === 'fr_ht' ? 'Chwazi, Trennen oswa Kole yon imaj' : 'Select, Drag & Drop, or Paste an Image'}</span>
-                            <span className="text-[10px] text-slate-500">Imaj PNG oswa JPG</span>
+                            <span className="text-xs font-bold">{language === 'fr_ht' ? 'Choisir, glisser ou coller une image' : 'Select, Drag & Drop, or Paste an Image'}</span>
+                            <span className="text-[10px] text-slate-500">Image PNG ou JPG</span>
                           </div>
                         )}
                       </div>
@@ -4406,13 +4316,13 @@ export default function AdminDashboardClient({
                     <div className="border-b border-slate-900 pb-3">
                       <h4 className="text-sm font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
                         <BookOpen className="w-4 h-4" />
-                        <span>{language === 'fr_ht' ? 'Paj "Kwayans Nou Yo" (Our Beliefs)' : 'Our Beliefs Page Content'}</span>
+                        <span>{language === 'fr_ht' ? 'Page « Nos croyances »' : 'Our Beliefs Page Content'}</span>
                       </h4>
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Section Title (Kreyòl)</label>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Section Title (Français)</label>
                         <input
                           type="text"
                           required
@@ -4438,7 +4348,7 @@ export default function AdminDashboardClient({
                       <h5 className="text-xs font-bold text-amber-400/80 uppercase">Kwayans 1 / Belief 1</h5>
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Kreyòl)</label>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Français)</label>
                           <input
                             type="text"
                             required
@@ -4460,7 +4370,7 @@ export default function AdminDashboardClient({
                       </div>
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Kreyòl)</label>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Français)</label>
                           <textarea
                             required
                             value={belief1DescHt}
@@ -4485,7 +4395,7 @@ export default function AdminDashboardClient({
                       <h5 className="text-xs font-bold text-amber-400/80 uppercase">Kwayans 2 / Belief 2</h5>
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Kreyòl)</label>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Français)</label>
                           <input
                             type="text"
                             required
@@ -4507,7 +4417,7 @@ export default function AdminDashboardClient({
                       </div>
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Kreyòl)</label>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Français)</label>
                           <textarea
                             required
                             value={belief2DescHt}
@@ -4532,7 +4442,7 @@ export default function AdminDashboardClient({
                       <h5 className="text-xs font-bold text-amber-400/80 uppercase">Kwayans 3 / Belief 3</h5>
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Kreyòl)</label>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Français)</label>
                           <input
                             type="text"
                             required
@@ -4554,7 +4464,7 @@ export default function AdminDashboardClient({
                       </div>
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Kreyòl)</label>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Français)</label>
                           <textarea
                             required
                             value={belief3DescHt}
@@ -4579,7 +4489,7 @@ export default function AdminDashboardClient({
                       <h5 className="text-xs font-bold text-amber-400/80 uppercase">Kwayans 4 / Belief 4</h5>
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Kreyòl)</label>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Français)</label>
                           <input
                             type="text"
                             required
@@ -4601,7 +4511,7 @@ export default function AdminDashboardClient({
                       </div>
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Kreyòl)</label>
+                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Français)</label>
                           <textarea
                             required
                             value={belief4DescHt}
@@ -4629,13 +4539,13 @@ export default function AdminDashboardClient({
                     <div className="border-b border-slate-900 pb-3">
                       <h4 className="text-sm font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
                         <Users className="w-4 h-4" />
-                        <span>{language === 'fr_ht' ? 'Paj "Ekip Nou An" (Our Team)' : 'Our Team Page Content'}</span>
+                        <span>{language === 'fr_ht' ? 'Page « Notre équipe »' : 'Our Team Page Content'}</span>
                       </h4>
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Section Title (Kreyòl)</label>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Section Title (Français)</label>
                         <input
                           type="text"
                           required
@@ -4673,7 +4583,7 @@ export default function AdminDashboardClient({
                             <div className="flex items-center gap-1.5 z-10">
                               <button
                                 type="button"
-                                title={language === 'fr_ht' ? 'Moute' : 'Move Up'}
+                                title={language === 'fr_ht' ? 'Monter' : 'Move Up'}
                                 onClick={() => handleMoveTeamMember(index, 'up')}
                                 disabled={index === 0}
                                 className="p-1 rounded bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 text-slate-400 hover:text-amber-400 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:border-slate-800 disabled:hover:bg-slate-950 transition-all cursor-pointer"
@@ -4682,7 +4592,7 @@ export default function AdminDashboardClient({
                               </button>
                               <button
                                 type="button"
-                                title={language === 'fr_ht' ? 'Desann' : 'Move Down'}
+                                title={language === 'fr_ht' ? 'Descendre' : 'Move Down'}
                                 onClick={() => handleMoveTeamMember(index, 'down')}
                                 disabled={index === teamMembers.length - 1}
                                 className="p-1 rounded bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 text-slate-400 hover:text-amber-400 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:border-slate-800 disabled:hover:bg-slate-950 transition-all cursor-pointer"
@@ -4691,7 +4601,7 @@ export default function AdminDashboardClient({
                               </button>
                               <button
                                 type="button"
-                                title={language === 'fr_ht' ? 'Siprime' : 'Delete'}
+                                title={language === 'fr_ht' ? 'Supprimer' : 'Delete'}
                                 onClick={() => handleDeleteTeamMember(index)}
                                 className="p-1 rounded bg-slate-950 border border-rose-950 hover:border-rose-500 hover:bg-rose-950/20 text-rose-400/80 hover:text-rose-400 transition-all cursor-pointer"
                               >
@@ -4714,7 +4624,7 @@ export default function AdminDashboardClient({
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Email / Imel</label>
+                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Email / Adresse courriel</label>
                                   <input
                                     type="email"
                                     required
@@ -4727,7 +4637,7 @@ export default function AdminDashboardClient({
 
                               <div className="grid md:grid-cols-2 gap-4">
                                 <div>
-                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Role / Ròl (Kreyòl)</label>
+                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Rôle (français)</label>
                                   <input
                                     type="text"
                                     required
@@ -4750,7 +4660,7 @@ export default function AdminDashboardClient({
 
                               <div className="grid md:grid-cols-2 gap-4">
                                 <div>
-                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bio / Biyografi (Kreyòl)</label>
+                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Biographie (français)</label>
                                   <textarea
                                     required
                                     value={member.bio_ht}
@@ -4802,14 +4712,14 @@ export default function AdminDashboardClient({
                                       {member.name ? `${member.name.replace(/\s+/g, '_')}.jpg` : `Member_${index + 1}.jpg`}
                                     </span>
                                     <span className="text-[9px] text-slate-400 block leading-tight">
-                                      {language === 'fr_ht' ? 'Trennen, klike oswa kole pou chanje' : 'Drag, click or paste to change'}
+                                      {language === 'fr_ht' ? 'Glissez, cliquez ou collez pour remplacer' : 'Drag, click or paste to change'}
                                     </span>
                                   </div>
                                 ) : (
                                   <div className="flex flex-col items-center gap-1 text-slate-400 text-center">
                                     <UploadCloud className="w-6 h-6 group-hover/drop:text-amber-400 transition-all animate-bounce" />
                                     <span className="text-[10px] font-bold">
-                                      {language === 'fr_ht' ? 'Chwazi oswa Kole Foto' : 'Choose or Paste Photo'}
+                                      {language === 'fr_ht' ? 'Choisir ou coller une photo' : 'Choose or Paste Photo'}
                                     </span>
                                     <span className="text-[9px] text-slate-500">Imaj Kare (PNG/JPG)</span>
                                   </div>
@@ -4829,7 +4739,7 @@ export default function AdminDashboardClient({
                         className="px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 hover:border-amber-500/50 hover:bg-amber-500/20 text-amber-400 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-lg hover:shadow-amber-500/5 hover:-translate-y-0.5"
                       >
                         <Plus className="w-4 h-4" />
-                        <span>{language === 'fr_ht' ? 'Ajoute yon Manm Ekip' : 'Add Team Member'}</span>
+                        <span>{language === 'fr_ht' ? 'Ajouter un membre à l’équipe' : 'Add Team Member'}</span>
                       </button>
                     </div>
                   </div>
@@ -4841,13 +4751,13 @@ export default function AdminDashboardClient({
                     <div className="border-b border-slate-900 pb-3">
                       <h4 className="text-sm font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
                         <Heart className="w-4 h-4" />
-                        <span>{language === 'fr_ht' ? 'Paj "Kisa pou Atann" (What to Expect)' : 'What to Expect Page Content'}</span>
+                        <span>{language === 'fr_ht' ? 'Page « À quoi vous attendre »' : 'What to Expect Page Content'}</span>
                       </h4>
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Section Title (Kreyòl)</label>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Section Title (Français)</label>
                         <input
                           type="text"
                           required
@@ -4870,7 +4780,7 @@ export default function AdminDashboardClient({
 
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Description (Kreyòl)</label>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Description (Français)</label>
                         <textarea
                           required
                           value={expectP1Ht}
@@ -4891,13 +4801,13 @@ export default function AdminDashboardClient({
 
                     {/* Bullet Points */}
                     <div className="p-4 rounded-lg bg-slate-900/30 border border-slate-850 space-y-4">
-                      <h5 className="text-xs font-bold text-amber-400/80 uppercase">Pwen kle yo / Bullet Points (3 items)</h5>
+                      <h5 className="text-xs font-bold text-amber-400/80 uppercase">Points clés / Bullet Points (3 items)</h5>
                       
                       <div className="space-y-4">
                         {/* Bullet 1 */}
                         <div className="grid md:grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bullet 1 (Kreyòl)</label>
+                            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bullet 1 (Français)</label>
                             <input
                               type="text"
                               required
@@ -4921,7 +4831,7 @@ export default function AdminDashboardClient({
                         {/* Bullet 2 */}
                         <div className="grid md:grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bullet 2 (Kreyòl)</label>
+                            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bullet 2 (Français)</label>
                             <input
                               type="text"
                               required
@@ -4945,7 +4855,7 @@ export default function AdminDashboardClient({
                         {/* Bullet 3 */}
                         <div className="grid md:grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bullet 3 (Kreyòl)</label>
+                            <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bullet 3 (Français)</label>
                             <input
                               type="text"
                               required
@@ -5000,7 +4910,7 @@ export default function AdminDashboardClient({
                               <span className="text-xs font-bold text-slate-200 block truncate">expect_bg.jpg</span>
                               <span className="text-[10px] text-slate-400 mt-1 block">
                                 {language === 'fr_ht' 
-                                  ? 'Klike pou chanje, trennen yon lòt imaj, oswa kòpye-kole la a.' 
+                                  ? 'Cliquez pour modifier, faites glisser une autre image ou collez-en une ici.'
                                   : 'Click to choose, drag and drop another image, or paste an image here.'}
                               </span>
                               <input 
@@ -5014,8 +4924,8 @@ export default function AdminDashboardClient({
                         ) : (
                           <div className="flex flex-col items-center gap-2 text-slate-400">
                             <UploadCloud className="w-8 h-8 group-hover:text-amber-400 transition-all animate-bounce" />
-                            <span className="text-xs font-bold">{language === 'fr_ht' ? 'Chwazi, Trennen oswa Kole yon imaj' : 'Select, Drag & Drop, or Paste an Image'}</span>
-                            <span className="text-[10px] text-slate-500">Imaj PNG oswa JPG</span>
+                            <span className="text-xs font-bold">{language === 'fr_ht' ? 'Choisir, glisser ou coller une image' : 'Select, Drag & Drop, or Paste an Image'}</span>
+                            <span className="text-[10px] text-slate-500">Image PNG ou JPG</span>
                           </div>
                         )}
                       </div>
@@ -5030,7 +4940,7 @@ export default function AdminDashboardClient({
                     className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl transition-all shadow-lg shadow-amber-500/10 flex items-center gap-2 text-xs"
                   >
                     <Save className="w-4 h-4" />
-                    <span>{language === 'fr_ht' ? 'Sove Tout Chanjman yo' : 'Save All Changes'}</span>
+                    <span>{language === 'fr_ht' ? 'Enregistrer toutes les modifications' : 'Save All Changes'}</span>
                   </button>
                 </div>
               </form>
@@ -5055,12 +4965,12 @@ export default function AdminDashboardClient({
               {/* Form to Add or Edit */}
               <form onSubmit={handleSaveSchedule} className="p-5 rounded-xl bg-slate-950 border border-slate-850 space-y-4">
                 <h4 className="text-xs font-bold uppercase text-amber-400">
-                  {editingScheduleId ? 'Modify Schedule / Modifye' : 'Create New Schedule / Ajoute Nouvo'}
+                  {editingScheduleId ? 'Modify Schedule / Modifier' : 'Create New Schedule / Ajouter un horaire'}
                 </h4>
                 
                 <div className="grid md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Day / Jou (Kreyòl)</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Jour (français)</label>
                     <input 
                       type="text" required placeholder="e.g. Dimanch" value={schedDayHt} onChange={e => setSchedDayHt(e.target.value)}
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
@@ -5074,7 +4984,7 @@ export default function AdminDashboardClient({
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Time / Lè</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Heure</label>
                     <input 
                       type="text" required placeholder="e.g. 9:00 AM - 11:30 AM" value={schedTime} onChange={e => setSchedTime(e.target.value)}
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
@@ -5084,7 +4994,7 @@ export default function AdminDashboardClient({
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Kreyòl)</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Français)</label>
                     <input 
                       type="text" required value={schedTitleHt} onChange={e => setSchedTitleHt(e.target.value)}
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
@@ -5101,7 +5011,7 @@ export default function AdminDashboardClient({
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Kreyòl)</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Français)</label>
                     <textarea 
                       rows={2} value={schedDescHt} onChange={e => setSchedDescHt(e.target.value)}
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-none"
@@ -5120,7 +5030,7 @@ export default function AdminDashboardClient({
                 {/* Visual Image Dropzone / Clipboard Paste / File Browse */}
                 <div className="space-y-2">
                   <label className="block text-[10px] font-bold uppercase text-slate-500">
-                    {language === 'fr_ht' ? 'Imaj pou Orè Sèvis la (Fakiltatif)' : 'Service Schedule Image (Optional)'}
+                    {language === 'fr_ht' ? 'Image de l’horaire des cultes (facultative)' : 'Service Schedule Image (Optional)'}
                   </label>
                   
                   <div 
@@ -5150,11 +5060,11 @@ export default function AdminDashboardClient({
                         </div>
                         <div className="flex-1 text-left">
                           <span className="text-xs font-bold text-slate-200 block truncate">
-                            {language === 'fr_ht' ? 'Imaj_Aktiv.png' : 'Active_Image.png'}
+                            {language === 'fr_ht' ? 'Image_Active.png' : 'Active_Image.png'}
                           </span>
                           <span className="text-[10px] text-slate-400 mt-1 block">
                             {language === 'fr_ht' 
-                              ? 'Klike pou chanje, trennen yon lòt imaj, oswa kòpye-kole la a' 
+                              ? 'Cliquez pour modifier, faites glisser une autre image ou collez-en une ici'
                               : 'Click to change, drag another image, or copy-paste here'}
                           </span>
                         </div>
@@ -5165,7 +5075,7 @@ export default function AdminDashboardClient({
                             setSchedImg('');
                           }}
                           className="p-1.5 rounded-lg bg-slate-950 border border-slate-850 hover:bg-rose-950 hover:border-rose-900 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
-                          title={language === 'fr_ht' ? 'Retire imaj' : 'Remove image'}
+                          title={language === 'fr_ht' ? 'Supprimer l’image' : 'Remove image'}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -5175,12 +5085,12 @@ export default function AdminDashboardClient({
                         <UploadCloud className="w-7 h-7 group-hover:text-amber-400 transition-all animate-bounce" />
                         <span className="text-xs font-bold text-center">
                           {language === 'fr_ht' 
-                            ? 'Chwazi, Trennen oswa Kole yon Imaj' 
+                            ? 'Choisir, glisser ou coller une image'
                             : 'Browse, Drag, or Paste an Image'}
                         </span>
                         <span className="text-[10px] text-slate-500">
                           {language === 'fr_ht' 
-                            ? 'Sipòte PNG, JPG (Y ap konprime otomatikman)' 
+                            ? 'Formats PNG et JPG acceptés (compression automatique)'
                             : 'Supports PNG, JPG (Will be auto-compressed)'}
                         </span>
                       </div>
@@ -5189,14 +5099,14 @@ export default function AdminDashboardClient({
 
                   <div className="mt-2">
                     <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1">
-                      {language === 'fr_ht' ? 'URL Dirèk pou Imaj (Opsyonèl)' : 'Direct URL Input (Optional)'}
+                      {language === 'fr_ht' ? 'URL directe de l’image (facultative)' : 'Direct URL Input (Optional)'}
                     </label>
                     <input 
                       type="text" 
                       value={schedImg}
                       onChange={(e) => setSchedImg(e.target.value)}
                       className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-[10px] text-slate-100 transition-all font-mono"
-                      placeholder={language === 'fr_ht' ? "Oswa kòpye yon URL imaj isit la..." : "Or paste any image URL here..."}
+                      placeholder={language === 'fr_ht' ? "Ou collez l’URL d’une image ici..." : "Or paste any image URL here..."}
                     />
                   </div>
                 </div>
@@ -5208,12 +5118,12 @@ export default function AdminDashboardClient({
                     <div>
                       <p className="font-bold text-rose-400">
                         {language === 'fr_ht' 
-                          ? 'Atansyon: gen konfli nan lè a!' 
+                          ? 'Attention : conflit d’horaire !'
                           : 'Warning: cannot schedule 2 live stream events at the same time'}
                       </p>
                       <p className="text-[10px] text-rose-300/80 mt-0.5">
                         {language === 'fr_ht'
-                          ? `Orè sa a konflije avèk "${getScheduleConflict()?.title_kreyol}" (${getScheduleConflict()?.time})`
+                          ? `Cet horaire entre en conflit avec "${getScheduleConflict()?.title_kreyol}" (${getScheduleConflict()?.time})`
                           : `This conflicts with "${getScheduleConflict()?.title_english}" (${getScheduleConflict()?.time})`}
                       </p>
                     </div>
@@ -5238,7 +5148,7 @@ export default function AdminDashboardClient({
                       )}
                     </div>
                     <span className="text-lg font-bold text-purple-400 drop-shadow-[0_0_6px_rgba(168,85,247,0.3)] font-sans tracking-wide">
-                      {language === 'fr_ht' ? 'Difizyon an Dirèk' : 'Live Stream'}
+                      {language === 'fr_ht' ? 'Diffusion en direct' : 'Live Stream'}
                     </span>
                   </div>
 
@@ -5280,7 +5190,7 @@ export default function AdminDashboardClient({
                           {sched.is_livestreamed === 1 && (
                             <span className="text-[10px] font-bold text-purple-400 bg-purple-950/40 border border-purple-800/60 px-2 py-0.5 rounded shadow-[0_0_8px_rgba(168,85,247,0.2)] flex items-center gap-1">
                               <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse shrink-0" />
-                              {language === 'fr_ht' ? 'An Dirèk' : 'Live Stream'}
+                              {language === 'fr_ht' ? 'En direct' : 'Live Stream'}
                             </span>
                           )}
                         </div>
@@ -5329,7 +5239,7 @@ export default function AdminDashboardClient({
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Project Name (Kreyòl)</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Project Name (Français)</label>
                     <input 
                       type="text" required value={missTitleHt} onChange={e => setPMissTitleHt(e.target.value)}
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
@@ -5346,7 +5256,7 @@ export default function AdminDashboardClient({
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Kreyòl)</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Français)</label>
                     <textarea 
                       rows={3} value={missDescHt} onChange={e => setPMissDescHt(e.target.value)}
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-none"
@@ -5364,7 +5274,7 @@ export default function AdminDashboardClient({
                 {/* Visual Image Dropzone / Clipboard Paste / File Browse */}
                 <div className="space-y-2">
                   <label className="block text-[10px] font-bold uppercase text-slate-500">
-                    {language === 'fr_ht' ? 'Imaj pou Misyon an (Fakiltatif)' : 'Mission Image (Optional)'}
+                    {language === 'fr_ht' ? 'Image de la mission (facultative)' : 'Mission Image (Optional)'}
                   </label>
                   
                   <div 
@@ -5394,11 +5304,11 @@ export default function AdminDashboardClient({
                         </div>
                         <div className="flex-1 text-left">
                           <span className="text-xs font-bold text-slate-200 block truncate">
-                            {language === 'fr_ht' ? 'Imaj_Misyon.png' : 'Mission_Image.png'}
+                            {language === 'fr_ht' ? 'Image_Mission.png' : 'Mission_Image.png'}
                           </span>
                           <span className="text-[10px] text-slate-400 mt-1 block">
                             {language === 'fr_ht' 
-                              ? 'Klike pou chanje, trennen yon lòt imaj, oswa kòpye-kole la a' 
+                              ? 'Cliquez pour modifier, faites glisser une autre image ou collez-en une ici'
                               : 'Click to change, drag another image, or copy-paste here'}
                           </span>
                         </div>
@@ -5409,7 +5319,7 @@ export default function AdminDashboardClient({
                             setPMissImg('');
                           }}
                           className="p-1.5 rounded-lg bg-slate-950 border border-slate-850 hover:bg-rose-950 hover:border-rose-900 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
-                          title={language === 'fr_ht' ? 'Retire imaj' : 'Remove image'}
+                          title={language === 'fr_ht' ? 'Supprimer l’image' : 'Remove image'}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -5419,12 +5329,12 @@ export default function AdminDashboardClient({
                         <UploadCloud className="w-7 h-7 group-hover:text-amber-400 transition-all animate-bounce" />
                         <span className="text-xs font-bold text-center">
                           {language === 'fr_ht' 
-                            ? 'Chwazi, Trennen oswa Kole yon Imaj' 
+                            ? 'Choisir, glisser ou coller une image'
                             : 'Browse, Drag, or Paste an Image'}
                         </span>
                         <span className="text-[10px] text-slate-500">
                           {language === 'fr_ht' 
-                            ? 'Sipòte PNG, JPG (Y ap konprime otomatikman)' 
+                            ? 'Formats PNG et JPG acceptés (compression automatique)'
                             : 'Supports PNG, JPG (Will be auto-compressed)'}
                         </span>
                       </div>
@@ -5433,14 +5343,14 @@ export default function AdminDashboardClient({
 
                   <div className="mt-2">
                     <label className="block text-[9px] font-bold uppercase text-slate-500 mb-1">
-                      {language === 'fr_ht' ? 'URL Dirèk pou Imaj (Opsyonèl)' : 'Direct URL Input (Optional)'}
+                      {language === 'fr_ht' ? 'URL directe de l’image (facultative)' : 'Direct URL Input (Optional)'}
                     </label>
                     <input 
                       type="text" 
                       value={missImg}
                       onChange={(e) => setPMissImg(e.target.value)}
                       className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-[10px] text-slate-100 transition-all font-mono"
-                      placeholder={language === 'fr_ht' ? "Oswa kòpye yon URL imaj isit la..." : "Or paste any image URL here..."}
+                      placeholder={language === 'fr_ht' ? "Ou collez l’URL d’une image ici..." : "Or paste any image URL here..."}
                     />
                   </div>
                 </div>
@@ -5498,14 +5408,14 @@ export default function AdminDashboardClient({
                 section="haiti_missions"
                 exportSlug="haiti_missions"
                 language={language === 'fr_ht' ? 'fr_ht' : 'en'}
-                listTitle={language === 'en' ? 'Haiti Missions Export' : 'Ekspòtasyon Misyon Ayiti'}
+                listTitle={language === 'en' ? 'Haiti Missions Export' : 'Exportation des missions en Haïti'}
                 listDescription={
                   language === 'en'
                     ? 'Download an Excel-compatible spreadsheet you can open in Excel or Google Sheets.'
-                    : 'Telechaje yon fichye Excel ou ka louvri nan Excel oswa Google Sheets.'
+                    : 'Téléchargez un fichier compatible avec Excel ou Google Sheets.'
                 }
                 recordCount={missions.length}
-                emptyMessage={language === 'en' ? 'No Haiti mission projects to export yet.' : 'Pa gen pwojè misyon Ayiti pou ekspòte ankò.'}
+                emptyMessage={language === 'en' ? 'No Haiti mission projects to export yet.' : 'Aucun projet missionnaire en Haïti à exporter pour le moment.'}
               />
             </div>
           )}
@@ -5530,7 +5440,7 @@ export default function AdminDashboardClient({
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Project Name (Kreyòl)</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Project Name (Français)</label>
                     <input 
                       type="text" required value={outrTitleHt} onChange={e => setOutrTitleHt(e.target.value)}
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
@@ -5547,7 +5457,7 @@ export default function AdminDashboardClient({
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Kreyòl)</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Français)</label>
                     <textarea 
                       rows={2} value={outrDescHt} onChange={e => setOutrDescHt(e.target.value)}
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-none"
@@ -5564,9 +5474,9 @@ export default function AdminDashboardClient({
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Schedule Info (Kreyòl)</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Schedule Info (Français)</label>
                     <input 
-                      type="text" required placeholder="e.g. Chak Samdi, 8:00 AM" value={outrSchedHt} onChange={e => setOutrSchedHt(e.target.value)}
+                      type="text" required placeholder="p. ex. Chaque samedi, 8 h" value={outrSchedHt} onChange={e => setOutrSchedHt(e.target.value)}
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
                     />
                   </div>
@@ -5615,14 +5525,14 @@ export default function AdminDashboardClient({
                 section="local_outreach"
                 exportSlug="local_outreach"
                 language={language === 'fr_ht' ? 'fr_ht' : 'en'}
-                listTitle={language === 'en' ? 'Local Outreach Export' : 'Ekspòtasyon Evanjelizasyon Lokal'}
+                listTitle={language === 'en' ? 'Local Outreach Export' : 'Exportation de l’action communautaire locale'}
                 listDescription={
                   language === 'en'
                     ? 'Download an Excel-compatible spreadsheet you can open in Excel or Google Sheets.'
-                    : 'Telechaje yon fichye Excel ou ka louvri nan Excel oswa Google Sheets.'
+                    : 'Téléchargez un fichier compatible avec Excel ou Google Sheets.'
                 }
                 recordCount={outreaches.length}
-                emptyMessage={language === 'en' ? 'No local outreach projects to export yet.' : 'Pa gen pwojè evanjelizasyon lokal pou ekspòte ankò.'}
+                emptyMessage={language === 'en' ? 'No local outreach projects to export yet.' : 'Aucun projet d’action communautaire locale à exporter pour le moment.'}
               />
             </div>
           )}
@@ -5647,7 +5557,7 @@ export default function AdminDashboardClient({
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Event Title (Kreyòl)</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Event Title (Français)</label>
                     <input 
                       type="text" required value={evTitleHt} onChange={e => setEvTitleHt(e.target.value)}
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
@@ -5678,7 +5588,7 @@ export default function AdminDashboardClient({
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Location (Kreyòl)</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Location (Français)</label>
                     <input 
                       type="text" required value={evLocHt} onChange={e => setEvLocHt(e.target.value)}
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
@@ -5695,7 +5605,7 @@ export default function AdminDashboardClient({
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Kreyòl)</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Français)</label>
                     <textarea 
                       rows={2} value={evDescHt} onChange={e => setEvDescHt(e.target.value)}
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-none"
@@ -5746,14 +5656,14 @@ export default function AdminDashboardClient({
                 section="events_signups"
                 exportSlug="events"
                 language={language === 'fr_ht' ? 'fr_ht' : 'en'}
-                listTitle={language === 'en' ? 'Events Export' : 'Ekspòtasyon Evènman yo'}
+                listTitle={language === 'en' ? 'Events Export' : 'Exportation des événements'}
                 listDescription={
                   language === 'en'
                     ? 'Download an Excel-compatible spreadsheet you can open in Excel or Google Sheets.'
-                    : 'Telechaje yon fichye Excel ou ka louvri nan Excel oswa Google Sheets.'
+                    : 'Téléchargez un fichier compatible avec Excel ou Google Sheets.'
                 }
                 recordCount={events.length}
-                emptyMessage={language === 'en' ? 'No events to export yet.' : 'Pa gen evènman pou ekspòte ankò.'}
+                emptyMessage={language === 'en' ? 'No events to export yet.' : 'Aucun événement à exporter pour le moment.'}
               />
             </div>
           )}
@@ -5769,20 +5679,20 @@ export default function AdminDashboardClient({
                 section="events_signups"
                 exportSlug="event_registrations"
                 language={language === 'fr_ht' ? 'fr_ht' : 'en'}
-                listTitle={language === 'en' ? 'Event Registrations Export' : 'Ekspòtasyon Enskripsyon Evènman'}
+                listTitle={language === 'en' ? 'Event Registrations Export' : 'Exportation des inscriptions aux événements'}
                 listDescription={
                   language === 'en'
                     ? 'Download an Excel-compatible spreadsheet you can open in Excel or Google Sheets.'
-                    : 'Telechaje yon fichye Excel ou ka louvri nan Excel oswa Google Sheets.'
+                    : 'Téléchargez un fichier compatible avec Excel ou Google Sheets.'
                 }
                 recordCount={registrations.length}
-                emptyMessage={language === 'en' ? 'No event registrations to export yet.' : 'Pa gen enskripsyon evènman pou ekspòte ankò.'}
+                emptyMessage={language === 'en' ? 'No event registrations to export yet.' : 'Aucune inscription à un événement à exporter pour le moment.'}
                 showContactConfig={false}
               />
 
               {registrations.length === 0 ? (
                 <div className="text-center py-12 text-slate-500 text-sm">
-                  Pa gen moun ki enskri pou evènman yo ankò. / No registrations yet.
+                  Aucune inscription à un événement pour le moment. / No registrations yet.
                 </div>
               ) : (
                 <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/20">
@@ -5852,7 +5762,7 @@ export default function AdminDashboardClient({
                     <span>YouTube Channel Auto-Synchronization / Otomatik Senkronizasyon</span>
                   </h4>
                   <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                    Etabli URL kanal ou a pou otomatikman enpòte tout videyo difizyon an dirèk (Live streams) nan bibliyotèk sit la san ou pa bezwen mete yo manyèlman yonn pa yonn.
+                    Indiquez l’URL de votre chaîne pour importer automatiquement toutes les diffusions en direct dans la bibliothèque du site, sans devoir les ajouter une à une.
                   </p>
                 </div>
 
@@ -5877,7 +5787,7 @@ export default function AdminDashboardClient({
                     {isSyncing ? (
                       <>
                         <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span>Y ap Senkronize...</span>
+                        <span>Synchronisation en cours...</span>
                       </>
                     ) : (
                       <>
@@ -5889,19 +5799,19 @@ export default function AdminDashboardClient({
                 </div>
                 
                 <span className="text-[10px] text-slate-500 block">
-                  Enpòtatè a pral vizite paj la, rekipere tout videyo difizyon yo epi sove oswa mete ajou yo dirèkteman nan baz done SQLite la, asire dat ak non pastè yo kòrèk.
+                  L’outil parcourra la page, récupérera toutes les vidéos diffusées en direct et les enregistrera ou les mettra à jour dans la base SQLite, en vérifiant les dates et les noms des pasteurs.
                 </span>
               </div>
 
               {/* Form */}
               <form onSubmit={handleSaveSermon} className="p-5 rounded-2xl bg-slate-950/40 border border-slate-850 space-y-4">
                 <h4 className="text-sm font-bold text-amber-400 uppercase tracking-wider">
-                  {editingSermonId ? (language === 'fr_ht' ? 'Modifye Mesaj' : 'Edit Sermon') : (language === 'fr_ht' ? 'Ajoute yon Nouvo Mesaj' : 'Add a New Sermon')}
+                  {editingSermonId ? (language === 'fr_ht' ? 'Modifier le sermon' : 'Edit Sermon') : (language === 'fr_ht' ? 'Ajouter un sermon' : 'Add a New Sermon')}
                 </h4>
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Kreyòl)</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Français)</label>
                     <input 
                       type="text" required value={sermTitleHt} onChange={e => setSermTitleHt(e.target.value)}
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
@@ -5943,7 +5853,7 @@ export default function AdminDashboardClient({
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Kreyòl)</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Français)</label>
                     <textarea 
                       rows={2} value={sermDescHt} onChange={e => setSermDescHt(e.target.value)}
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-none"
@@ -6018,10 +5928,10 @@ export default function AdminDashboardClient({
                 <div>
                   <h3 className="text-base font-bold text-white flex items-center gap-2">
                     <Users className="w-5 h-5 text-amber-500" />
-                    <span>Moun ki Abòne yo (Subscribers List)</span>
+                    <span>Abonnés (Subscribers List)</span>
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
-                    Lis moun ki abòne pou resevwa kado espirityèl la, mesaj devosyonèl, oswa lòt enfòmasyon nan men legliz la.
+                    Liste des personnes abonnées pour recevoir le cadeau spirituel, les messages de dévotion ou d’autres nouvelles de l’église.
                   </p>
                 </div>
                 
@@ -6033,12 +5943,12 @@ export default function AdminDashboardClient({
                     {copiedSubscribers ? (
                       <>
                         <Check className="w-3.5 h-3.5 text-emerald-500" />
-                        <span className="text-emerald-400">Tout Imel Kopye!</span>
+                        <span className="text-emerald-400">Toutes les adresses courriel ont été copiées !</span>
                       </>
                     ) : (
                       <>
                         <Mail className="w-3.5 h-3.5 text-amber-500" />
-                        <span>Kopye Tout Imel</span>
+                        <span>Copier toutes les adresses courriel</span>
                       </>
                     )}
                   </button>
@@ -6049,11 +5959,11 @@ export default function AdminDashboardClient({
                 section="ebook_subscribers"
                 exportSlug="ebook_subscribers"
                 language={language === 'fr_ht' ? 'fr_ht' : 'en'}
-                listTitle={language === 'en' ? 'Ebook Subscribers Export' : 'Ekspòtasyon Abòne Ebook'}
+                listTitle={language === 'en' ? 'Ebook Subscribers Export' : 'Exportation des abonnés au livre numérique'}
                 listDescription={
                   language === 'en'
                     ? 'Download an Excel-compatible spreadsheet you can open in Excel or Google Sheets.'
-                    : 'Telechaje yon fichye Excel ou ka louvri nan Excel oswa Google Sheets.'
+                    : 'Téléchargez un fichier compatible avec Excel ou Google Sheets.'
                 }
                 recordCount={subscriberList.length}
                 emptyMessage={t.adminSubscribersEmpty}
@@ -6063,7 +5973,7 @@ export default function AdminDashboardClient({
               <div className="relative">
                 <input
                   type="text"
-                  placeholder={language === 'fr_ht' ? 'Chache pa non, imel oswa telefòn...' : 'Search by name, email, or phone...'}
+                  placeholder={language === 'fr_ht' ? 'Rechercher par nom, adresse courriel ou téléphone...' : 'Search by name, email, or phone...'}
                   value={subSearch}
                   onChange={(e) => setSubSearch(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/50 border border-slate-850 focus:border-amber-500 focus:outline-none text-xs text-slate-200 transition-all"
@@ -6090,7 +6000,7 @@ export default function AdminDashboardClient({
               }).length === 0 ? (
                 <div className="p-12 text-center rounded-2xl bg-slate-950/20 border border-slate-850">
                   <p className="text-sm text-slate-500">
-                    {language === 'fr_ht' ? 'Pa gen okenn abòne ki koresponn ak rechèch sa a.' : 'No subscribers match this search.'}
+                    {language === 'fr_ht' ? 'Aucun abonné ne correspond à cette recherche.' : 'No subscribers match this search.'}
                   </p>
                 </div>
               ) : (
@@ -6099,10 +6009,10 @@ export default function AdminDashboardClient({
                     <thead>
                       <tr className="border-b border-slate-850 bg-slate-950/40">
                         <th className="p-4 text-xs font-bold uppercase tracking-wider text-amber-500">Non (Name)</th>
-                        <th className="p-4 text-xs font-bold uppercase tracking-wider text-amber-500">Imel (Email)</th>
-                        <th className="p-4 text-xs font-bold uppercase tracking-wider text-amber-500">Telefòn (Phone)</th>
-                        <th className="p-4 text-xs font-bold uppercase tracking-wider text-amber-500">Dat (Date Subscribed)</th>
-                        <th className="p-4 text-xs font-bold uppercase tracking-wider text-amber-500 text-right">Aksyon (Action)</th>
+                        <th className="p-4 text-xs font-bold uppercase tracking-wider text-amber-500">Adresse courriel (Email)</th>
+                        <th className="p-4 text-xs font-bold uppercase tracking-wider text-amber-500">Téléphone (Phone)</th>
+                        <th className="p-4 text-xs font-bold uppercase tracking-wider text-amber-500">Date (Date Subscribed)</th>
+                        <th className="p-4 text-xs font-bold uppercase tracking-wider text-amber-500 text-right">Actions (Action)</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-850">
@@ -6131,7 +6041,7 @@ export default function AdminDashboardClient({
                             <button
                               onClick={() => handleDeleteSubscriber(sub.id)}
                               className="p-1.5 rounded hover:bg-slate-800 text-slate-500 hover:text-rose-500 transition-all cursor-pointer opacity-40 group-hover:opacity-100"
-                              title={language === 'fr_ht' ? 'Efase Abòne' : 'Delete Subscriber'}
+                              title={language === 'fr_ht' ? 'Supprimer l’abonné' : 'Delete Subscriber'}
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -6242,7 +6152,7 @@ export default function AdminDashboardClient({
                   <div className="flex justify-between items-center border-b border-slate-850 pb-3">
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <Edit className="w-4 h-4 text-amber-500" />
-                      <span>{language === 'fr_ht' ? 'Modifye Devosyonèl la' : 'Edit Devotional'}</span>
+                      <span>{language === 'fr_ht' ? 'Modifier la dévotion' : 'Edit Devotional'}</span>
                     </h4>
                     <span className="text-xs font-semibold text-slate-400">
                       ID: #{editingDevotionalId}
@@ -6352,7 +6262,7 @@ export default function AdminDashboardClient({
               <div className="relative">
                 <input
                   type="text"
-                  placeholder={language === 'fr_ht' ? 'Chache pa dat oswa referans...' : 'Search by date or reference...'}
+                  placeholder={language === 'fr_ht' ? 'Rechercher par date ou référence...' : 'Search by date or reference...'}
                   value={devotionalSearch}
                   onChange={(e) => setDevotionalSearch(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/50 border border-slate-850 focus:border-amber-500 focus:outline-none text-xs text-slate-200 transition-all"
@@ -6379,7 +6289,7 @@ export default function AdminDashboardClient({
               }).length === 0 ? (
                 <div className="p-12 text-center rounded-2xl bg-slate-950/20 border border-slate-850">
                   <p className="text-sm text-slate-500">
-                    {language === 'fr_ht' ? 'Pa gen okenn devosyonèl ki jwenn.' : 'No devotionals found.'}
+                    {language === 'fr_ht' ? 'Aucune dévotion trouvée.' : 'No devotionals found.'}
                   </p>
                 </div>
               ) : (
@@ -6422,20 +6332,20 @@ export default function AdminDashboardClient({
                               title={t.devotionalBtnApprove}
                             >
                               <Check className="w-3 h-3" />
-                              <span>{language === 'fr_ht' ? 'Apwouve' : 'Approve'}</span>
+                              <span>{language === 'fr_ht' ? 'Approuver' : 'Approve'}</span>
                             </button>
                           )}
                           <button
                             onClick={() => startEditDevotional(d)}
                             className="p-1.5 rounded bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition-all cursor-pointer"
-                            title={language === 'fr_ht' ? 'Modifye' : 'Edit'}
+                            title={language === 'fr_ht' ? 'Modifier' : 'Edit'}
                           >
                             <Edit className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleDevotionalDelete(d.id)}
                             className="p-1.5 rounded bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-rose-500 transition-all cursor-pointer"
-                            title={language === 'fr_ht' ? 'Siprime' : 'Delete'}
+                            title={language === 'fr_ht' ? 'Supprimer' : 'Delete'}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -6443,10 +6353,10 @@ export default function AdminDashboardClient({
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                        {/* Kreyol Version */}
+                        {/* French version (stored in legacy _kreyol fields) */}
                         <div className="space-y-2 border-r border-slate-850/30 pr-0 md:pr-4">
                           <div className="text-amber-500 font-extrabold flex items-center gap-1.5">
-                            <span className="text-[10px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded">HT</span>
+                            <span className="text-[10px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded">FR</span>
                             <span>{d.verse_ref_kreyol}</span>
                           </div>
                           <p className="text-slate-200 italic font-medium leading-relaxed">
@@ -6488,7 +6398,7 @@ export default function AdminDashboardClient({
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
                   {language === 'fr_ht' 
-                    ? 'Ajoute oswa siprime imel administratè ki otorize pou yo konekte avèk OTP nan sistèm nan.'
+                    ? 'Ajoutez ou révoquez les adresses courriel des administrateurs autorisés à se connecter au système par code OTP.'
                     : 'Add or revoke administrator email addresses authorized to log in via 2FA/OTP.'}
                 </p>
               </div>
@@ -6498,7 +6408,7 @@ export default function AdminDashboardClient({
                 <div className="flex flex-col sm:flex-row items-end gap-3">
                   <div className="flex-1 w-full">
                     <label className="block text-xs font-bold text-slate-400 mb-2">
-                      {language === 'fr_ht' ? 'Adrès Imel Administratè a' : 'Administrator Email Address'}
+                      {language === 'fr_ht' ? 'Adresse courriel de l’administrateur' : 'Administrator Email Address'}
                     </label>
                     <input
                       type="email"
@@ -6534,7 +6444,7 @@ export default function AdminDashboardClient({
                         <th className="px-5 py-4">{t.adminAdminsColEmail}</th>
                         <th className="px-5 py-4">{t.adminAdminsColSuperAdmin}</th>
                         <th className="px-5 py-4">{t.adminAdminsColDate}</th>
-                        <th className="px-5 py-4 text-right">{language === 'fr_ht' ? 'Aksyon' : 'Actions'}</th>
+                        <th className="px-5 py-4 text-right">{language === 'fr_ht' ? 'Actions' : 'Actions'}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-850/40">
@@ -6561,14 +6471,14 @@ export default function AdminDashboardClient({
                                   title={
                                     isEnvSuperAdmin(admin.email)
                                       ? (language === 'fr_ht'
-                                        ? 'Super admin pèmanan nan konfigirasyon anviwònman an'
+                                        ? 'Super-administrateur permanent défini dans la configuration de l’environnement'
                                         : 'Permanent super-admin configured in environment')
                                       : undefined
                                   }
                                 />
                                 <span className="text-slate-400 text-[11px]">
                                   {isAdminSuperAdmin(admin)
-                                    ? (language === 'fr_ht' ? 'Wi' : 'Yes')
+                                    ? (language === 'fr_ht' ? 'Oui' : 'Yes')
                                     : (language === 'fr_ht' ? 'Non' : 'No')}
                                 </span>
                               </label>
@@ -6606,7 +6516,7 @@ export default function AdminDashboardClient({
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
                     {language === 'fr_ht' 
-                      ? 'Li nòt ak mesaj ke vizitè sit la voye ba ou yo.'
+                      ? 'Consultez les demandes, les commentaires et les messages envoyés par les visiteurs du site.'
                       : 'View care requests, feedback, and messages submitted by website visitors.'}
                   </p>
                 </div>
@@ -6616,11 +6526,11 @@ export default function AdminDashboardClient({
                 section="contact_submissions"
                 exportSlug="contact_submissions"
                 language={language === 'fr_ht' ? 'fr_ht' : 'en'}
-                listTitle={language === 'en' ? 'Contact Submissions Export' : 'Ekspòtasyon Mesaj Kontakte'}
+                listTitle={language === 'en' ? 'Contact Submissions Export' : 'Exportation des messages de contact'}
                 listDescription={
                   language === 'en'
                     ? 'Download an Excel-compatible spreadsheet you can open in Excel or Google Sheets.'
-                    : 'Telechaje yon fichye Excel ou ka louvri nan Excel oswa Google Sheets.'
+                    : 'Téléchargez un fichier compatible avec Excel ou Google Sheets.'
                 }
                 recordCount={contactLogs.length}
                 emptyMessage={t.adminContactEmpty}
@@ -6678,7 +6588,7 @@ export default function AdminDashboardClient({
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
                   {language === 'fr_ht' 
-                    ? 'Kontwole ak siprime demann lapriyè ki pibliye sou miray piblik la.'
+                    ? 'Modérez et supprimez les demandes de prière publiées sur le mur public.'
                     : 'Moderate and delete prayer requests posted on the public prayer wall.'}
                 </p>
               </div>
@@ -6687,11 +6597,11 @@ export default function AdminDashboardClient({
                 section="prayer_moderation"
                 exportSlug="prayer_moderation"
                 language={language === 'fr_ht' ? 'fr_ht' : 'en'}
-                listTitle={language === 'en' ? 'Prayer Requests Export' : 'Ekspòtasyon Demann Lapriyè'}
+                listTitle={language === 'en' ? 'Prayer Requests Export' : 'Exportation des demandes de prière'}
                 listDescription={
                   language === 'en'
                     ? 'Download an Excel-compatible spreadsheet you can open in Excel or Google Sheets.'
-                    : 'Telechaje yon fichye Excel ou ka louvri nan Excel oswa Google Sheets.'
+                    : 'Téléchargez un fichier compatible avec Excel ou Google Sheets.'
                 }
                 recordCount={moderationPrayers.length}
                 emptyMessage={t.adminPrayersEmpty}
@@ -6751,7 +6661,7 @@ export default function AdminDashboardClient({
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
                     {language === 'fr_ht' 
-                      ? 'Pibliye nòt, refleksyon, ak blòg pastoral pou kominote a.'
+                      ? 'Publiez des notes, des réflexions et des articles pastoraux pour la communauté.'
                       : 'Publish weekly thoughts, reflections, and pastoral viewpoints for the church blog.'}
                   </p>
                 </div>
@@ -6780,7 +6690,7 @@ export default function AdminDashboardClient({
                       onClick={() => setEditingBlogPostId(null)}
                       className="text-xs text-slate-400 hover:text-white transition-all cursor-pointer font-bold"
                     >
-                      {language === 'fr_ht' ? 'ANILE' : 'CANCEL'}
+                      {language === 'fr_ht' ? 'ANNULER' : 'CANCEL'}
                     </button>
                   </div>
 
@@ -6838,7 +6748,7 @@ export default function AdminDashboardClient({
                         value={blogForm.content_kreyol}
                         onChange={(e) => setBlogForm(prev => ({ ...prev, content_kreyol: e.target.value }))}
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 leading-relaxed font-serif"
-                        placeholder="Mete kontni refleksyon an an kreyòl..."
+                        placeholder="Saisissez le contenu de la réflexion en français..."
                         required
                       />
                     </div>
@@ -6881,7 +6791,7 @@ export default function AdminDashboardClient({
                         <tr className="bg-slate-950/60 border-b border-slate-850 text-slate-400 font-bold uppercase tracking-wider">
                           <th className="px-5 py-4">{t.adminBlogColTitle}</th>
                           <th className="px-5 py-4">{t.adminBlogColDate}</th>
-                          <th className="px-5 py-4 text-right">{language === 'fr_ht' ? 'Aksyon' : 'Actions'}</th>
+                          <th className="px-5 py-4 text-right">{language === 'fr_ht' ? 'Actions' : 'Actions'}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-850/40">
@@ -6936,12 +6846,12 @@ export default function AdminDashboardClient({
                 <div>
                   <h3 className="text-base font-bold text-white flex items-center gap-2">
                     <Users className="w-5 h-5 text-amber-500" />
-                    <span>{language === 'en' ? 'Core Ministries Configuration' : 'Konfigirasyon Ministè yo'}</span>
+                    <span>{language === 'en' ? 'Core Ministries Configuration' : 'Konfigirasyon Ministères'}</span>
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
                     {language === 'en'
                       ? 'Configure images, descriptions, committee contacts, notifications, and signup lists for each ministry.'
-                      : 'Konfigirasyon imaj, deskripsyon, kontak komite, notifikasyon, ak lis enskripsyon pou chak ministè.'}
+                      : 'Configurez les images, les descriptions, les contacts des comités, les notifications et les listes d’inscription de chaque ministère.'}
                   </p>
                 </div>
               </div>
@@ -6950,12 +6860,12 @@ export default function AdminDashboardClient({
               <div className="flex gap-2 border-b border-slate-850 pb-px">
                 {['women', 'men', 'children', 'missions'].map((slug) => {
                   const label = slug === 'women' 
-                    ? (language === 'en' ? "Women's Ministry" : "Ministè Dam yo")
+                    ? (language === 'en' ? "Women's Ministry" : "Ministère des femmes")
                     : slug === 'men'
-                    ? (language === 'en' ? "Men's Ministry" : "Ministè Gason yo")
+                    ? (language === 'en' ? "Men's Ministry" : "Ministère des hommes")
                     : slug === 'children'
-                    ? (language === 'en' ? "Children & Youth" : "Ministè Timoun yo")
-                    : (language === 'en' ? 'Missions' : 'Misyon');
+                    ? (language === 'en' ? "Children & Youth" : "Ministère des enfants et des jeunes")
+                    : (language === 'en' ? 'Missions' : 'Missions');
                   return (
                     <button
                       key={slug}
@@ -6986,7 +6896,7 @@ export default function AdminDashboardClient({
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                      {language === 'en' ? 'Ministry Title (English)' : 'Tit Ministè a (Angle)'}
+                      {language === 'en' ? 'Ministry Title (English)' : 'Titre du ministère (anglais)'}
                     </label>
                     <input
                       type="text"
@@ -6998,7 +6908,7 @@ export default function AdminDashboardClient({
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                      {language === 'en' ? 'Ministry Title (Creole)' : 'Tit Ministè a (Kreyòl)'}
+                      {language === 'en' ? 'Ministry Title (French)' : 'Tit Ministè a (Français)'}
                     </label>
                     <input
                       type="text"
@@ -7013,7 +6923,7 @@ export default function AdminDashboardClient({
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                      {language === 'en' ? 'Description (English)' : 'Deskripsyon (Angle)'}
+                      {language === 'en' ? 'Description (English)' : 'Description (anglais)'}
                     </label>
                     <textarea
                       rows={4}
@@ -7025,7 +6935,7 @@ export default function AdminDashboardClient({
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                      {language === 'en' ? 'Description (Creole)' : 'Deskripsyon (Kreyòl)'}
+                      {language === 'en' ? 'Description (French)' : 'Deskripsyon (Français)'}
                     </label>
                     <textarea
                       rows={4}
@@ -7040,7 +6950,7 @@ export default function AdminDashboardClient({
                 {/* Visual Image Dropzone / Clipboard Paste / File Browse */}
                 <div className="space-y-2">
                   <label className="block text-[10px] font-bold uppercase text-slate-400">
-                    {language === 'en' ? 'Ministry Image' : 'Imaj Ministè a'}
+                    {language === 'en' ? 'Ministry Image' : 'Image du ministère'}
                   </label>
                   
                   <div 
@@ -7070,12 +6980,12 @@ export default function AdminDashboardClient({
                         </div>
                         <div className="flex-1 text-left">
                           <span className="text-xs font-bold text-slate-200 block truncate">
-                            {language === 'en' ? 'Ministry_Image.png' : 'Imaj_Ministè.png'}
+                            {language === 'en' ? 'Ministry_Image.png' : 'Image_Ministère.png'}
                           </span>
                           <span className="text-[10px] text-slate-400 mt-1 block">
                             {language === 'en' 
                               ? 'Click to change, drag another image, or copy-paste here' 
-                              : 'Klike pou chanje, trennen yon lòt imaj, oswa kòpye-kole la a'}
+                              : 'Cliquez pour modifier, faites glisser une autre image ou collez-en une ici'}
                           </span>
                         </div>
                         <button
@@ -7085,7 +6995,7 @@ export default function AdminDashboardClient({
                             setMinForm(prev => ({ ...prev, image_url: '' }));
                           }}
                           className="p-1.5 rounded-lg bg-slate-950 border border-slate-850 hover:bg-rose-950 hover:border-rose-900 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
-                          title={language === 'en' ? 'Remove image' : 'Retire imaj'}
+                          title={language === 'en' ? 'Remove image' : 'Supprimer l’image'}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -7096,12 +7006,12 @@ export default function AdminDashboardClient({
                         <span className="text-xs font-bold text-center">
                           {language === 'en' 
                             ? 'Browse, Drag, or Paste an Image' 
-                            : 'Chwazi, Trennen oswa Kole yon Imaj'}
+                            : 'Choisir, glisser ou coller une image'}
                         </span>
                         <span className="text-[10px] text-slate-500">
                           {language === 'en' 
-                            ? 'Supports PNG, JPG (Will be auto-compressed)' 
-                            : 'Sipòte PNG, JPG (Y ap konprime otomatikman)'}
+                            ? 'Supports PNG, JPG (Will be auto-compressed)'
+                            : 'Formats PNG et JPG acceptés (compression automatique)'}
                         </span>
                       </div>
                     )}
@@ -7109,7 +7019,7 @@ export default function AdminDashboardClient({
 
                   <div className="mt-2">
                     <label className="block text-[9px] font-bold uppercase text-slate-400 mb-1">
-                      {language === 'en' ? 'Direct URL Input (Required)' : 'URL Dirèk pou Imaj (Obligatwa)'}
+                      {language === 'en' ? 'Direct URL Input (Required)' : 'URL directe de l’image (obligatoire)'}
                     </label>
                     <input 
                       type="text" 
@@ -7117,7 +7027,7 @@ export default function AdminDashboardClient({
                       value={minForm.image_url}
                       onChange={(e) => setMinForm(prev => ({ ...prev, image_url: e.target.value }))}
                       className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-[10px] text-slate-100 transition-all font-mono"
-                      placeholder={language === 'en' ? "Or paste any image URL here..." : "Oswa kòpye yon URL imaj isit la..."}
+                      placeholder={language === 'en' ? "Or paste any image URL here..." : "Ou collez l’URL d’une image ici..."}
                     />
                   </div>
                 </div>
@@ -7126,9 +7036,9 @@ export default function AdminDashboardClient({
                   <div>
                     <div className="flex justify-between items-center mb-1">
                       <label className="block text-[10px] font-bold uppercase text-slate-400">
-                        {language === 'en' ? 'Bullet Points / Key Events (English)' : 'Evènman ak Pwen Kle (Angle)'}
+                        {language === 'en' ? 'Bullet Points / Key Events (English)' : 'Événements et points clés (anglais)'}
                       </label>
-                      <span className="text-[9px] text-slate-500 font-bold uppercase">{language === 'en' ? 'One per line' : 'Youn pa liy'}</span>
+                      <span className="text-[9px] text-slate-500 font-bold uppercase">{language === 'en' ? 'One per line' : 'Un par ligne'}</span>
                     </div>
                     <textarea
                       rows={6}
@@ -7141,15 +7051,15 @@ export default function AdminDashboardClient({
                   <div>
                     <div className="flex justify-between items-center mb-1">
                       <label className="block text-[10px] font-bold uppercase text-slate-400">
-                        {language === 'en' ? 'Bullet Points / Key Events (Creole)' : 'Evènman ak Pwen Kle (Kreyòl)'}
+                        {language === 'en' ? 'Bullet Points / Key Events (French)' : 'Événements et points clés (français)'}
                       </label>
-                      <span className="text-[9px] text-slate-500 font-bold uppercase">{language === 'en' ? 'One per line' : 'Youn pa liy'}</span>
+                      <span className="text-[9px] text-slate-500 font-bold uppercase">{language === 'en' ? 'One per line' : 'Un par ligne'}</span>
                     </div>
                     <textarea
                       rows={6}
                       value={minForm.bullets_kreyol}
                       onChange={(e) => setMinForm(prev => ({ ...prev, bullets_kreyol: e.target.value }))}
-                      placeholder={language === 'en' ? "Reyinyon Lapriyè Chak Semèn\nDejene Kominote Chak Mwa\nRetrèt Anyèl" : "Reyinyon Lapriyè Chak Semèn\nDejene Kominote Chak Mwa\nRetrèt Anyèl"}
+                      placeholder={language === 'en' ? "Réunion de prière hebdomadaire\nRepas fraternel mensuel\nRetraite annuelle" : "Réunion de prière hebdomadaire\nRepas fraternel mensuel\nRetraite annuelle"}
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
                     />
                   </div>
@@ -7157,12 +7067,12 @@ export default function AdminDashboardClient({
 
                 <div className="pt-2 border-t border-slate-850">
                   <h4 className="text-sm font-bold text-white mb-3">
-                    {language === 'en' ? 'Committee Contact & Notifications' : 'Kontak Komite ak Notifikasyon'}
+                    {language === 'en' ? 'Committee Contact & Notifications' : 'Contact du comité et notifications'}
                   </h4>
                   <div className="grid md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                        {language === 'en' ? 'Contact Name' : 'Non Kontak'}
+                        {language === 'en' ? 'Contact Name' : 'Nom du contact'}
                       </label>
                       <input
                         type="text"
@@ -7173,7 +7083,7 @@ export default function AdminDashboardClient({
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                        {language === 'en' ? 'Contact Email' : 'Imel Kontak'}
+                        {language === 'en' ? 'Contact Email' : 'Adresse courriel du contact'}
                       </label>
                       <input
                         type="email"
@@ -7184,7 +7094,7 @@ export default function AdminDashboardClient({
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                        {language === 'en' ? 'Contact Phone' : 'Telefòn Kontak'}
+                        {language === 'en' ? 'Contact Phone' : 'Téléphone du contact'}
                       </label>
                       <input
                         type="text"
@@ -7197,17 +7107,17 @@ export default function AdminDashboardClient({
                   <div className="grid md:grid-cols-1 gap-4 mt-4">
                     <div>
                       <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                        {language === 'en' ? 'Notification Recipients' : 'Resevè Notifikasyon'}
+                        {language === 'en' ? 'Notification Recipients' : 'Destinataires des notifications'}
                       </label>
                       <textarea
                         rows={3}
                         value={minForm.notification_emails}
                         onChange={(e) => setMinForm(prev => ({ ...prev, notification_emails: e.target.value }))}
-                        placeholder={language === 'en' ? 'leader@church.org, committee@church.org' : 'lidè@legliz.org, komite@legliz.org'}
+                        placeholder={language === 'en' ? 'leader@church.org, committee@church.org' : 'responsable@eglise.org, comite@eglise.org'}
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
                       />
                       <p className="text-[10px] text-slate-500 mt-1">
-                        {language === 'en' ? 'Comma or line-separated emails notified on each new signup.' : 'Imel separe pa vigil oswa liy ki resevwa notifikasyon pou chak nouvo enskripsyon.'}
+                        {language === 'en' ? 'Comma or line-separated emails notified on each new signup.' : 'Adresses courriel séparées par des virgules ou des sauts de ligne, avisées à chaque nouvelle inscription.'}
                       </p>
                     </div>
                   </div>
@@ -7219,7 +7129,7 @@ export default function AdminDashboardClient({
                     className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5"
                   >
                     <Save className="w-4 h-4" />
-                    <span>{language === 'en' ? 'Save Ministry Settings' : 'Sove Anviwònman Ministè a'}</span>
+                    <span>{language === 'en' ? 'Save Ministry Settings' : 'Enregistrer les paramètres du ministère'}</span>
                   </button>
                 </div>
               </form>
@@ -7229,12 +7139,12 @@ export default function AdminDashboardClient({
                   <div>
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <FileSpreadsheet className="w-4 h-4 text-amber-500" />
-                      <span>{language === 'en' ? 'Ministry Signups' : 'Enskripsyon Ministè'}</span>
+                      <span>{language === 'en' ? 'Ministry Signups' : 'Inscriptions au ministère'}</span>
                     </h4>
                     <p className="text-[10px] text-slate-500 mt-1">
                       {language === 'en'
                         ? 'Download an Excel-compatible spreadsheet you can open in Excel or Google Sheets.'
-                        : 'Telechaje yon fichye Excel ou ka louvri nan Excel oswa Google Sheets.'}
+                        : 'Téléchargez un fichier compatible avec Excel ou Google Sheets.'}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -7244,7 +7154,7 @@ export default function AdminDashboardClient({
                       className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-amber-500/50 text-xs font-bold text-slate-200 inline-flex items-center gap-1.5 cursor-pointer"
                     >
                       <RefreshCw className={`w-3.5 h-3.5 ${loadingMinistrySignups ? 'animate-spin' : ''}`} />
-                      <span>{language === 'en' ? 'Refresh' : 'Rafrechi'}</span>
+                      <span>{language === 'en' ? 'Refresh' : 'Actualiser'}</span>
                     </button>
                     <button
                       type="button"
@@ -7253,28 +7163,28 @@ export default function AdminDashboardClient({
                       className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
                     >
                       <FileSpreadsheet className="w-3.5 h-3.5" />
-                      <span>{language === 'en' ? 'Download Spreadsheet (.xlsx)' : 'Telechaje Fichye (.xlsx)'}</span>
+                      <span>{language === 'en' ? 'Download Spreadsheet (.xlsx)' : 'Télécharger la feuille de calcul (.xlsx)'}</span>
                     </button>
                   </div>
                 </div>
 
                 {loadingMinistrySignups ? (
-                  <p className="text-xs text-slate-400">{language === 'en' ? 'Loading signups...' : 'Y ap chaje enskripsyon yo...'}</p>
+                  <p className="text-xs text-slate-400">{language === 'en' ? 'Loading signups...' : 'Chargement des inscriptions...'}</p>
                 ) : ministrySignups.length === 0 ? (
-                  <p className="text-xs text-slate-500">{language === 'en' ? 'No signups yet for this ministry.' : 'Pa gen enskripsyon pou ministè sa a ankò.'}</p>
+                  <p className="text-xs text-slate-500">{language === 'en' ? 'No signups yet for this ministry.' : 'Aucune inscription pour ce ministère pour le moment.'}</p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
                       <thead>
                         <tr className="text-slate-400 border-b border-slate-850">
-                          <th className="py-2 pr-3 font-bold uppercase">{language === 'en' ? 'Date' : 'Dat'}</th>
+                          <th className="py-2 pr-3 font-bold uppercase">{language === 'en' ? 'Date' : 'Date'}</th>
                           <th className="py-2 pr-3 font-bold uppercase">{language === 'en' ? 'Name' : 'Non'}</th>
-                          <th className="py-2 pr-3 font-bold uppercase">{language === 'en' ? 'Email' : 'Imel'}</th>
-                          <th className="py-2 pr-3 font-bold uppercase">{language === 'en' ? 'Phone' : 'Telefòn'}</th>
+                          <th className="py-2 pr-3 font-bold uppercase">{language === 'en' ? 'Email' : 'Adresse courriel'}</th>
+                          <th className="py-2 pr-3 font-bold uppercase">{language === 'en' ? 'Phone' : 'Téléphone'}</th>
                           {MINISTRY_SIGNUP_FIELDS[selectedMinistrySlug as MinistrySignupSlug]?.map((field) => (
                             <th key={field.key} className="py-2 pr-3 font-bold uppercase">{field.label_en}</th>
                           ))}
-                          <th className="py-2 font-bold uppercase">{language === 'en' ? 'Actions' : 'Aksyon'}</th>
+                          <th className="py-2 font-bold uppercase">{language === 'en' ? 'Actions' : 'Actions'}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -7301,7 +7211,7 @@ export default function AdminDashboardClient({
                                   type="button"
                                   onClick={() => handleDeleteMinistrySignup(signup.id)}
                                   className="p-1.5 rounded-lg bg-slate-950 border border-slate-850 hover:bg-rose-950 hover:border-rose-900 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
-                                  title={language === 'en' ? 'Delete signup' : 'Siprime enskripsyon'}
+                                  title={language === 'en' ? 'Delete signup' : 'Supprimer enskripsyon'}
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>

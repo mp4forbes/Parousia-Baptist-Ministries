@@ -7,7 +7,7 @@ Canonical screenshot files for `Parousia-Admin-Guide.md`.
 | `01-public-nav-gear.png` | Public site nav with admin gear icon (logged in) |
 | `02-admin-login-step1.png` | Admin login email/password screen |
 | `03-admin-login-otp-en.png` | OTP verification screen (English) |
-| `03-admin-login-otp-ht.png` | OTP verification screen (Kreyòl) — place your Kreyòl screenshot here |
+| `03-admin-login-otp-ht.png` | OTP verification screen (French) — place your French screenshot here |
 | `04-admin-dashboard-sidebar.png` | Admin dashboard sidebar |
 | `05-logo-upload.png` | Logo upload panel |
 | `06-color-adjuster.png` | Color adjuster panel |

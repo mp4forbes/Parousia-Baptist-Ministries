@@ -119,7 +119,7 @@ export default function AdminLoginClient({
   const handleRequestOtp = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
-      setError(language === 'fr_ht' ? 'Tanpri antre adrès imel ou.' : 'Please enter your email address.');
+      setError(language === 'fr_ht' ? 'Veuillez saisir votre adresse courriel.' : 'Please enter your email address.');
       return;
     }
     if (emailValidationError) {
@@ -155,7 +155,7 @@ export default function AdminLoginClient({
   const handleRequestForgotPassword = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
-      setError(language === 'fr_ht' ? 'Tanpri antre adrès imel ou.' : 'Please enter your email address.');
+      setError(language === 'fr_ht' ? 'Veuillez saisir votre adresse courriel.' : 'Please enter your email address.');
       return;
     }
     setError('');
@@ -178,11 +178,11 @@ export default function AdminLoginClient({
   const handleVerifyOtp = (e: React.FormEvent) => {
     e.preventDefault();
     if (!otpCode.trim() || otpCode.trim().length !== 6) {
-      setError(language === 'fr_ht' ? 'Tanpri antre yon kòd 6 chif ki valid.' : 'Please enter a valid 6-digit code.');
+      setError(language === 'fr_ht' ? 'Veuillez saisir un code valide à 6 chiffres.' : 'Please enter a valid 6-digit code.');
       return;
     }
     if (timer <= 0) {
-      setError(language === 'fr_ht' ? 'Kòd la ekspire. Tanpri tounen dèyè epi mande yon lòt.' : 'Verification code expired. Please go back and request a new one.');
+      setError(language === 'fr_ht' ? 'Le code a expiré. Revenez en arrière et demandez-en un nouveau.' : 'Verification code expired. Please go back and request a new one.');
       return;
     }
     setError('');
@@ -199,7 +199,7 @@ export default function AdminLoginClient({
           router.refresh();
         }
       } else {
-        setError(res.error || (language === 'fr_ht' ? 'Kòd la pa korèk.' : 'Invalid code.'));
+        setError(res.error || (language === 'fr_ht' ? 'Code invalide.' : 'Invalid code.'));
       }
     });
   };
@@ -207,7 +207,7 @@ export default function AdminLoginClient({
   const handleCreatePassword = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPassword.trim() || !confirmPassword.trim()) {
-      setError(language === 'fr_ht' ? 'Tanpri ranpli tout jaden yo.' : 'Please fill out all fields.');
+      setError(language === 'fr_ht' ? 'Veuillez remplir tous les champs.' : 'Please fill out all fields.');
       return;
     }
     setError('');
@@ -219,7 +219,7 @@ export default function AdminLoginClient({
         router.push('/admin/dashboard');
         router.refresh();
       } else {
-        setError(res.error || (language === 'fr_ht' ? 'Pa t kapab sove modpas la.' : 'Could not save password.'));
+        setError(res.error || (language === 'fr_ht' ? 'Impossible d’enregistrer le mot de passe.' : 'Could not save password.'));
       }
     });
   };
@@ -251,7 +251,7 @@ export default function AdminLoginClient({
           className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-sm font-semibold hover:border-amber-500 text-amber-400 cursor-pointer transition-all hover:scale-105"
         >
           <Globe2 className="w-4 h-4" />
-          <span>{language === 'fr_ht' ? 'English' : 'Kreyòl'}</span>
+          <span>{language === 'fr_ht' ? 'English' : 'Français'}</span>
         </button>
       </div>
 
@@ -443,11 +443,11 @@ export default function AdminLoginClient({
               </p>
               <div className="text-xs text-slate-300 bg-slate-950/60 border border-slate-850 rounded-xl px-4 py-3 space-y-1">
                 <p>
-                  <span className="text-slate-500">{language === 'fr_ht' ? 'Voye bay: ' : 'Sent to: '}</span>
+                  <span className="text-slate-500">{language === 'fr_ht' ? 'Envoyé à : ' : 'Sent to: '}</span>
                   <span className="font-semibold text-amber-400">{email}</span>
                 </p>
                 <p>
-                  <span className="text-slate-500">{language === 'fr_ht' ? 'Soti nan: ' : 'From: '}</span>
+                  <span className="text-slate-500">{language === 'fr_ht' ? 'Expéditeur : ' : 'From: '}</span>
                   <span className="font-semibold">{otpFromEmail}</span>
                 </p>
               </div>
@@ -517,7 +517,7 @@ export default function AdminLoginClient({
 
               {email && (
                 <div className="text-xs text-slate-300 bg-slate-950/60 border border-slate-850 rounded-xl px-4 py-3">
-                  <span className="text-slate-500">{language === 'fr_ht' ? 'Kont: ' : 'Account: '}</span>
+                  <span className="text-slate-500">{language === 'fr_ht' ? 'Compte : ' : 'Account: '}</span>
                   <span className="font-semibold text-amber-400">{email}</span>
                 </div>
               )}
@@ -594,7 +594,7 @@ export default function AdminLoginClient({
           <div className="mt-6 pt-6 border-t border-slate-850 text-center">
             <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
               <Sparkles className="w-3 h-3 text-amber-500" />
-              <span>Sistèm Sekirize OTP</span>
+              <span>Système OTP sécurisé</span>
             </span>
           </div>
 
@@ -602,7 +602,7 @@ export default function AdminLoginClient({
 
         <div className="text-center mt-6">
           <a href="/" className="text-xs font-bold text-slate-500 hover:text-amber-400 transition-colors uppercase tracking-widest">
-            ← Retounen nan Akèy / Back to Home
+            ← Retour à l’accueil / Back to Home
           </a>
         </div>
 

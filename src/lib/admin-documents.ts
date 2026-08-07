@@ -10,14 +10,14 @@ export const ADMIN_DOCUMENTS: AdminDocument[] = [
   {
     id: 'admin-guide',
     titleEn: 'Website Administration Guide',
-    titleHt: 'Gid Administrasyon Sit Wèb la',
+    titleHt: 'Guide d’administration du site Web',
     href: '/admin-guide/Parousia-Admin-Guide.html',
     kind: 'guide',
   },
   {
     id: 'completion-letter',
     titleEn: 'Project Completion Letter',
-    titleHt: 'Lèt Fini Pwojè a',
+    titleHt: 'Lettre d’achèvement du projet',
     href: '/admin-guide/Parousia-Completion-Letter.html',
     kind: 'letter',
   },

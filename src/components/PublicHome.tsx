@@ -17,6 +17,7 @@ import {
 import MinistrySignupForm from '@/components/MinistrySignupForm';
 import { setAdminUiClient } from '@/lib/admin-cookies';
 import { MinistrySignupSlug } from '@/lib/ministry-signup-fields';
+import { EXECUTIVE_COMMITTEE_MEMBERS } from '@/lib/executive-committee';
 import { getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from '@/lib/youtube';
 import { 
   Church, 
@@ -148,7 +149,7 @@ export default function PublicHome({
   const handlePrayerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prayerText.trim()) {
-      setPrayerError(language === 'fr_ht' ? 'Demann lapriyè a pa ka vid.' : 'Prayer request text cannot be empty.');
+      setPrayerError(language === 'fr_ht' ? 'La demande de prière ne peut pas être vide.' : 'Prayer request text cannot be empty.');
       return;
     }
     setPrayerSubmitting(true);
@@ -170,10 +171,10 @@ export default function PublicHome({
         const updated = await getPrayerRequests();
         setPrayerRequests(updated);
       } else {
-        setPrayerError(res.error || (language === 'fr_ht' ? 'Yon erè rive. Tanpri reye.' : 'Submission failed. Please try again.'));
+        setPrayerError(res.error || (language === 'fr_ht' ? 'Une erreur est survenue. Veuillez réessayer.' : 'Submission failed. Please try again.'));
       }
     } catch (err: any) {
-      setPrayerError(err.message || (language === 'fr_ht' ? 'Yon erè rive. Tanpri reye.' : 'An error occurred. Please try again.'));
+      setPrayerError(err.message || (language === 'fr_ht' ? 'Une erreur est survenue. Veuillez réessayer.' : 'An error occurred. Please try again.'));
     } finally {
       setPrayerSubmitting(false);
     }
@@ -183,7 +184,7 @@ export default function PublicHome({
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactName.trim() || !contactEmail.trim() || !contactMessage.trim()) {
-      setContactError(language === 'fr_ht' ? 'Tanpri ranpli tout jaden ki obligatwa yo.' : 'Please fill out all required fields.');
+      setContactError(language === 'fr_ht' ? 'Veuillez remplir tous les champs obligatoires.' : 'Please fill out all required fields.');
       return;
     }
     setContactSubmitting(true);
@@ -204,10 +205,10 @@ export default function PublicHome({
         setContactPhone('');
         setContactMessage('');
       } else {
-        setContactError(res.error || (language === 'fr_ht' ? 'Yon erè rive. Tanpri reye.' : 'An error occurred.'));
+        setContactError(res.error || (language === 'fr_ht' ? 'Une erreur est survenue. Veuillez réessayer.' : 'An error occurred.'));
       }
     } catch (err: any) {
-      setContactError(err.message || (language === 'fr_ht' ? 'Yon erè rive. Tanpri reye.' : 'An error occurred.'));
+      setContactError(err.message || (language === 'fr_ht' ? 'Une erreur est survenue. Veuillez réessayer.' : 'An error occurred.'));
     } finally {
       setContactSubmitting(false);
     }
@@ -254,12 +255,12 @@ export default function PublicHome({
     const defaultSunday = {
       id: -1,
       day_english: 'Sunday',
-      day_kreyol: 'Dimanch',
+      day_kreyol: 'Dimanche',
       time: '9:00 AM',
       title_english: 'Sunday Worship Service',
-      title_kreyol: 'Sèvis Adorasyon Dimanch',
+      title_kreyol: 'Culte du dimanche',
       description_english: 'Join us for our main weekly worship service filled with praise, prayer, and an inspiring message.',
-      description_kreyol: 'Rejwenn nou pou gwo sèvis adorasyon chak semèn nou an ki ranpli ak lwanj, priyè, ak yon mesaj k ap ankouraje nou.'
+      description_kreyol: 'Rejoignez-nous pour notre culte hebdomadaire, un temps de louange, de prière et de message inspirant.'
     };
 
     if (!schedules || schedules.length === 0) {
@@ -321,12 +322,12 @@ export default function PublicHome({
     const defaultSunday = {
       id: -1,
       day_english: 'Sunday',
-      day_kreyol: 'Dimanch',
+      day_kreyol: 'Dimanche',
       time: '9:00 AM',
       title_english: 'Sunday Worship Service',
-      title_kreyol: 'Sèvis Adorasyon Dimanch',
+      title_kreyol: 'Culte du dimanche',
       description_english: 'Join us for our main weekly worship service filled with praise, prayer, and an inspiring message.',
-      description_kreyol: 'Rejwenn nou pou gwo sèvis adorasyon chak semèn nou an ki ranpli ak lwanj, priyè, ak yon mesaj k ap ankouraje nou.'
+      description_kreyol: 'Rejoignez-nous pour notre culte hebdomadaire, un temps de louange, de prière et de message inspirant.'
     };
 
     if (!schedules || schedules.length === 0) {
@@ -376,12 +377,12 @@ export default function PublicHome({
     const defaultSunday = {
       id: -1,
       day_english: 'Sunday',
-      day_kreyol: 'Dimanch',
+      day_kreyol: 'Dimanche',
       time: '9:00 AM',
       title_english: 'Sunday Worship Service',
-      title_kreyol: 'Sèvis Adorasyon Dimanch',
+      title_kreyol: 'Culte du dimanche',
       description_english: 'Join us for our main weekly worship service filled with praise, prayer, and an inspiring message.',
-      description_kreyol: 'Rejwenn nou pou gwo sèvis adorasyon chak semèn nou an ki ranpli ak lwanj, priyè, ak yon mesaj k ap ankouraje nou.',
+      description_kreyol: 'Rejoignez-nous pour notre culte hebdomadaire, un temps de louange, de prière et de message inspirant.',
       image_url: '',
       is_livestreamed: 1
     };
@@ -614,7 +615,7 @@ export default function PublicHome({
   const handleLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!leadName || !leadEmail || !leadPhone) {
-      setLeadError(language === 'fr_ht' ? 'Tanpri ranpli tout jaden yo.' : 'Please fill out all fields.');
+      setLeadError(language === 'fr_ht' ? 'Veuillez remplir tous les champs.' : 'Please fill out all fields.');
       return;
     }
     
@@ -629,10 +630,10 @@ export default function PublicHome({
         setLeadEmail('');
         setLeadPhone('');
       } else {
-        setLeadError(res.error || (language === 'fr_ht' ? 'Yon erè rive. Tanpri reye.' : 'An error occurred. Please try again.'));
+        setLeadError(res.error || (language === 'fr_ht' ? 'Une erreur est survenue. Veuillez réessayer.' : 'An error occurred. Please try again.'));
       }
     } catch (err: any) {
-      setLeadError(err.message || (language === 'fr_ht' ? 'Yon erè rive. Tanpri reye.' : 'An error occurred. Please try again.'));
+      setLeadError(err.message || (language === 'fr_ht' ? 'Une erreur est survenue. Veuillez réessayer.' : 'An error occurred. Please try again.'));
     } finally {
       setLeadSubmitting(false);
     }
@@ -714,7 +715,7 @@ export default function PublicHome({
     
     const finalAmount = isCustomAmount ? parseFloat(customAmount) : parseFloat(giveAmount);
     if (isNaN(finalAmount) || finalAmount <= 0) {
-      alert(language === 'fr_ht' ? 'Tanpri antre yon kantite lajan ki valab.' : 'Please enter a valid amount.');
+      alert(language === 'fr_ht' ? 'Veuillez saisir un montant valide.' : 'Please enter a valid amount.');
       setGivingLoading(false);
       return;
     }
@@ -759,19 +760,19 @@ export default function PublicHome({
 
   // Dynamic Home Tabs titles/content
   const dAboutUsTitle = isHt 
-    ? (settings.about_us_title_ht || t.tabAboutUs || 'Ki Moun Nou Ye') 
+    ? (settings.about_us_title_ht || t.tabAboutUs || 'Qui sommes-nous ?')
     : (settings.about_us_title_en || t.tabAboutUs || 'About Us');
 
   const dBeliefsTitle = isHt 
-    ? (settings.beliefs_title_ht || t.tabBeliefs || 'Kwayans Nou Yo') 
+    ? (settings.beliefs_title_ht || t.tabBeliefs || 'Nos croyances')
     : (settings.beliefs_title_en || t.tabBeliefs || 'Our Beliefs');
 
   const dTeamTitle = isHt 
-    ? (settings.team_title_ht || t.tabTeam || 'Ekip Nou An') 
-    : (settings.team_title_en || t.tabTeam || 'Our Team');
+    ? (settings.team_title_ht || 'Comité exécutif')
+    : (settings.team_title_en || 'Executive Committee');
 
   const dExpectTitle = isHt 
-    ? (settings.expect_title_ht || t.tabExpect || 'Kisa pou Atann') 
+    ? (settings.expect_title_ht || t.tabExpect || 'À quoi vous attendre')
     : (settings.expect_title_en || t.tabExpect || 'What to Expect');
 
   // Parse dynamic team members with full fallback
@@ -796,26 +797,7 @@ export default function PublicHome({
     } catch (e) {
       console.error('Error parsing team_members_json in PublicHome:', e);
     }
-    return [
-      {
-        name: settings.team_p1_name || 'Pastor Maxon Francois',
-        role_en: settings.team_p1_role_en || 'Senior Pastor',
-        role_ht: settings.team_p1_role_ht || 'Pastè Prensipal',
-        bio_en: settings.team_p1_bio_en || "Pastor Maxon Francois has served in pastoral ministry for over 15 years, with a deep passion for preaching expository biblical truth and preparing the church for Christ's return.",
-        bio_ht: settings.team_p1_bio_ht || 'Pastè Maxon Francois gen plis pase 15 ane ap preche Pawòl Bondye a ak yon vizyon klè pou anseye verite biblik la san chanjman epi prepare kominote a pou retou Seyè a.',
-        image_url: settings.team_p1_image_url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=300&auto=format&fit=crop',
-        email: settings.team_p1_email || 'pastor@parousiabaptist.org'
-      },
-      {
-        name: settings.team_p2_name || 'Pastor Jean-Pierre Louis',
-        role_en: settings.team_p2_role_en || 'Assistant Pastor',
-        role_ht: settings.team_p2_role_ht || 'Asistan Pastè',
-        bio_en: settings.team_p2_bio_en || "Pastor Jean-Pierre coordinates youth discipleship, counseling, and direct operations of our missionary schools and medical outposts in Okay, Haiti.",
-        bio_ht: settings.team_p2_bio_ht || 'Pastè Jean-Pierre konsantre sou devlopman jèn yo, vizit fraternel yo, ak sipò dirèk nan lekòl ak klinik misyon nou yo an Ayiti.',
-        image_url: settings.team_p2_image_url || 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=300&auto=format&fit=crop',
-        email: settings.team_p2_email || 'it@parousiabaptist.org'
-      }
-    ];
+    return EXECUTIVE_COMMITTEE_MEMBERS;
   })();
 
   // Dynamic Theme Classes
@@ -931,7 +913,7 @@ export default function PublicHome({
               className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700' : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-amber-400'} border text-sm font-semibold transition-all duration-300 cursor-pointer hover:scale-105`}
             >
               <Globe2 className="w-4 h-4" />
-              <span>{language === 'fr_ht' ? 'English' : 'Kreyòl'}</span>
+              <span>{language === 'fr_ht' ? 'English' : 'Français'}</span>
             </button>
             
             {/* Config Gear Icon - Only visible to admin logins */}
@@ -973,7 +955,7 @@ export default function PublicHome({
               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border ${isLight ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-slate-900 border-slate-800 text-amber-400'} text-xs font-semibold cursor-pointer`}
             >
               <Globe2 className="w-3.5 h-3.5" />
-              <span>{language === 'fr_ht' ? 'EN' : 'HT'}</span>
+              <span>{language === 'fr_ht' ? 'EN' : 'FR'}</span>
             </button>
             <button 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -1105,7 +1087,7 @@ export default function PublicHome({
             
             <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${isLight ? 'bg-slate-200/80 text-amber-800' : 'bg-slate-900 text-amber-400'} text-xs font-semibold mb-6`}>
               <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-              <span>{language === 'fr_ht' ? 'Parousie - Paske l\'ap retounen' : 'Parousie - For He Is Returning'}</span>
+              <span>{language === 'fr_ht' ? 'Parousie — Car il revient' : 'Parousie - For He Is Returning'}</span>
             </div>
 
             {/* Uploaded logo — multiply removes the white PNG box on the matching hero background */}
@@ -1125,7 +1107,7 @@ export default function PublicHome({
             <h2 className={`text-4xl sm:text-5xl md:text-6xl font-extrabold font-serif tracking-tight mb-4 max-w-4xl leading-tight text-center ${textTitle}`}>
               {language === 'fr_ht' ? (
                 <>
-                  <span>Ministè Batis </span>
+                  <span>Ministères baptistes </span>
                   <span className="text-blue-500">Parousia</span>
                 </>
               ) : (
@@ -1158,7 +1140,7 @@ export default function PublicHome({
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-                <span>{language === 'fr_ht' ? 'Vèsè pou Jodi a' : 'Daily Verse'}</span>
+                <span>{language === 'fr_ht' ? 'Verset du jour' : 'Daily Verse'}</span>
                 <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
               </a>
 
@@ -1190,7 +1172,7 @@ export default function PublicHome({
               <Gift className="w-5 h-5 animate-bounce" />
               <span>
                 {language === 'fr_ht' 
-                  ? (settings.free_gift_title_kreyol || 'Kado Devosyonèl') 
+                  ? (settings.free_gift_title_kreyol || 'Méditations offertes')
                   : (settings.free_gift_title_english || 'Free Devotional')}
               </span>
             </a>
@@ -1206,7 +1188,7 @@ export default function PublicHome({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">Lè Sèvis Nou Yo</h3>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">{language === 'fr_ht' ? 'Horaires des cultes' : 'Service Times'}</h3>
             <h4 className={`text-3xl sm:text-4xl font-extrabold font-serif ${textTitle} mb-4`}>{t.servicesTitle}</h4>
             <p className={`${textMuted} text-base`}>{t.servicesSubtitle}</p>
           </div>
@@ -1257,7 +1239,7 @@ export default function PublicHome({
                 {/* Service Time Detail */}
                 <div className={`pt-4 border-t ${isLight ? 'border-slate-100' : 'border-slate-800/80'} flex flex-col gap-3`}>
                   <div className="flex items-center justify-between">
-                    <span className={`text-xs uppercase font-semibold ${textMuted}`}>Orè / Time</span>
+                    <span className={`text-xs uppercase font-semibold ${textMuted}`}>{language === 'fr_ht' ? 'Horaire' : 'Time'}</span>
                     <span className={`text-sm font-bold ${textTitle} ${isLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-950/80 border-slate-800'} px-2.5 py-1 rounded border`}>
                       {schedule.time}
                     </span>
@@ -1278,7 +1260,7 @@ export default function PublicHome({
                     >
                       <span className="flex items-center gap-1.5">
                         <Calendar className="w-3.5 h-3.5 text-amber-500" />
-                        <span>{language === 'fr_ht' ? 'Ajoute nan Kalandre' : 'Add to Calendar'}</span>
+                        <span>{language === 'fr_ht' ? 'Ajouter au calendrier' : 'Add to Calendar'}</span>
                       </span>
                       <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${activeCalendarMenu?.type === 'schedule' && activeCalendarMenu.id === schedule.id ? 'rotate-180' : ''}`} />
                     </button>
@@ -1310,7 +1292,7 @@ export default function PublicHome({
                           }}
                           className={`w-full text-left px-3 py-2 rounded-lg hover:bg-amber-500/10 hover:text-amber-500 transition-colors cursor-pointer ${textBody}`}
                         >
-                          📅 {language === 'fr_ht' ? 'Google Calendar (Chak Semèn)' : 'Google Calendar (Weekly)'}
+                          📅 {language === 'fr_ht' ? 'Google Calendar (hebdomadaire)' : 'Google Calendar (Weekly)'}
                         </button>
                         <button
                           onClick={() => {
@@ -1331,7 +1313,7 @@ export default function PublicHome({
                           }}
                           className={`w-full text-left px-3 py-2 rounded-lg hover:bg-amber-500/10 hover:text-amber-500 transition-colors cursor-pointer ${textBody}`}
                         >
-                          📅 {language === 'fr_ht' ? 'Google Calendar (Yon Sèl Fwa)' : 'Google Calendar (One-Time)'}
+                          📅 {language === 'fr_ht' ? 'Google Calendar (une fois)' : 'Google Calendar (One-Time)'}
                         </button>
                         <button
                           onClick={() => {
@@ -1353,7 +1335,7 @@ export default function PublicHome({
                           }}
                           className={`w-full text-left px-3 py-2 rounded-lg hover:bg-amber-500/10 hover:text-amber-500 transition-colors cursor-pointer ${textBody}`}
                         >
-                          🍏 {language === 'fr_ht' ? 'Apple / Mac (.ics - Chak Semèn)' : 'Apple / Mac (.ics - Weekly)'}
+                          🍏 {language === 'fr_ht' ? 'Apple / Mac (.ics — hebdomadaire)' : 'Apple / Mac (.ics - Weekly)'}
                         </button>
                         <button
                           onClick={() => {
@@ -1374,7 +1356,7 @@ export default function PublicHome({
                           }}
                           className={`w-full text-left px-3 py-2 rounded-lg hover:bg-amber-500/10 hover:text-amber-500 transition-colors cursor-pointer ${textBody}`}
                         >
-                          🍏 {language === 'fr_ht' ? 'Apple / Mac (.ics - Yon Sèl Fwa)' : 'Apple / Mac (.ics - One-Time)'}
+                          🍏 {language === 'fr_ht' ? 'Apple / Mac (.ics — une fois)' : 'Apple / Mac (.ics - One-Time)'}
                         </button>
                       </div>
                     )}
@@ -1395,7 +1377,7 @@ export default function PublicHome({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">{language === 'fr_ht' ? 'Sèvis an Dirèk & Kadans Achiv' : 'Live Broadcasts & Archives'}</h3>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">{language === 'fr_ht' ? 'Diffusions en direct et archives' : 'Live Broadcasts & Archives'}</h3>
             <h4 className={`text-3xl sm:text-4xl font-extrabold font-serif ${textTitle} mb-4`}>{t.sermonsTitle}</h4>
             <p className={`${textMuted} text-base`}>{t.sermonsSubtitle}</p>
           </div>
@@ -1413,7 +1395,7 @@ export default function PublicHome({
                       <Tv className="w-5 h-5" />
                     </span>
                     <h5 className={`text-lg font-bold ${textTitle}`}>
-                      {language === 'fr_ht' ? 'Sèvis an Dirèk' : 'Live Stream'}
+                      {language === 'fr_ht' ? 'Diffusion en direct' : 'Live Stream'}
                     </h5>
                   </div>
                   
@@ -1443,8 +1425,8 @@ export default function PublicHome({
                     ? (language === 'fr_ht' ? selectedCustomEvent.title_kreyol : selectedCustomEvent.title_english)
                     : (language === 'fr_ht' ? nextService.title_kreyol : nextService.title_english);
                   const eventTime = isCustomActive && selectedCustomEvent
-                    ? (language === 'fr_ht' ? `${selectedCustomEvent.date} nan ${selectedCustomEvent.time}` : `${selectedCustomEvent.date} at ${selectedCustomEvent.time}`)
-                    : (language === 'fr_ht' ? `${nextService.day_kreyol} a ${nextService.time}` : `${nextService.day_english} at ${nextService.time}`);
+                    ? (language === 'fr_ht' ? `${selectedCustomEvent.date} à ${selectedCustomEvent.time}` : `${selectedCustomEvent.date} at ${selectedCustomEvent.time}`)
+                    : (language === 'fr_ht' ? `${nextService.day_kreyol} à ${nextService.time}` : `${nextService.day_english} at ${nextService.time}`);
                   
                   return (
                     <div className="flex flex-col flex-1">
@@ -1465,9 +1447,9 @@ export default function PublicHome({
                           ? 'bg-amber-50/50 border-amber-100 text-slate-600' 
                           : 'bg-amber-500/5 border-amber-500/10 text-slate-300'
                       }`}>
-                        <span className="font-bold text-amber-500 mr-1.5">💡 {language === 'fr_ht' ? 'Nòt sou Difizyon:' : 'Live Stream Tip:'}</span>
+                        <span className="font-bold text-amber-500 mr-1.5">💡 {language === 'fr_ht' ? 'À propos de la diffusion :' : 'Live Stream Tip:'}</span>
                         {language === 'fr_ht' 
-                          ? "Si jwè videyo anwo a bay yon erè, sa vle di sèvis la poko kòmanse oswa li fini. Rankontre nou pou pwochen sèvis nou an: "
+                          ? "Si le lecteur vidéo ci-dessus affiche une erreur, la diffusion n'a peut-être pas encore commencé ou est déjà terminée. Rejoignez-nous pour notre prochain culte : "
                           : "If the player above displays an error, the broadcast may not have started yet or has already concluded. Join us for our next service: "}
                         <strong className={`${textTitle} font-bold`}>
                           {`${eventTitle} (${eventTime})`}
@@ -1483,7 +1465,7 @@ export default function PublicHome({
                     const title = language === 'fr_ht' ? service.title_kreyol : service.title_english;
                     const description = language === 'fr_ht' ? service.description_kreyol : service.description_english;
                     const datetimeStr = language === 'fr_ht' 
-                      ? `${service.day_kreyol} a ${service.time}` 
+                      ? `${service.day_kreyol} à ${service.time}`
                       : `${service.day_english} at ${service.time}`;
                     const thumbnail = service.image_url;
 
@@ -1518,7 +1500,7 @@ export default function PublicHome({
 
                             {/* Absolute Badge over Thumbnail */}
                             <span className="absolute top-2.5 left-2.5 text-[9px] font-extrabold uppercase tracking-widest bg-blue-600 text-white px-2.5 py-0.5 rounded-full shadow">
-                              {language === 'fr_ht' ? 'Sèvis' : 'Service'}
+                              {language === 'fr_ht' ? 'Culte' : 'Service'}
                             </span>
                           </div>
 
@@ -1526,8 +1508,8 @@ export default function PublicHome({
                             <div className="flex items-center justify-between gap-4 mb-3">
                               <span className="text-[10px] font-bold uppercase tracking-widest text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
                                 {isFallback 
-                                  ? (language === 'fr_ht' ? 'Sèvis Altènatif' : 'Fallback Service')
-                                  : (language === 'fr_ht' ? 'Pwochen Sèvis' : 'Next Service')}
+                                  ? (language === 'fr_ht' ? 'Culte de remplacement' : 'Fallback Service')
+                                  : (language === 'fr_ht' ? 'Prochain culte' : 'Next Service')}
                               </span>
                               <span className={`text-xs font-bold ${textTitle} flex items-center gap-1.5 shrink-0 bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-full border border-blue-500/20`}>
                                 <Clock className="w-3.5 h-3.5" />
@@ -1541,7 +1523,7 @@ export default function PublicHome({
                             
                             <p className={`${textBody} text-xs leading-relaxed line-clamp-3 mb-0`}>
                               {description || (language === 'fr_ht' 
-                                ? 'Rejwenn nou pou sèvis adorasyon sa a.' 
+                                ? 'Rejoignez-nous pour ce culte.'
                                 : 'Join us for this worship service.')}
                             </p>
                           </div>
@@ -1556,11 +1538,11 @@ export default function PublicHome({
                         <Tv className="w-6 h-6 text-slate-400" />
                       </div>
                       <h6 className={`text-xl font-bold ${textTitle} mb-2`}>
-                        {language === 'fr_ht' ? 'Pa gen difizyon an dirèk pou kounye a' : 'No active live stream at this time'}
+                        {language === 'fr_ht' ? 'Aucune diffusion en direct pour le moment' : 'No active live stream at this time'}
                       </h6>
                       <p className={`${textBody} text-sm max-w-md leading-relaxed mb-6`}>
                         {language === 'fr_ht' 
-                          ? 'Difizyon sèvis nou yo ap fèt pandan lè sèvis regilye nou yo. Al gade nan detay pwochen sèvis nou an pi ba a.'
+                          ? 'Nos cultes sont diffusés en direct aux horaires habituels. Consultez ci-dessous les détails de notre prochain culte.'
                           : 'Our services are broadcast live during our regular scheduled hours. See details of our next upcoming service below.'}
                       </p>
                       
@@ -1577,7 +1559,7 @@ export default function PublicHome({
                           ? selectedCustomEvent.title_kreyol 
                           : selectedCustomEvent.title_english;
                         const customDatetime = language === 'fr_ht' 
-                          ? `${selectedCustomEvent.date} nan ${selectedCustomEvent.time}` 
+                          ? `${selectedCustomEvent.date} à ${selectedCustomEvent.time}`
                           : `${selectedCustomEvent.date} at ${selectedCustomEvent.time}`;
                         const customDescription = language === 'fr_ht' 
                           ? selectedCustomEvent.description_kreyol 
@@ -1615,14 +1597,14 @@ export default function PublicHome({
 
                                 {/* Absolute Badge over Thumbnail */}
                                 <span className="absolute top-2.5 left-2.5 text-[9px] font-extrabold uppercase tracking-widest bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full shadow">
-                                  {language === 'fr_ht' ? 'Espesyal' : 'Special'}
+                                  {language === 'fr_ht' ? 'Spécial' : 'Special'}
                                 </span>
                               </div>
 
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-4 mb-3">
                                   <span className="text-[10px] font-bold uppercase tracking-widest text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
-                                    {language === 'fr_ht' ? 'Pwochen Evènman' : 'Upcoming Event'}
+                                    {language === 'fr_ht' ? 'Événement à venir' : 'Upcoming Event'}
                                   </span>
                                   <span className={`text-xs font-bold ${textTitle} flex items-center gap-1.5 shrink-0 bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-full border border-blue-500/20`}>
                                     <Clock className="w-3.5 h-3.5" />
@@ -1636,7 +1618,7 @@ export default function PublicHome({
                                 
                                 <p className={`${textBody} text-xs leading-relaxed line-clamp-3 mb-0`}>
                                   {customDescription || (language === 'fr_ht' 
-                                    ? 'Rejwenn nou pou evènman espesyal sa a.' 
+                                    ? 'Rejoignez-nous pour cet événement spécial.'
                                     : 'Join us for this special upcoming event.')}
                                 </p>
                               </div>
@@ -1653,7 +1635,7 @@ export default function PublicHome({
                         className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all duration-300 hover:scale-105"
                       >
                         <Calendar className="w-3.5 h-3.5" />
-                        <span>{language === 'fr_ht' ? 'Gade Tout Orè Sèvis Yo' : 'View Full Service Schedule'}</span>
+                        <span>{language === 'fr_ht' ? 'Voir tous les horaires des cultes' : 'View Full Service Schedule'}</span>
                       </a>
                     </div>
                   );
@@ -1671,7 +1653,7 @@ export default function PublicHome({
                       <Video className="w-5 h-5" />
                     </span>
                     <h5 className={`text-lg font-bold ${textTitle}`}>
-                      {language === 'fr_ht' ? 'Achiv Mesaj Yo' : 'Sermon Archives'}
+                      {language === 'fr_ht' ? 'Archives des prédications' : 'Sermon Archives'}
                     </h5>
                   </div>
                 </div>
@@ -1728,7 +1710,7 @@ export default function PublicHome({
                     ))
                   ) : (
                     <div className={`text-center py-12 ${textMuted} text-sm`}>
-                      {language === 'fr_ht' ? 'Pa gen okenn mesaj ki jwenn.' : 'No sermons found matching your search.'}
+                      {language === 'fr_ht' ? 'Aucune prédication ne correspond à votre recherche.' : 'No sermons found matching your search.'}
                     </div>
                   )}
                 </div>
@@ -1794,11 +1776,11 @@ export default function PublicHome({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">{language === 'fr_ht' ? 'Travay Bondye a' : 'Our Work'}</h3>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">{language === 'fr_ht' ? "L'œuvre de Dieu" : 'Our Work'}</h3>
             <h4 className={`text-3xl sm:text-4xl font-extrabold font-serif ${textTitle} mb-4`}>{t.navMinistries}</h4>
             <p className={`${textMuted} text-base`}>
               {language === 'fr_ht' 
-                ? 'Dekouvri diferan ministè kote w ka sèvi, grandi, epi sipòte travay Seyè a.' 
+                ? "Découvrez nos différents ministères, où vous pourrez servir, grandir et soutenir l'œuvre du Seigneur."
                 : 'Explore our various ministries where you can serve, grow, and support the work of the Lord.'}
             </p>
           </div>
@@ -1898,7 +1880,7 @@ export default function PublicHome({
                       href="#giving" 
                       className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-sm transition-all duration-300 shadow-md shadow-amber-500/10 cursor-pointer"
                     >
-                      <span>{language === 'fr_ht' ? 'Bay pou Misyon an' : 'Give to Missions'}</span>
+                      <span>{language === 'fr_ht' ? 'Soutenir les missions' : 'Give to Missions'}</span>
                       <Heart className="w-4 h-4 fill-current" />
                     </a>
                   </div>
@@ -1942,7 +1924,7 @@ export default function PublicHome({
                             <div className="h-full rounded-full bg-amber-500" style={{ width: `${pct}%` }} />
                           </div>
                           <div className="flex justify-between items-center text-[10px] text-slate-500">
-                            <span>Dat: {mission.date}</span>
+                            <span>{language === 'fr_ht' ? 'Date' : 'Date'}: {mission.date}</span>
                             <span className="font-bold text-amber-400">{pct}% {t.missionsProgress}</span>
                           </div>
                         </div>
@@ -1979,13 +1961,13 @@ export default function PublicHome({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">{language === 'fr_ht' ? 'Dekouvri Nou' : 'Discover Us'}</h3>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">{language === 'fr_ht' ? 'Découvrez-nous' : 'Discover Us'}</h3>
             <h4 className={`text-3xl sm:text-4xl font-extrabold font-serif ${textTitle} mb-4`}>
-              {language === 'fr_ht' ? 'Sou Ministè Nou An' : 'About Our Ministry'}
+              {language === 'fr_ht' ? 'À propos de notre ministère' : 'About Our Ministry'}
             </h4>
             <p className={`${textMuted} text-base`}>
               {language === 'fr_ht'
-                ? 'Aprann konnen misyon nou, kwayans fondamantal nou yo, ekip k ap dirije nou an, ak kisa ou ka atann.'
+                ? 'Découvrez notre mission, nos croyances bibliques fondamentales, notre équipe dirigeante et ce qui vous attend.'
                 : 'Get to know our mission, foundational biblical beliefs, leadership team, and what to expect.'}
             </p>
           </div>
@@ -2020,12 +2002,12 @@ export default function PublicHome({
                   <h5 className={`text-2xl font-bold font-serif ${textTitle} mb-4`}>{dAboutUsTitle}</h5>
                   <p className={`${textBody} text-base leading-relaxed mb-4`}>
                     {language === 'fr_ht'
-                      ? (settings.about_us_p1_ht || 'Parousia Baptist Ministries se yon kominote dore pèp Bondye k ap tann retou Jezi-Kri. Nou gen yon vizyon klè pou gaye mesaj Levanjil la, fè disip, epi sèvi diaspora nou an atravè divès kalite pwojè kominotè ak edikasyon espirityèl.')
+                      ? (settings.about_us_p1_ht || "Parousia Baptist Ministries est une communauté vivante de croyants consacrés à l'adoration de Dieu et dans l'attente du retour de Jésus-Christ. Notre mission est d'annoncer fidèlement l'Évangile, de former des disciples et de servir notre communauté locale ainsi que la diaspora.")
                       : (settings.about_us_p1_en || 'Parousia Baptist Ministries is a vibrant community of believers devoted to worshiping God and anticipating the second coming (Parousia) of our Lord Jesus Christ. Our mission is to preach the true Gospel, foster deep discipleship, and serve our local and diaspora community.')}
                   </p>
                   <p className={`${textBody} text-base leading-relaxed`}>
                     {language === 'fr_ht'
-                      ? (settings.about_us_p2_ht || 'Depi nou te kòmanse, nou konsantre sou bati yon lafwa solid ak transparan, sipòte pwojè lekòl ak swen sante an Ayiti, epi ofri yon kote kote chak frè ak sè kapab jwenn yon vrè fanmi espirityèl.')
+                      ? (settings.about_us_p2_ht || "Depuis nos débuts, nous nous attachons à vivre une foi biblique authentique, à soutenir des projets éducatifs et sanitaires en Haïti et à offrir un lieu accueillant où chacun peut trouver une véritable famille spirituelle.")
                       : (settings.about_us_p2_en || 'From our inception, we have focused on authentic biblical living, establishing direct educational and healthcare mission support in Haiti, and cultivating a welcoming space where everyone can experience genuine spiritual family.')}
                   </p>
                 </div>
@@ -2046,34 +2028,34 @@ export default function PublicHome({
                   {[
                     {
                       title: language === 'fr_ht' 
-                        ? (settings.belief_1_title_ht || 'Labib kòm Verite Absoli') 
+                        ? (settings.belief_1_title_ht || "L'autorité infaillible des Écritures")
                         : (settings.belief_1_title_en || 'Infallible Scripture'),
                       desc: language === 'fr_ht' 
-                        ? (settings.belief_1_desc_ht || 'Nou kwè tout Bib la se Pawòl enspire Bondye ye. Se sèl otorite siprèm pou lafwa nou ak jan n ap mennen lavi nou chak jou.') 
+                        ? (settings.belief_1_desc_ht || "Nous croyons que toute la Bible est la Parole inspirée, infaillible et sans erreur de Dieu, notre autorité suprême en matière de foi, de doctrine et de conduite.")
                         : (settings.belief_1_desc_en || 'We believe the Bible is the inspired, infallible, and inerrant Word of God, serving as our final authority in all matters of faith, doctrine, and conduct.')
                     },
                     {
                       title: language === 'fr_ht' 
-                        ? (settings.belief_2_title_ht || 'Trinite Sen An') 
+                        ? (settings.belief_2_title_ht || 'La Sainte Trinité')
                         : (settings.belief_2_title_en || 'Holy Trinity'),
                       desc: language === 'fr_ht'
-                        ? (settings.belief_2_desc_ht || 'Nou kwè nan yon sèl Bondye ki egziste nan twa pèsòn: Papa a, Pitit la (Jezi-Kri), ak Sentespri a, ki gen menm pouvwa ak glwa.')
+                        ? (settings.belief_2_desc_ht || "Nous croyons en un seul Dieu, existant éternellement en trois personnes égales : le Père, le Fils (Jésus-Christ) et le Saint-Esprit.")
                         : (settings.belief_2_desc_en || 'We believe in one God, eternally existing in three co-equal persons: God the Father, God the Son (Jesus Christ), and God the Holy Spirit.')
                     },
                     {
                       title: language === 'fr_ht' 
-                        ? (settings.belief_3_title_ht || 'Sali pa la Gras sèlman') 
+                        ? (settings.belief_3_title_ht || 'Le salut par la grâce')
                         : (settings.belief_3_title_en || 'Salvation by Grace'),
                       desc: language === 'fr_ht'
-                        ? (settings.belief_3_desc_ht || 'Sali a se yon kado Bondye fè moun pa mwayen lafwa nan Jezikri. Se pa pa mwayen bon zèv, men se pa gras sèlman nou sove.')
+                        ? (settings.belief_3_desc_ht || "Le salut est un don de Dieu reçu par la repentance et la foi dans le sacrifice de Jésus-Christ. Nous sommes sauvés par la grâce seule, et non par nos œuvres.")
                         : (settings.belief_3_desc_en || "Salvation is a gift of God received through repentance and faith in Christ's substitutionary sacrifice on the cross. It is entirely by grace alone, not works.")
                     },
                     {
                       title: language === 'fr_ht' 
-                        ? (settings.belief_4_title_ht || 'Retou Seyè a (Parousia)') 
+                        ? (settings.belief_4_title_ht || 'Le retour du Seigneur (Parousie)')
                         : (settings.belief_4_title_en || 'The Blessed Hope (Parousia)'),
                       desc: language === 'fr_ht'
-                        ? (settings.belief_4_desc_ht || 'Nou gen gwo espwa nan retou vizib ak gloriye Jezikri pou rache legliz la epi jije mond lan daprè jistis li.')
+                        ? (settings.belief_4_desc_ht || "Nous attendons avec espérance le retour personnel, visible et glorieux de Jésus-Christ, qui rassemblera son Église et établira son règne de justice.")
                         : (settings.belief_4_desc_en || 'We eagerly anticipate the personal, visible, and glorious return of Jesus Christ to gather His Church and establish His righteous kingdom.')
                     }
                   ].map((belief, idx) => (
@@ -2098,13 +2080,15 @@ export default function PublicHome({
                       key={idx} 
                       className={`rounded-2xl ${bgCardAltNested} overflow-hidden flex flex-col sm:flex-row border ${borderCard} h-full`}
                     >
-                      <div className="w-full sm:w-44 h-56 sm:h-auto relative flex-shrink-0">
-                        <img 
-                          src={member.image_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=300&auto=format&fit=crop"} 
-                          alt={member.name || `Team Member ${idx + 1}`} 
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
+                      {member.image_url && (
+                        <div className="w-full sm:w-44 h-56 sm:h-auto relative flex-shrink-0">
+                          <img
+                            src={member.image_url}
+                            alt={member.name || `Team Member ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
                       <div className="p-5 flex flex-col justify-between flex-grow">
                         <div>
                           <h6 className={`text-lg font-bold ${textTitle} font-serif`}>{member.name || `Team Member ${idx + 1}`}</h6>
@@ -2134,22 +2118,22 @@ export default function PublicHome({
                   <h5 className={`text-2xl font-bold font-serif ${textTitle} mb-4`}>{dExpectTitle}</h5>
                   <p className={`${textBody} text-base leading-relaxed mb-4`}>
                     {language === 'fr_ht'
-                      ? (settings.expect_p1_ht || 'Lè w vin adore avèk nou nan Parousia Baptist Ministries, w ap jwenn yon anbyans cho, kote yo adore Bondye ak reverans e ak kè kontan. Sèvis nou yo se an Kreyòl ak an Angle pou pèmèt tout moun patisipe fasilman.')
+                      ? (settings.expect_p1_ht || "Lorsque vous venez adorer avec nous à Parousia Baptist Ministries, vous découvrez une atmosphère chaleureuse, accueillante et respectueuse. Nos cultes, en français et en anglais, permettent à chacun de participer pleinement.")
                       : (settings.expect_p1_en || 'When you step into a service at Parousia Baptist Ministries, you will experience a warm, friendly, and reverent atmosphere. Our worship is spirit-filled and biblical, and our bilingual environment welcomes all.')}
                   </p>
                   <ul className="space-y-3">
                     {[
                       {
                         en: settings.expect_bullet1_en || 'Christ-centered praise, blending traditional hymns and modern worship',
-                        ht: settings.expect_bullet1_ht || 'Adorasyon ak Louwanj ki edifye kè ou'
+                        ht: settings.expect_bullet1_ht || 'Une louange centrée sur le Christ, entre cantiques traditionnels et chants contemporains'
                       },
                       {
                         en: settings.expect_bullet2_en || 'Expository, practical teaching straight from the holy scriptures',
-                        ht: settings.expect_bullet2_ht || 'Mesaj solid ki baze sèlman sou Bib la'
+                        ht: settings.expect_bullet2_ht || 'Un enseignement biblique, concret et fidèle aux Écritures'
                       },
                       {
                         en: settings.expect_bullet3_en || 'A supportive, tight-knit family that will welcome you with open arms',
-                        ht: settings.expect_bullet3_ht || 'Yon kominote k ap resevwa w ak bra louvri'
+                        ht: settings.expect_bullet3_ht || 'Une communauté fraternelle qui vous accueille à bras ouverts'
                       }
                     ].map((bulletObj, idx) => {
                       const bulletText = language === 'fr_ht' ? bulletObj.ht : bulletObj.en;
@@ -2181,7 +2165,7 @@ export default function PublicHome({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">Kalandre Aktivite</h3>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">{language === 'fr_ht' ? 'Calendrier des activités' : 'Events Calendar'}</h3>
             <h4 className={`text-3xl sm:text-4xl font-extrabold font-serif ${textTitle} mb-4`}>{t.eventsTitle}</h4>
             <p className={`${textMuted} text-base`}>{t.eventsSubtitle}</p>
           </div>
@@ -2232,10 +2216,10 @@ export default function PublicHome({
                             ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700' 
                             : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-white'
                         }`}
-                        title={language === 'fr_ht' ? 'Ajoute nan Kalandre' : 'Add to Calendar'}
+                        title={language === 'fr_ht' ? 'Ajouter au calendrier' : 'Add to Calendar'}
                       >
                         <Calendar className="w-3.5 h-3.5 text-amber-500" />
-                        <span className="hidden sm:inline">{language === 'fr_ht' ? 'Kalandre' : 'Add to Calendar'}</span>
+                        <span className="hidden sm:inline">{language === 'fr_ht' ? 'Calendrier' : 'Add to Calendar'}</span>
                         <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${activeCalendarMenu?.type === 'event' && activeCalendarMenu.id === event.id ? 'rotate-180' : ''}`} />
                       </button>
 
@@ -2448,11 +2432,11 @@ export default function PublicHome({
               <span>{t.navBlog}</span>
             </div>
             <h2 className={`text-3xl md:text-5xl font-extrabold font-serif ${textTitle} tracking-tight mb-4`}>
-              {language === 'fr_ht' ? "Pwen de Vi Pastè a" : "Pastor's Weekly Perspective"}
+              {language === 'fr_ht' ? 'Le regard du pasteur' : "Pastor's Weekly Perspective"}
             </h2>
             <p className={`${textMuted} text-base md:text-lg leading-relaxed`}>
               {language === 'fr_ht' 
-                ? "Nouriti espirityèl chak semèn, konsèy pastoral, ak refleksyon sakre pou gide lavi w." 
+                ? 'Chaque semaine, une nourriture spirituelle, des conseils pastoraux et des réflexions bibliques pour guider votre marche.'
                 : "Weekly spiritual nourishment, pastoral counsel, and sacred reflections to guide your journey."}
             </p>
           </div>
@@ -2484,7 +2468,7 @@ export default function PublicHome({
                           📅 {post.date}
                         </span>
                         <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${isLight ? 'bg-amber-100 text-amber-800' : 'bg-amber-500/10 text-amber-400'}`}>
-                          {language === 'fr_ht' ? 'Mesaj Semèn nan' : "Pastor's Word"}
+                          {language === 'fr_ht' ? 'Message de la semaine' : "Pastor's Word"}
                         </span>
                       </div>
                       
@@ -2504,7 +2488,7 @@ export default function PublicHome({
                             : 'bg-slate-950 hover:bg-slate-850 text-slate-200 border border-slate-850 hover:border-slate-800'
                         }`}
                       >
-                        <span>{language === 'fr_ht' ? 'Li Plis' : 'Read More'}</span>
+                        <span>{language === 'fr_ht' ? 'Lire la suite' : 'Read More'}</span>
                         <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                       </button>
                     </div>
@@ -2537,7 +2521,7 @@ export default function PublicHome({
                     </span>
                     <span className="text-xs font-semibold text-amber-500 flex items-center gap-1">
                       <Sparkles className="w-3.5 h-3.5" />
-                      <span>{language === 'fr_ht' ? 'Mesaj Pastè a' : 'Pastoral Word'}</span>
+                      <span>{language === 'fr_ht' ? 'Message pastoral' : 'Pastoral Word'}</span>
                     </span>
                   </div>
                   <h3 className={`text-2xl md:text-3xl font-bold font-serif ${textTitle}`}>
@@ -2565,7 +2549,7 @@ export default function PublicHome({
                   onClick={() => setSelectedBlogPost(null)}
                   className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-all"
                 >
-                  {language === 'fr_ht' ? 'Fèmen' : 'Close'}
+                  {language === 'fr_ht' ? 'Fermer' : 'Close'}
                 </button>
               </div>
             </div>
@@ -2585,7 +2569,7 @@ export default function PublicHome({
               <span>{t.prayerTitle}</span>
             </div>
             <h2 className={`text-3xl md:text-5xl font-extrabold font-serif ${textTitle} tracking-tight mb-4`}>
-              {language === 'fr_ht' ? 'Miray Lapriyè Piblik' : 'Public Prayer Wall'}
+              {language === 'fr_ht' ? 'Mur public de prière' : 'Public Prayer Wall'}
             </h2>
             <p className={`${textMuted} text-base md:text-lg leading-relaxed`}>
               {t.prayerSubtitle}
@@ -2626,14 +2610,14 @@ export default function PublicHome({
                       disabled={prayerIsAnonymous}
                       value={prayerName}
                       onChange={(e) => setPrayerName(e.target.value)}
-                      placeholder={language === 'fr_ht' ? 'e.g. Frè Marie' : 'e.g. Brother Thomas'} 
+                      placeholder={language === 'fr_ht' ? 'p. ex. Marie Dupont' : 'e.g. Brother Thomas'}
                       className={`w-full px-4 py-3 rounded-xl ${bgInput} focus:border-amber-500 focus:outline-none text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed`}
                     />
                   </div>
 
                   <div>
                     <label className={`block text-xs font-bold uppercase ${textMuted} mb-1.5`}>
-                      {language === 'fr_ht' ? 'Demann Lapriyè Ou' : 'Your Prayer Request'}
+                      {language === 'fr_ht' ? 'Votre demande de prière' : 'Your Prayer Request'}
                     </label>
                     <textarea 
                       rows={5}
@@ -2686,9 +2670,9 @@ export default function PublicHome({
             <div className="lg:col-span-3">
               <div className={`rounded-3xl ${bgCardAlt} border p-6 md:p-8 shadow-inner overflow-hidden max-h-[580px] flex flex-col`}>
                 <h3 className={`text-xl font-bold font-serif ${textTitle} mb-6 flex items-center justify-between`}>
-                  <span>{language === 'fr_ht' ? 'Lapriyè Kominote a' : 'Active Intercessions'}</span>
+                  <span>{language === 'fr_ht' ? 'Prières de la communauté' : 'Active Intercessions'}</span>
                   <span className="text-xs font-mono font-bold bg-amber-500/10 text-amber-400 px-2.5 py-1 rounded-full">
-                    {prayerRequests.length} {language === 'fr_ht' ? 'demann' : 'requests'}
+                    {prayerRequests.length} {language === 'fr_ht' ? 'demandes' : 'requests'}
                   </span>
                 </h3>
 
@@ -2743,11 +2727,11 @@ export default function PublicHome({
                 <span>{t.contactTitle}</span>
               </div>
               <h2 className={`text-3xl md:text-5xl font-extrabold font-serif ${textTitle} tracking-tight mb-6 leading-tight`}>
-                {language === 'fr_ht' ? 'Konekte avèk Kominote nou an' : 'Reach Out to Our Leadership'}
+                {language === 'fr_ht' ? 'Prenez contact avec notre communauté' : 'Reach Out to Our Leadership'}
               </h2>
               <p className={`${textBody} text-base md:text-lg leading-relaxed mb-8`}>
                 {language === 'fr_ht' 
-                  ? "Swa ou bezwen konsèy pastoral, priyè pou fanmi w, oswa ou vle mande enfòmasyon sou sèvis nou yo, lidèchip nou an toujou la pou koute w." 
+                  ? "Que vous ayez besoin d'un accompagnement pastoral, de prières pour votre famille ou de renseignements sur nos ministères, notre équipe est à votre écoute."
                   : "Whether you need pastoral care, a prayer cover, or have questions about our ministries, our team is always ready to receive and listen to you."}
               </p>
 
@@ -2983,7 +2967,7 @@ export default function PublicHome({
                               : isLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
                           }`}
                         >
-                          {language === 'fr_ht' ? 'Chèk / Mandat' : 'Check / M.O.'}
+                          {language === 'fr_ht' ? 'Chèque / Mandat' : 'Check / M.O.'}
                         </button>
                       )}
                     </div>
@@ -2996,11 +2980,11 @@ export default function PublicHome({
                             <span className="text-lg font-extrabold font-serif italic tracking-wide">zelle</span>
                           </div>
                           <h5 className={`text-xl font-extrabold ${textTitle}`}>
-                            {language === 'fr_ht' ? 'Bay Ofann ak Zelle' : 'Give via Zelle'}
+                            {language === 'fr_ht' ? 'Faire un don par Zelle' : 'Give via Zelle'}
                           </h5>
                           <p className={`text-xs ${textMuted} mt-2 max-w-sm mx-auto`}>
                             {language === 'fr_ht'
-                              ? "Sèvi ak enfòmasyon sa yo nan aplikasyon bank ou a pou fè transfè a dirèkteman."
+                              ? "Utilisez les renseignements suivants dans votre application bancaire pour effectuer le virement."
                               : "Use the following details in your banking app to complete your transfer directly."}
                           </p>
                         </div>
@@ -3010,7 +2994,7 @@ export default function PublicHome({
                           <div className={`p-4 rounded-2xl ${bgCardAltNested} flex items-center justify-between group transition-all duration-300`}>
                             <div>
                               <span className={`block text-[10px] font-bold uppercase tracking-wider ${textMuted} mb-1`}>
-                                {language === 'fr_ht' ? 'Non Benefisyè a' : 'Recipient Name'}
+                                {language === 'fr_ht' ? 'Nom du bénéficiaire' : 'Recipient Name'}
                               </span>
                               <span className={`text-sm font-bold ${textTitle} font-serif`}>
                                 {settings.zelle_name || 'Eglise Baptiste de la Parousie'}
@@ -3032,7 +3016,7 @@ export default function PublicHome({
                           <div className={`p-4 rounded-2xl ${bgCardAltNested} flex items-center justify-between group transition-all duration-300`}>
                             <div>
                               <span className={`block text-[10px] font-bold uppercase tracking-wider ${textMuted} mb-1`}>
-                                {language === 'fr_ht' ? 'Nimewo Zelle / Telefòn' : 'Zelle Phone Number'}
+                                {language === 'fr_ht' ? 'Numéro de téléphone Zelle' : 'Zelle Phone Number'}
                               </span>
                               <span className="text-base font-extrabold text-indigo-500 tracking-wider font-mono">
                                 {settings.zelle_phone || '929 599 8809'}
@@ -3056,7 +3040,7 @@ export default function PublicHome({
                           <Sparkles className={`w-4 h-4 ${isLight ? 'text-indigo-600' : 'text-indigo-400'} shrink-0 mt-0.5`} />
                           <p className="leading-relaxed">
                             {language === 'fr_ht'
-                              ? "Zelle se yon fason rapid ak sekirize ki pa gen okenn frè. Bondye beni-ou pou jenewozite ou!"
+                              ? "Zelle est un moyen rapide et sécurisé de faire un don sans frais de transaction. Merci pour votre fidèle soutien !"
                               : "Zelle is a direct and secure way to give without any transaction fees. Thank you for your faithful support!"}
                           </p>
                         </div>
@@ -3070,11 +3054,11 @@ export default function PublicHome({
                             <span className="text-lg font-extrabold font-serif italic tracking-wide">CashApp</span>
                           </div>
                           <h5 className={`text-xl font-extrabold ${textTitle}`}>
-                            {language === 'fr_ht' ? 'Bay Ofann ak CashApp' : 'Give via CashApp'}
+                            {language === 'fr_ht' ? 'Faire un don par CashApp' : 'Give via CashApp'}
                           </h5>
                           <p className={`text-xs ${textMuted} mt-2 max-w-sm mx-auto`}>
                             {language === 'fr_ht'
-                              ? "Eskane oswa kopye kòd CashApp sa a pou fè transfè ou dirèkteman nan aplikasyon CashApp la."
+                              ? "Scannez ou copiez cet identifiant pour effectuer votre don directement dans l'application CashApp."
                               : "Scan or copy this CashApp ID to make your donation directly in the CashApp application."}
                           </p>
                         </div>
@@ -3084,7 +3068,7 @@ export default function PublicHome({
                           <div className={`p-4 rounded-2xl ${bgCardAltNested} flex items-center justify-between group transition-all duration-300`}>
                             <div>
                               <span className={`block text-[10px] font-bold uppercase tracking-wider ${textMuted} mb-1`}>
-                                {language === 'fr_ht' ? 'Non Benefisyè a' : 'Recipient Name'}
+                                {language === 'fr_ht' ? 'Nom du bénéficiaire' : 'Recipient Name'}
                               </span>
                               <span className={`text-sm font-bold ${textTitle} font-serif`}>
                                 Eglise Baptiste de la Parousie
@@ -3131,7 +3115,7 @@ export default function PublicHome({
                           <Sparkles className="w-4 h-4 text-[#00D632] shrink-0 mt-0.5" />
                           <p className="leading-relaxed">
                             {language === 'fr_ht'
-                              ? "CashApp pèmèt ou voye ofann byen vit san okenn frè tranzaksyon. Mèsi anpil!"
+                              ? "CashApp vous permet d'envoyer rapidement votre don sans frais de transaction. Merci pour votre générosité !"
                               : "CashApp allows you to send offerings instantly without any fees. Thank you for your generosity!"}
                           </p>
                         </div>
@@ -3145,11 +3129,11 @@ export default function PublicHome({
                             <span className="text-lg font-extrabold font-serif italic tracking-wide">Venmo</span>
                           </div>
                           <h5 className={`text-xl font-extrabold ${textTitle}`}>
-                            {language === 'fr_ht' ? 'Bay Ofann ak Venmo' : 'Give via Venmo'}
+                            {language === 'fr_ht' ? 'Faire un don par Venmo' : 'Give via Venmo'}
                           </h5>
                           <p className={`text-xs ${textMuted} mt-2 max-w-sm mx-auto`}>
                             {language === 'fr_ht'
-                              ? "Kopye Venmo ID sa a pou w ka transfere ofann ou an rapidman."
+                              ? "Copiez cet identifiant Venmo pour effectuer votre don rapidement et en toute sécurité."
                               : "Copy this Venmo ID to complete your donation safely within the Venmo app."}
                           </p>
                         </div>
@@ -3159,7 +3143,7 @@ export default function PublicHome({
                           <div className={`p-4 rounded-2xl ${bgCardAltNested} flex items-center justify-between group transition-all duration-300`}>
                             <div>
                               <span className={`block text-[10px] font-bold uppercase tracking-wider ${textMuted} mb-1`}>
-                                {language === 'fr_ht' ? 'Non Benefisyè a' : 'Recipient Name'}
+                                {language === 'fr_ht' ? 'Nom du bénéficiaire' : 'Recipient Name'}
                               </span>
                               <span className={`text-sm font-bold ${textTitle} font-serif`}>
                                 Eglise Baptiste de la Parousie
@@ -3206,7 +3190,7 @@ export default function PublicHome({
                           <Sparkles className="w-4 h-4 text-[#008CFF] shrink-0 mt-0.5" />
                           <p className="leading-relaxed">
                             {language === 'fr_ht'
-                              ? "Venmo se yon mwayen pafè ak senp pou bay san okenn lòt frè adisyonèl. Bondye beni-ou!"
+                              ? "Venmo est un moyen simple de soutenir notre communauté sans frais supplémentaires. Que Dieu vous bénisse !"
                               : "Venmo is a simple way to support our community without additional fees. God bless you!"}
                           </p>
                         </div>
@@ -3220,11 +3204,11 @@ export default function PublicHome({
                             <span className="text-lg font-extrabold font-serif italic tracking-wide">Apple Pay</span>
                           </div>
                           <h5 className={`text-xl font-extrabold ${textTitle}`}>
-                            {language === 'fr_ht' ? 'Bay Ofann ak Apple Pay' : 'Give via Apple Pay'}
+                            {language === 'fr_ht' ? 'Faire un don par Apple Pay' : 'Give via Apple Pay'}
                           </h5>
                           <p className={`text-xs ${textMuted} mt-2 max-w-sm mx-auto`}>
                             {language === 'fr_ht'
-                              ? "Sèvi ak nimewo telefòn oswa imel sa a nan aplikasyon iMessage oswa Apple Wallet ou pou voye lajan."
+                              ? "Utilisez ce numéro de téléphone ou cette adresse e-mail dans iMessage ou Apple Wallet pour envoyer votre don."
                               : "Use the following phone number/email directly in iMessage or your Apple Wallet to make a payment."}
                           </p>
                         </div>
@@ -3234,7 +3218,7 @@ export default function PublicHome({
                           <div className={`p-4 rounded-2xl ${bgCardAltNested} flex items-center justify-between group transition-all duration-300`}>
                             <div>
                               <span className={`block text-[10px] font-bold uppercase tracking-wider ${textMuted} mb-1`}>
-                                {language === 'fr_ht' ? 'Non Benefisyè a' : 'Recipient Name'}
+                                {language === 'fr_ht' ? 'Nom du bénéficiaire' : 'Recipient Name'}
                               </span>
                               <span className={`text-sm font-bold ${textTitle} font-serif`}>
                                 Eglise Baptiste de la Parousie
@@ -3257,7 +3241,7 @@ export default function PublicHome({
                           <div className={`p-4 rounded-2xl ${bgCardAltNested} flex items-center justify-between group transition-all duration-300`}>
                             <div>
                               <span className={`block text-[10px] font-bold uppercase tracking-wider ${textMuted} mb-1`}>
-                                {language === 'fr_ht' ? 'Nimewo Telefòn / Imel Apple Pay' : 'Apple Pay Phone / Email'}
+                                {language === 'fr_ht' ? 'Téléphone / e-mail Apple Pay' : 'Apple Pay Phone / Email'}
                               </span>
                               <span className={`text-base font-extrabold ${isLight ? 'text-slate-800' : 'text-slate-200'} tracking-wider font-mono`}>
                                 {settings.apple_pay_phone}
@@ -3281,7 +3265,7 @@ export default function PublicHome({
                           <Sparkles className={`w-4 h-4 ${isLight ? 'text-slate-600' : 'text-white'} shrink-0 mt-0.5`} />
                           <p className="leading-relaxed">
                             {language === 'fr_ht'
-                              ? "Apple Pay se yon transfè mobil rapid ak sekirize ki pa gen okenn frè. Bondye beni-ou!"
+                              ? "Apple Pay permet des virements mobiles rapides et sécurisés, sans frais de transaction. Merci !"
                               : "Apple Pay provides secure, instant transfers without any platform transaction fees. Thank you!"}
                           </p>
                         </div>
@@ -3295,11 +3279,11 @@ export default function PublicHome({
                             <CreditCard className="w-5 h-5 text-amber-500" />
                           </div>
                           <h5 className={`text-xl font-extrabold ${textTitle}`}>
-                            {language === 'fr_ht' ? 'Chèk oswa Mandat-Kat' : 'Check or Money Order'}
+                            {language === 'fr_ht' ? 'Chèque ou mandat' : 'Check or Money Order'}
                           </h5>
                           <p className={`text-xs ${textMuted} mt-2 max-w-sm mx-auto`}>
                             {language === 'fr_ht'
-                              ? "Ou ka ekri chèk oswa mandat-kat epi voye l nan adrès nou an."
+                              ? "Vous pouvez libeller un chèque ou un mandat et l'envoyer à l'adresse ci-dessous."
                               : "You can write a check or money order and mail it to our address below."}
                           </p>
                         </div>
@@ -3309,7 +3293,7 @@ export default function PublicHome({
                           <div className={`p-4 rounded-2xl ${bgCardAltNested} flex items-center justify-between group transition-all duration-300`}>
                             <div className="min-w-0 flex-1 pr-3">
                               <span className={`block text-[10px] font-bold uppercase tracking-wider ${textMuted} mb-1`}>
-                                {language === 'fr_ht' ? 'Ekri sou non (Lòd)' : 'Pay to the order of'}
+                                {language === 'fr_ht' ? "À l'ordre de" : 'Pay to the order of'}
                               </span>
                               <span className={`text-sm font-bold ${textTitle} font-serif block truncate`}>
                                 {settings.check_payable_to || 'Eglise Baptiste de la Parousie'}
@@ -3332,7 +3316,7 @@ export default function PublicHome({
                           <div className={`p-4 rounded-2xl ${bgCardAltNested} flex items-center justify-between group transition-all duration-300`}>
                             <div className="min-w-0 flex-1 pr-3">
                               <span className={`block text-[10px] font-bold uppercase tracking-wider ${textMuted} mb-1`}>
-                                {language === 'fr_ht' ? 'Adrès Lapòs' : 'Mailing Address'}
+                                {language === 'fr_ht' ? 'Adresse postale' : 'Mailing Address'}
                               </span>
                               <span className={`text-sm font-semibold ${isLight ? 'text-slate-800' : 'text-slate-300'} font-mono block whitespace-pre-line leading-relaxed`}>
                                 {settings.church_address || settings.check_mailing_address || '789 Community Blvd, Fort Lauderdale, FL 33311'}
@@ -3356,7 +3340,7 @@ export default function PublicHome({
                           <Sparkles className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                           <p className="leading-relaxed">
                             {language === 'fr_ht'
-                              ? "Nou remèsye ou anpil pou ofrann ak fidelite ou nan travay Bondye a!"
+                              ? "Merci pour votre générosité et votre fidélité envers l'œuvre de Dieu !"
                               : "Thank you for your generous check or money order contribution to support God's ministry!"}
                           </p>
                         </div>
@@ -3378,7 +3362,7 @@ export default function PublicHome({
                       <div className={`rounded-xl ${isLight ? 'bg-slate-50 border border-slate-200 text-slate-500' : 'bg-slate-950 border border-slate-850 text-slate-400'} p-4 max-w-xs mx-auto mb-8 text-left text-xs font-mono space-y-1.5`}>
                         <div className="flex justify-between"><span>Trans:</span><span className={isLight ? 'text-slate-800' : 'text-slate-200'}>{givingTxId}</span></div>
                         <div className="flex justify-between"><span>Dest:</span><span className={isLight ? 'text-slate-800' : 'text-slate-200'}>{giveFund}</span></div>
-                        <div className="flex justify-between"><span>Frekans:</span><span className={isLight ? 'text-slate-800' : 'text-slate-200'}>{giveFreq === 'monthly' ? 'Monthly' : 'One-time'}</span></div>
+                        <div className="flex justify-between"><span>{language === 'fr_ht' ? 'Fréquence' : 'Frequency'}:</span><span className={isLight ? 'text-slate-800' : 'text-slate-200'}>{giveFreq === 'monthly' ? (language === 'fr_ht' ? 'Mensuel' : 'Monthly') : (language === 'fr_ht' ? 'Ponctuel' : 'One-time')}</span></div>
                         <div className={`flex justify-between border-t ${isLight ? 'border-slate-200' : 'border-slate-800'} pt-1.5 text-sm font-bold`}><span>Total:</span><span className="text-amber-500">${isCustomAmount ? customAmount : giveAmount} USD</span></div>
                       </div>
 
@@ -3390,7 +3374,7 @@ export default function PublicHome({
                             : 'bg-slate-950 hover:bg-slate-850 text-slate-200 border-slate-800'
                         }`}
                       >
-                        Bay yon lòt ofrann
+                        {language === 'fr_ht' ? 'Faire un autre don' : 'Make another offering'}
                       </button>
                     </div>
                   ) : (
@@ -3455,7 +3439,7 @@ export default function PublicHome({
                             onClick={() => setIsCustomAmount(!isCustomAmount)}
                             className="text-xs font-bold text-amber-500 hover:text-amber-600 transition-colors cursor-pointer"
                           >
-                            {isCustomAmount ? (language === 'fr_ht' ? 'Chwazi kantite fiks' : 'Choose pre-set amount') : (language === 'fr_ht' ? 'Antre kantite pa w' : 'Enter custom amount')}
+                            {isCustomAmount ? (language === 'fr_ht' ? 'Choisir un montant prédéfini' : 'Choose pre-set amount') : (language === 'fr_ht' ? 'Saisir un autre montant' : 'Enter custom amount')}
                           </button>
                         </div>
 
@@ -3489,7 +3473,7 @@ export default function PublicHome({
                         <div className={`p-4 rounded-2xl ${bgCardAltNested} mb-6 space-y-4`}>
                           <div className={`flex items-center gap-1.5 ${textMuted} text-xs font-semibold uppercase tracking-wider mb-2`}>
                             <Lock className="w-3.5 h-3.5 text-blue-500" />
-                            <span>Sekirize ak chifreman / Secured SSL</span>
+                            <span>{language === 'fr_ht' ? 'Paiement sécurisé par chiffrement SSL' : 'Secured SSL'}</span>
                           </div>
 
                           <div>
@@ -3560,7 +3544,7 @@ export default function PublicHome({
                       {/* Mobile Payment Alternatives */}
                       <div className={`mt-6 pt-6 border-t ${borderDivider}`}>
                         <h6 className={`text-[10px] font-bold uppercase tracking-wider ${textMuted} mb-3 text-center`}>
-                          {language === 'fr_ht' ? 'Oswa bay avèk transfè mobil dirèk' : 'Or give via direct mobile transfer'}
+                          {language === 'fr_ht' ? 'Ou faites un don par virement mobile direct' : 'Or give via direct mobile transfer'}
                         </h6>
                         <div className="space-y-2.5">
                           {/* Zelle */}
@@ -3582,7 +3566,7 @@ export default function PublicHome({
                                 } text-[10px] font-semibold transition-all cursor-pointer`}
                               >
                                 {copiedPhone ? <CheckCircle className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                                <span>{copiedPhone ? (language === 'fr_ht' ? 'Kopye' : 'Copied') : (language === 'fr_ht' ? 'Kopye' : 'Copy')}</span>
+                                <span>{copiedPhone ? (language === 'fr_ht' ? 'Copié' : 'Copied') : (language === 'fr_ht' ? 'Copier' : 'Copy')}</span>
                               </button>
                             </div>
                           </div>
@@ -3607,7 +3591,7 @@ export default function PublicHome({
                                   } text-[10px] font-semibold transition-all cursor-pointer`}
                                 >
                                   {copiedCashapp ? <CheckCircle className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                                  <span>{copiedCashapp ? (language === 'fr_ht' ? 'Kopye' : 'Copied') : (language === 'fr_ht' ? 'Kopye' : 'Copy')}</span>
+                                  <span>{copiedCashapp ? (language === 'fr_ht' ? 'Copié' : 'Copied') : (language === 'fr_ht' ? 'Copier' : 'Copy')}</span>
                                 </button>
                               </div>
                             </div>
@@ -3633,7 +3617,7 @@ export default function PublicHome({
                                   } text-[10px] font-semibold transition-all cursor-pointer`}
                                 >
                                   {copiedVenmo ? <CheckCircle className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                                  <span>{copiedVenmo ? (language === 'fr_ht' ? 'Kopye' : 'Copied') : (language === 'fr_ht' ? 'Kopye' : 'Copy')}</span>
+                                  <span>{copiedVenmo ? (language === 'fr_ht' ? 'Copié' : 'Copied') : (language === 'fr_ht' ? 'Copier' : 'Copy')}</span>
                                 </button>
                               </div>
                             </div>
@@ -3659,7 +3643,7 @@ export default function PublicHome({
                                   } text-[10px] font-semibold transition-all cursor-pointer`}
                                 >
                                   {copiedApplePay ? <CheckCircle className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                                  <span>{copiedApplePay ? (language === 'fr_ht' ? 'Kopye' : 'Copied') : (language === 'fr_ht' ? 'Kopye' : 'Copy')}</span>
+                                  <span>{copiedApplePay ? (language === 'fr_ht' ? 'Copié' : 'Copied') : (language === 'fr_ht' ? 'Copier' : 'Copy')}</span>
                                 </button>
                               </div>
                             </div>
@@ -3670,13 +3654,13 @@ export default function PublicHome({
                             <div className={`p-3 rounded-xl ${bgCardAltNested} flex flex-col gap-2.5 text-xs`}>
                               <div className="flex items-center justify-between">
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide ${isLight ? 'bg-slate-200 text-slate-700' : 'bg-slate-800 text-slate-300'} select-none`}>
-                                  {language === 'fr_ht' ? 'Chèk oswa Mandat' : 'Check / Money Order'}
+                                  {language === 'fr_ht' ? 'Chèque ou mandat' : 'Check / Money Order'}
                                 </span>
                               </div>
                               <div className="grid sm:grid-cols-2 gap-2">
                                 <div className={`p-2 ${isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'} border rounded-lg flex items-center justify-between`}>
                                   <div className="min-w-0 flex-1 pr-1">
-                                    <span className="block text-[8px] uppercase tracking-wider text-slate-500">{language === 'fr_ht' ? 'Lòd' : 'Pay to'}</span>
+                                    <span className="block text-[8px] uppercase tracking-wider text-slate-500">{language === 'fr_ht' ? "À l'ordre de" : 'Pay to'}</span>
                                     <span className={`text-[11px] font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'} block truncate`}>{settings.check_payable_to || 'Eglise Baptiste de la Parousie'}</span>
                                   </div>
                                   <button
@@ -3693,7 +3677,7 @@ export default function PublicHome({
                                 </div>
                                 <div className={`p-2 ${isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'} border rounded-lg flex items-center justify-between`}>
                                   <div className="min-w-0 flex-1 pr-1">
-                                    <span className="block text-[8px] uppercase tracking-wider text-slate-500">{language === 'fr_ht' ? 'Adrès' : 'Mailing address'}</span>
+                                    <span className="block text-[8px] uppercase tracking-wider text-slate-500">{language === 'fr_ht' ? 'Adresse' : 'Mailing address'}</span>
                                     <span className={`text-[11px] font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'} block truncate`}>{settings.church_address || settings.check_mailing_address || '789 Community Blvd, Fort Lauderdale, FL 33311'}</span>
                                   </div>
                                   <button
@@ -3724,7 +3708,7 @@ export default function PublicHome({
                               } text-[10px] font-bold transition-all cursor-pointer`}
                             >
                               {copiedName ? <CheckCircle className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                              <span>{copiedName ? (language === 'fr_ht' ? 'Kopye Non Benefisyè a!' : 'Copied Name!') : (language === 'fr_ht' ? 'Kopye Non Benefisyè a' : 'Copy Beneficiary Name')}</span>
+                              <span>{copiedName ? (language === 'fr_ht' ? 'Nom du bénéficiaire copié !' : 'Copied Name!') : (language === 'fr_ht' ? 'Copier le nom du bénéficiaire' : 'Copy Beneficiary Name')}</span>
                             </button>
                           </div>
                         </div>
@@ -3768,16 +3752,16 @@ export default function PublicHome({
                   
                   <div className="flex justify-between items-start pl-2">
                     <Sparkles className="w-5 h-5 text-amber-500 animate-pulse" />
-                    <span className="text-[10px] font-bold tracking-widest text-amber-500 uppercase">{language === 'fr_ht' ? 'Gratis' : 'Free'}</span>
+                    <span className="text-[10px] font-bold tracking-widest text-amber-500 uppercase">{language === 'fr_ht' ? 'Gratuit' : 'Free'}</span>
                   </div>
                   
                   <div className="pl-2 my-auto">
                     <BookOpen className="w-12 h-12 text-blue-500 mb-3" />
                     <h5 className={`font-serif font-extrabold text-base leading-tight ${textTitle}`}>
-                      {language === 'fr_ht' ? (settings.free_gift_title_kreyol || 'Devosyonèl Parousie 2026') : (settings.free_gift_title_english || 'Parousie Devotional 2026')}
+                      {language === 'fr_ht' ? (settings.free_gift_title_kreyol || 'Méditations Parousie 2026') : (settings.free_gift_title_english || 'Parousie Devotional 2026')}
                     </h5>
                     <p className={`text-[10px] mt-1 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                      {language === 'fr_ht' ? 'Meditasyon & Vèsè' : 'Meditations & Verses'}
+                      {language === 'fr_ht' ? 'Méditations et versets' : 'Meditations & Verses'}
                     </p>
                   </div>
                   
@@ -3787,10 +3771,10 @@ export default function PublicHome({
                 </div>
                 
                 <h4 className={`text-2xl font-extrabold font-serif ${textTitle} mt-6 mb-3`}>
-                  {language === 'fr_ht' ? (settings.free_gift_title_kreyol || t.leadSectionTitle) : (settings.free_gift_title_english || t.leadSectionTitle)}
+                  {language === 'fr_ht' ? (settings.free_gift_title_kreyol || 'Méditations Parousie 2026') : (settings.free_gift_title_english || t.leadSectionTitle)}
                 </h4>
                 <p className={`text-sm ${textBody} leading-relaxed max-w-sm`}>
-                  {language === 'fr_ht' ? (settings.free_gift_desc_kreyol || t.leadSectionSubtitle) : (settings.free_gift_desc_english || t.leadSectionSubtitle)}
+                  {language === 'fr_ht' ? (settings.free_gift_desc_kreyol || 'Recevez gratuitement ce recueil de méditations et de versets pour nourrir votre foi au quotidien.') : (settings.free_gift_desc_english || t.leadSectionSubtitle)}
                 </p>
               </div>
               
@@ -3956,7 +3940,7 @@ export default function PublicHome({
 
           <div className={`pt-8 border-t ${borderDivider} flex flex-col sm:flex-row justify-between items-center text-xs font-semibold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
             <p>&copy; {new Date().getFullYear()} {t.churchName}. {t.rightsReserved}</p>
-            <p className="mt-2 sm:mt-0 text-slate-500">Kreyòl Ayisyen &amp; English</p>
+            <p className="mt-2 sm:mt-0 text-slate-500">Français &amp; English</p>
           </div>
 
         </div>

@@ -69,7 +69,7 @@ export default function AdminSectionContactExport({
       }
       setMessage({
         type: 'success',
-        text: language === 'en' ? 'Contact settings saved.' : 'Anviwònman kontak sove.',
+        text: language === 'en' ? 'Contact settings saved.' : 'Paramètres de contact enregistrés.',
       });
       onSaved?.();
     } catch (error: any) {
@@ -104,7 +104,7 @@ export default function AdminSectionContactExport({
         text:
           language === 'en'
             ? 'Spreadsheet downloaded. Open it in Excel or Google Sheets.'
-            : 'Fichye telechaje. Ou ka louvri li nan Excel oswa Google Sheets.',
+            : 'Fichier téléchargé. Vous pouvez l’ouvrir dans Excel ou Google Sheets.',
       });
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message || 'Error occurred' });
@@ -118,19 +118,19 @@ export default function AdminSectionContactExport({
       {showContactConfig && (
         <div className="p-5 rounded-2xl bg-slate-950/30 border border-slate-850 space-y-4">
           <h4 className="text-sm font-bold text-white">
-            {language === 'en' ? 'Committee Contact & Notifications' : 'Kontak Komite ak Notifikasyon'}
+            {language === 'en' ? 'Committee Contact & Notifications' : 'Contact du comité et notifications'}
           </h4>
 
           {loading ? (
             <p className="text-xs text-slate-400">
-              {language === 'en' ? 'Loading contact settings...' : 'Y ap chaje anviwònman kontak yo...'}
+              {language === 'en' ? 'Loading contact settings...' : 'Chargement des paramètres de contact...'}
             </p>
           ) : (
             <>
               <div className="grid md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                    {language === 'en' ? 'Contact Name' : 'Non Kontak'}
+                    {language === 'en' ? 'Contact Name' : 'Nom du contact'}
                   </label>
                   <input
                     type="text"
@@ -141,7 +141,7 @@ export default function AdminSectionContactExport({
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                    {language === 'en' ? 'Contact Email' : 'Imel Kontak'}
+                    {language === 'en' ? 'Contact Email' : 'Adresse courriel du contact'}
                   </label>
                   <input
                     type="email"
@@ -152,7 +152,7 @@ export default function AdminSectionContactExport({
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                    {language === 'en' ? 'Contact Phone' : 'Telefòn Kontak'}
+                    {language === 'en' ? 'Contact Phone' : 'Téléphone du contact'}
                   </label>
                   <input
                     type="text"
@@ -165,19 +165,19 @@ export default function AdminSectionContactExport({
 
               <div>
                 <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                  {language === 'en' ? 'Notification Recipients' : 'Resevè Notifikasyon'}
+                  {language === 'en' ? 'Notification Recipients' : 'Destinataires des notifications'}
                 </label>
                 <textarea
                   rows={3}
                   value={config.notification_emails || ''}
                   onChange={(e) => setConfig((prev) => ({ ...prev, notification_emails: e.target.value }))}
-                  placeholder={language === 'en' ? 'leader@church.org, committee@church.org' : 'lidè@legliz.org, komite@legliz.org'}
+                  placeholder={language === 'en' ? 'leader@church.org, committee@church.org' : 'responsable@eglise.org, comite@eglise.org'}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
                 />
                 <p className="text-[10px] text-slate-500 mt-1">
                   {language === 'en'
                     ? 'Comma or line-separated emails notified on each new submission.'
-                    : 'Imel separe pa vigil oswa liy ki resevwa notifikasyon pou chak nouvo soumisyon.'}
+                    : 'Adresses courriel séparées par des virgules ou des sauts de ligne, avisées à chaque nouvelle soumission.'}
                 </p>
               </div>
 
@@ -189,7 +189,7 @@ export default function AdminSectionContactExport({
                   className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-slate-950 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
                 >
                   <Save className="w-3.5 h-3.5" />
-                  <span>{language === 'en' ? 'Save Contact Settings' : 'Sove Anviwònman Kontak'}</span>
+                  <span>{language === 'en' ? 'Save Contact Settings' : 'Enregistrer les paramètres de contact'}</span>
                 </button>
               </div>
             </>
@@ -213,7 +213,7 @@ export default function AdminSectionContactExport({
               className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-amber-500/50 text-xs font-bold text-slate-200 inline-flex items-center gap-1.5 cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              <span>{language === 'en' ? 'Refresh' : 'Rafrechi'}</span>
+              <span>{language === 'en' ? 'Refresh' : 'Actualiser'}</span>
             </button>
             <button
               type="button"
@@ -222,7 +222,7 @@ export default function AdminSectionContactExport({
               className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
             >
               <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span>{language === 'en' ? 'Download Spreadsheet (.xlsx)' : 'Telechaje Fichye (.xlsx)'}</span>
+              <span>{language === 'en' ? 'Download Spreadsheet (.xlsx)' : 'Télécharger la feuille de calcul (.xlsx)'}</span>
             </button>
           </div>
         </div>
@@ -239,7 +239,7 @@ export default function AdminSectionContactExport({
           <p className="text-xs text-slate-400">
             {language === 'en'
               ? `${recordCount} record${recordCount === 1 ? '' : 's'} available for export.`
-              : `${recordCount} dosye disponib pou ekspòte.`}
+              : `${recordCount} dossier${recordCount === 1 ? '' : 's'} disponible${recordCount === 1 ? '' : 's'} pour l’exportation.`}
           </p>
         )}
       </div>
