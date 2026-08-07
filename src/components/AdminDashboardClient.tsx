@@ -69,7 +69,7 @@ import AdminDocumentsMenu from '@/components/AdminDocumentsMenu';
 import { MINISTRY_SIGNUP_FIELDS, MinistrySignupSlug } from '@/lib/ministry-signup-fields';
 import { useRouter } from 'next/navigation';
 import { clearAdminUiClient, setAdminUiClient } from '@/lib/admin-cookies';
-import { EXECUTIVE_COMMITTEE_MEMBERS } from '@/lib/executive-committee';
+import { flattenTeamMembers, parseTeamDepartments, type TeamDepartment, type TeamMember } from '@/lib/team-departments';
 import { getYouTubeThumbnailUrl } from '@/lib/youtube';
 import {
   BilingualTextField,
@@ -134,15 +134,7 @@ interface AdminDashboardProps {
 
 type TabType = 'settings' | 'hometabs' | 'schedules' | 'missions' | 'outreach' | 'events' | 'registrations' | 'sermons' | 'subscribers' | 'devotional' | 'admins' | 'contact' | 'prayers' | 'blog' | 'ministries';
 
-interface TeamMember {
-  name: string;
-  role_en: string;
-  role_ht: string;
-  bio_en: string;
-  bio_ht: string;
-  image_url: string;
-  email: string;
-}
+type TeamMemberKey = `${number}-${number}`;
 
 
 export default function AdminDashboardClient({ 
@@ -735,24 +727,14 @@ export default function AdminDashboardClient({
   const [belief4DescEn, setBelief4DescEn] = useState(settings.belief_4_desc_en || 'We eagerly anticipate the personal, visible, and glorious return of Jesus Christ to gather His Church and establish His righteous kingdom.');
   const [belief4DescHt, setBelief4DescHt] = useState(settings.belief_4_desc_ht || 'Nous plaçons notre grande espérance dans le retour visible et glorieux de Jésus-Christ, qui enlèvera l’Église et jugera le monde selon sa justice.');
 
-  const [teamTitleEn, setTeamTitleEn] = useState(settings.team_title_en || 'Executive Committee');
-  const [teamTitleHt, setTeamTitleHt] = useState(settings.team_title_ht || 'Comité exécutif');
+  const [teamTitleEn, setTeamTitleEn] = useState(settings.team_title_en || 'Our Team');
+  const [teamTitleHt, setTeamTitleHt] = useState(settings.team_title_ht || 'Notre équipe');
+  const [teamSubtitleEn, setTeamSubtitleEn] = useState(settings.team_subtitle_en || 'Departments & Associations');
+  const [teamSubtitleHt, setTeamSubtitleHt] = useState(settings.team_subtitle_ht || 'Départements et associations');
 
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => {
-    try {
-      if (settings.team_members_json) {
-        const parsed = JSON.parse(settings.team_members_json);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.error('Error parsing team_members_json:', e);
-    }
-    return EXECUTIVE_COMMITTEE_MEMBERS;
-  });
-  const [draggingMemberIndex, setDraggingMemberIndex] = useState<number | null>(null);
-  const [translatingTeamMemberIndex, setTranslatingTeamMemberIndex] = useState<number | null>(null);
+  const [teamDepartments, setTeamDepartments] = useState<TeamDepartment[]>(() => parseTeamDepartments(settings));
+  const [draggingMemberIndex, setDraggingMemberIndex] = useState<TeamMemberKey | null>(null);
+  const [translatingTeamMemberKey, setTranslatingTeamMemberKey] = useState<TeamMemberKey | null>(null);
 
   const [expectTitleEn, setExpectTitleEn] = useState(settings.expect_title_en || 'What to Expect');
   const [expectTitleHt, setExpectTitleHt] = useState(settings.expect_title_ht || 'À quoi vous attendre');
@@ -1062,57 +1044,73 @@ export default function AdminDashboardClient({
     }
   };
 
-  const handleTeamMemberFile = (index: number, file: File | undefined) => {
+  const handleTeamMemberFile = (deptIndex: number, memberIndex: number, file: File | undefined) => {
     if (!file) return;
     compressAndResizeImage(file, 400, 400, 0.85, (b64) => {
-      setTeamMembers(prev => {
-        const copy = [...prev];
-        copy[index] = { ...copy[index], image_url: b64 };
+      setTeamDepartments((prev) => {
+        const copy = prev.map((department) => ({
+          ...department,
+          members: [...department.members],
+        }));
+        copy[deptIndex].members[memberIndex] = {
+          ...copy[deptIndex].members[memberIndex],
+          image_url: b64,
+        };
         return copy;
       });
     });
   };
 
-  const handlePasteTeamMember = (index: number, e: React.ClipboardEvent) => {
+  const handlePasteTeamMember = (deptIndex: number, memberIndex: number, e: React.ClipboardEvent) => {
     const items = e.clipboardData.items;
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.indexOf('image') !== -1) {
         const file = items[i].getAsFile();
-        if (file) handleTeamMemberFile(index, file);
+        if (file) handleTeamMemberFile(deptIndex, memberIndex, file);
         break;
       }
     }
   };
 
-  const handleDropTeamMember = (index: number, e: React.DragEvent) => {
+  const handleDropTeamMember = (deptIndex: number, memberIndex: number, e: React.DragEvent) => {
     e.preventDefault();
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      handleTeamMemberFile(index, files[0]);
+      handleTeamMemberFile(deptIndex, memberIndex, files[0]);
     }
   };
 
-  const handleAddTeamMember = () => {
-    setTeamMembers(prev => [
-      ...prev,
-      {
-        name: '',
-        role_en: '',
-        role_ht: '',
-        bio_en: '',
-        bio_ht: '',
-        image_url: '',
-        email: ''
-      }
-    ]);
+  const handleAddTeamMember = (deptIndex: number) => {
+    setTeamDepartments((prev) =>
+      prev.map((department, index) =>
+        index === deptIndex
+          ? {
+              ...department,
+              members: [
+                ...department.members,
+                {
+                  name: '',
+                  role_en: '',
+                  role_ht: '',
+                  bio_en: '',
+                  bio_ht: '',
+                  image_url: '',
+                  email: '',
+                },
+              ],
+            }
+          : department
+      )
+    );
   };
 
-  const handleDeleteTeamMember = (index: number) => {
-    if (teamMembers.length <= 1) {
+  const handleDeleteTeamMember = (deptIndex: number, memberIndex: number) => {
+    const department = teamDepartments[deptIndex];
+    if (!department || department.members.length <= 1) {
       triggerAlert(
-        language === 'fr_ht' 
-          ? 'Vous devez conserver au moins un membre dans l’équipe.'
-          : 'You must have at least one team member.', 
+        language === 'fr_ht'
+          ? 'Chaque département doit conserver au moins un membre.'
+          : 'Each department must have at least one member.',
         'error'
       );
       return;
@@ -1120,26 +1118,111 @@ export default function AdminDashboardClient({
     if (!confirm(language === 'fr_ht' ? 'Voulez-vous supprimer ce membre de l’équipe ?' : 'Are you sure you want to delete this team member?')) {
       return;
     }
-    setTeamMembers(prev => prev.filter((_, i) => i !== index));
+    setTeamDepartments((prev) =>
+      prev.map((currentDepartment, index) =>
+        index === deptIndex
+          ? {
+              ...currentDepartment,
+              members: currentDepartment.members.filter((_, i) => i !== memberIndex),
+            }
+          : currentDepartment
+      )
+    );
   };
 
-  const handleMoveTeamMember = (index: number, direction: 'up' | 'down') => {
-    if (direction === 'up' && index === 0) return;
-    if (direction === 'down' && index === teamMembers.length - 1) return;
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    setTeamMembers(prev => {
+  const handleMoveTeamMember = (deptIndex: number, memberIndex: number, direction: 'up' | 'down') => {
+    const department = teamDepartments[deptIndex];
+    if (!department) return;
+    if (direction === 'up' && memberIndex === 0) return;
+    if (direction === 'down' && memberIndex === department.members.length - 1) return;
+    const targetIndex = direction === 'up' ? memberIndex - 1 : memberIndex + 1;
+    setTeamDepartments((prev) =>
+      prev.map((currentDepartment, index) => {
+        if (index !== deptIndex) return currentDepartment;
+        const members = [...currentDepartment.members];
+        const temp = members[memberIndex];
+        members[memberIndex] = members[targetIndex];
+        members[targetIndex] = temp;
+        return { ...currentDepartment, members };
+      })
+    );
+  };
+
+  const handleUpdateTeamMember = (
+    deptIndex: number,
+    memberIndex: number,
+    field: keyof TeamMember,
+    value: string
+  ) => {
+    setTeamDepartments((prev) =>
+      prev.map((department, index) => {
+        if (index !== deptIndex) return department;
+        const members = [...department.members];
+        members[memberIndex] = { ...members[memberIndex], [field]: value };
+        return { ...department, members };
+      })
+    );
+  };
+
+  const handleUpdateTeamDepartment = (
+    deptIndex: number,
+    field: 'title_en' | 'title_ht',
+    value: string
+  ) => {
+    setTeamDepartments((prev) =>
+      prev.map((department, index) =>
+        index === deptIndex ? { ...department, [field]: value } : department
+      )
+    );
+  };
+
+  const handleAddTeamDepartment = () => {
+    setTeamDepartments((prev) => [
+      ...prev,
+      {
+        id: `department-${Date.now()}`,
+        title_en: 'New Department',
+        title_ht: 'Nouveau département',
+        members: [
+          {
+            name: '',
+            role_en: '',
+            role_ht: '',
+            bio_en: '',
+            bio_ht: '',
+            image_url: '',
+            email: '',
+          },
+        ],
+      },
+    ]);
+  };
+
+  const handleDeleteTeamDepartment = (deptIndex: number) => {
+    if (teamDepartments.length <= 1) {
+      triggerAlert(
+        language === 'fr_ht'
+          ? 'Vous devez conserver au moins un département.'
+          : 'You must keep at least one department.',
+        'error'
+      );
+      return;
+    }
+    if (!confirm(language === 'fr_ht' ? 'Voulez-vous supprimer ce département ?' : 'Are you sure you want to delete this department?')) {
+      return;
+    }
+    setTeamDepartments((prev) => prev.filter((_, index) => index !== deptIndex));
+  };
+
+  const handleMoveTeamDepartment = (deptIndex: number, direction: 'up' | 'down') => {
+    if (direction === 'up' && deptIndex === 0) return;
+    if (direction === 'down' && deptIndex === teamDepartments.length - 1) return;
+    const targetIndex = direction === 'up' ? deptIndex - 1 : deptIndex + 1;
+    setTeamDepartments((prev) => {
       const copy = [...prev];
-      const temp = copy[index];
-      copy[index] = copy[targetIndex];
+      const temp = copy[deptIndex];
+      copy[deptIndex] = copy[targetIndex];
       copy[targetIndex] = temp;
-      return copy;
-    });
-  };
-
-  const handleUpdateTeamMember = (index: number, field: keyof TeamMember, value: string) => {
-    setTeamMembers(prev => {
-      const copy = [...prev];
-      copy[index] = { ...copy[index], [field]: value };
       return copy;
     });
   };
@@ -1210,6 +1293,12 @@ export default function AdminDashboardClient({
     if (homeSubTab === 'team') {
       return [
         { id: 'team_title', kreyol: teamTitleHt, english: teamTitleEn },
+        { id: 'team_subtitle', kreyol: teamSubtitleHt, english: teamSubtitleEn },
+        ...teamDepartments.map((department, index) => ({
+          id: `dept_${index}_title`,
+          kreyol: department.title_ht,
+          english: department.title_en,
+        })),
       ];
     }
 
@@ -1286,6 +1375,21 @@ export default function AdminDashboardClient({
         setTeamTitleHt(byId.team_title.kreyol);
         setTeamTitleEn(byId.team_title.english);
       }
+      if (byId.team_subtitle) {
+        setTeamSubtitleHt(byId.team_subtitle.kreyol);
+        setTeamSubtitleEn(byId.team_subtitle.english);
+      }
+      setTeamDepartments((prev) =>
+        prev.map((department, index) => {
+          const titleField = byId[`dept_${index}_title`];
+          if (!titleField) return department;
+          return {
+            ...department,
+            title_ht: titleField.kreyol,
+            title_en: titleField.english,
+          };
+        })
+      );
       return;
     }
 
@@ -1330,11 +1434,12 @@ export default function AdminDashboardClient({
     );
   };
 
-  const handleTranslateTeamMember = async (index: number) => {
-    const member = teamMembers[index];
+  const handleTranslateTeamMember = async (deptIndex: number, memberIndex: number) => {
+    const member = teamDepartments[deptIndex]?.members[memberIndex];
     if (!member) return;
 
-    setTranslatingTeamMemberIndex(index);
+    const memberKey: TeamMemberKey = `${deptIndex}-${memberIndex}`;
+    setTranslatingTeamMemberKey(memberKey);
     try {
       await runBilingualTranslation(
         [
@@ -1343,24 +1448,30 @@ export default function AdminDashboardClient({
         ],
         (updated) => {
           const byId = Object.fromEntries(updated.map((field) => [field.id, field]));
-          setTeamMembers((prev) =>
-            prev.map((current, currentIndex) =>
-              currentIndex === index
-                ? {
-                    ...current,
-                    role_ht: byId.role?.kreyol ?? current.role_ht,
-                    role_en: byId.role?.english ?? current.role_en,
-                    bio_ht: byId.bio?.kreyol ?? current.bio_ht,
-                    bio_en: byId.bio?.english ?? current.bio_en,
-                  }
-                : current
-            )
+          setTeamDepartments((prev) =>
+            prev.map((department, currentDeptIndex) => {
+              if (currentDeptIndex !== deptIndex) return department;
+              return {
+                ...department,
+                members: department.members.map((current, currentMemberIndex) =>
+                  currentMemberIndex === memberIndex
+                    ? {
+                        ...current,
+                        role_ht: byId.role?.kreyol ?? current.role_ht,
+                        role_en: byId.role?.english ?? current.role_en,
+                        bio_ht: byId.bio?.kreyol ?? current.bio_ht,
+                        bio_en: byId.bio?.english ?? current.bio_en,
+                      }
+                    : current
+                ),
+              };
+            })
           );
         },
-        member.name || `team member ${index + 1}`
+        member.name || `team member ${memberIndex + 1}`
       );
     } finally {
-      setTranslatingTeamMemberIndex(null);
+      setTranslatingTeamMemberKey(null);
     }
   };
 
@@ -1671,26 +1782,37 @@ export default function AdminDashboardClient({
       }
 
       // Upload any new team member photos
-      const updatedTeamMembers = [...teamMembers];
-      for (let i = 0; i < updatedTeamMembers.length; i++) {
-        const member = updatedTeamMembers[i];
-        if (member.image_url && member.image_url.startsWith('data:')) {
-          triggerAlert(
-            language === 'fr_ht' 
-              ? `Téléversement de la photo de ${member.name || 'responsable ' + (i + 1)}...`
-              : `Uploading photo for ${member.name || 'leader ' + (i + 1)}...`, 
-            'success'
-          );
-          const res = await clientUploadAsset(`home_team_member_${i}_${Date.now()}.jpg`, member.image_url);
-          if (res.success && res.url) {
-            updatedTeamMembers[i] = { ...member, image_url: res.url };
-          } else {
-            triggerAlert(res.error || `Failed to upload photo for ${member.name || 'leader ' + (i + 1)}`, 'error');
-            return;
+      const updatedTeamDepartments = teamDepartments.map((department) => ({
+        ...department,
+        members: [...department.members],
+      }));
+      let uploadCounter = 0;
+      for (let deptIndex = 0; deptIndex < updatedTeamDepartments.length; deptIndex++) {
+        for (let memberIndex = 0; memberIndex < updatedTeamDepartments[deptIndex].members.length; memberIndex++) {
+          const member = updatedTeamDepartments[deptIndex].members[memberIndex];
+          if (member.image_url && member.image_url.startsWith('data:')) {
+            uploadCounter += 1;
+            triggerAlert(
+              language === 'fr_ht'
+                ? `Téléversement de la photo de ${member.name || 'responsable ' + uploadCounter}...`
+                : `Uploading photo for ${member.name || 'leader ' + uploadCounter}...`,
+              'success'
+            );
+            const res = await clientUploadAsset(
+              `home_team_member_${deptIndex}_${memberIndex}_${Date.now()}.jpg`,
+              member.image_url
+            );
+            if (res.success && res.url) {
+              updatedTeamDepartments[deptIndex].members[memberIndex] = { ...member, image_url: res.url };
+            } else {
+              triggerAlert(res.error || `Failed to upload photo for ${member.name || 'leader ' + uploadCounter}`, 'error');
+              return;
+            }
           }
         }
       }
-      setTeamMembers(updatedTeamMembers);
+      setTeamDepartments(updatedTeamDepartments);
+      const updatedTeamMembers = flattenTeamMembers(updatedTeamDepartments);
 
       let finalExpectImg = expectImageUrl;
       if (expectImageUrl && expectImageUrl.startsWith('data:')) {
@@ -1737,6 +1859,9 @@ export default function AdminDashboardClient({
 
         team_title_en: teamTitleEn,
         team_title_ht: teamTitleHt,
+        team_subtitle_en: teamSubtitleEn,
+        team_subtitle_ht: teamSubtitleHt,
+        team_departments_json: JSON.stringify(updatedTeamDepartments),
         team_members_json: JSON.stringify(updatedTeamMembers),
         // Legacy keys for backwards compatibility:
         team_p1_name: updatedTeamMembers[0]?.name || '',
@@ -4760,15 +4885,15 @@ export default function AdminDashboardClient({
                       direction={bilingualTranslateDirection}
                       onDirectionChange={setBilingualTranslateDirection}
                       onTranslate={handleTranslateHomeTab}
-                      isTranslating={isBilingualTranslating && translatingTeamMemberIndex === null}
+                      isTranslating={isBilingualTranslating && translatingTeamMemberKey === null}
                       hint={language === 'fr_ht'
-                        ? 'Traduit uniquement le titre de la section. Utilisez la barre dans chaque fiche membre pour traduire ce membre.'
-                        : 'Translates the section title only. Use the bar inside each member card to translate that person.'}
+                        ? 'Traduit le titre de la page, le sous-titre et les en-têtes de département. Utilisez la barre dans chaque fiche membre pour traduire cette personne.'
+                        : 'Translates the page title, subtitle, and department headers. Use the bar inside each member card to translate that person.'}
                     />
 
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Section Title (Français)</label>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Page Title (Français)</label>
                         <input
                           type="text"
                           required
@@ -4778,7 +4903,7 @@ export default function AdminDashboardClient({
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Section Title (English)</label>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Page Title (English)</label>
                         <input
                           type="text"
                           required
@@ -4787,49 +4912,58 @@ export default function AdminDashboardClient({
                           className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
                         />
                       </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Subtitle (Français)</label>
+                        <input
+                          type="text"
+                          required
+                          value={teamSubtitleHt}
+                          onChange={(e) => setTeamSubtitleHt(e.target.value)}
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Subtitle (English)</label>
+                        <input
+                          type="text"
+                          required
+                          value={teamSubtitleEn}
+                          onChange={(e) => setTeamSubtitleEn(e.target.value)}
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                        />
+                      </div>
                     </div>
 
-                    {/* Dynamic Team Members List */}
-                    <div className="space-y-6">
-                      {teamMembers.map((member, index) => (
-                        <div 
-                          key={index}
-                          className={`p-5 rounded-lg bg-slate-900/30 border space-y-4 relative group/member transition-all ${
-                            translatingTeamMemberIndex === index
-                              ? 'border-amber-500 ring-2 ring-amber-500/30 bg-amber-500/5'
-                              : 'border-slate-850'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between border-b border-slate-850 pb-2">
-                            <h5 className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-                              {language === 'fr_ht' 
-                                ? `Membre de l'équipe ${index + 1}` 
-                                : `Team Member ${index + 1}`}
-                              {member.name ? ` - ${member.name}` : ''}
+                    <div className="space-y-8">
+                      {teamDepartments.map((department, deptIndex) => (
+                        <div key={department.id} className="p-5 rounded-xl bg-slate-900/20 border border-slate-850 space-y-5">
+                          <div className="flex items-center justify-between border-b border-slate-850 pb-3 gap-3">
+                            <h5 className="text-sm font-bold text-amber-400 uppercase tracking-wider">
+                              {language === 'fr_ht' ? `Département ${deptIndex + 1}` : `Department ${deptIndex + 1}`}
                             </h5>
-                            <div className="flex items-center gap-1.5 z-10">
+                            <div className="flex items-center gap-1.5">
                               <button
                                 type="button"
-                                title={language === 'fr_ht' ? 'Monter' : 'Move Up'}
-                                onClick={() => handleMoveTeamMember(index, 'up')}
-                                disabled={index === 0}
-                                className="p-1 rounded bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 text-slate-400 hover:text-amber-400 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:border-slate-800 disabled:hover:bg-slate-950 transition-all cursor-pointer"
+                                title={language === 'fr_ht' ? 'Monter le département' : 'Move department up'}
+                                onClick={() => handleMoveTeamDepartment(deptIndex, 'up')}
+                                disabled={deptIndex === 0}
+                                className="p-1 rounded bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 text-slate-400 hover:text-amber-400 disabled:opacity-30 transition-all cursor-pointer"
                               >
                                 <ArrowUp className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 type="button"
-                                title={language === 'fr_ht' ? 'Descendre' : 'Move Down'}
-                                onClick={() => handleMoveTeamMember(index, 'down')}
-                                disabled={index === teamMembers.length - 1}
-                                className="p-1 rounded bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 text-slate-400 hover:text-amber-400 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:border-slate-800 disabled:hover:bg-slate-950 transition-all cursor-pointer"
+                                title={language === 'fr_ht' ? 'Descendre le département' : 'Move department down'}
+                                onClick={() => handleMoveTeamDepartment(deptIndex, 'down')}
+                                disabled={deptIndex === teamDepartments.length - 1}
+                                className="p-1 rounded bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 text-slate-400 hover:text-amber-400 disabled:opacity-30 transition-all cursor-pointer"
                               >
                                 <ArrowDown className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 type="button"
-                                title={language === 'fr_ht' ? 'Supprimer' : 'Delete'}
-                                onClick={() => handleDeleteTeamMember(index)}
+                                title={language === 'fr_ht' ? 'Supprimer le département' : 'Delete department'}
+                                onClick={() => handleDeleteTeamDepartment(deptIndex)}
                                 className="p-1 rounded bg-slate-950 border border-rose-950 hover:border-rose-500 hover:bg-rose-950/20 text-rose-400/80 hover:text-rose-400 transition-all cursor-pointer"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -4837,163 +4971,238 @@ export default function AdminDashboardClient({
                             </div>
                           </div>
 
-                          <AdminBilingualTranslateBar
-                            compact
-                            language={language}
-                            direction={bilingualTranslateDirection}
-                            onDirectionChange={setBilingualTranslateDirection}
-                            onTranslate={() => handleTranslateTeamMember(index)}
-                            isTranslating={isBilingualTranslating && translatingTeamMemberIndex === index}
-                            hint={language === 'fr_ht'
-                              ? `Traduit le rôle et la biographie de ${member.name || `membre ${index + 1}`} uniquement.`
-                              : `Translates only the role and biography for ${member.name || `member ${index + 1}`}.`}
-                          />
-
-                          <div className="grid md:grid-cols-3 gap-4">
-                            <div className="md:col-span-2 space-y-4">
-                              <div className="grid md:grid-cols-2 gap-4">
-                                <div>
-                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Name / Non</label>
-                                  <input
-                                    type="text"
-                                    required
-                                    value={member.name}
-                                    onChange={(e) => handleUpdateTeamMember(index, 'name', e.target.value)}
-                                    className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white font-semibold"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Email / Adresse courriel (optionnel)</label>
-                                  <input
-                                    type="text"
-                                    value={member.email || ''}
-                                    onChange={(e) => handleUpdateTeamMember(index, 'email', e.target.value)}
-                                    placeholder={language === 'fr_ht' ? 'Laisser vide si non applicable' : 'Leave blank if not applicable'}
-                                    className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
-                                  />
-                                </div>
-                              </div>
-
-                              <div className="grid md:grid-cols-2 gap-4">
-                                <div>
-                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Rôle (français)</label>
-                                  <input
-                                    type="text"
-                                    required
-                                    value={member.role_ht}
-                                    onChange={(e) => handleUpdateTeamMember(index, 'role_ht', e.target.value)}
-                                    className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Role / Role (English)</label>
-                                  <input
-                                    type="text"
-                                    required
-                                    value={member.role_en}
-                                    onChange={(e) => handleUpdateTeamMember(index, 'role_en', e.target.value)}
-                                    className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
-                                  />
-                                </div>
-                              </div>
-
-                              <div className="grid md:grid-cols-2 gap-4">
-                                <div>
-                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Biographie (français)</label>
-                                  <textarea
-                                    required
-                                    value={member.bio_ht}
-                                    onChange={(e) => handleUpdateTeamMember(index, 'bio_ht', e.target.value)}
-                                    className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-20 resize-none leading-relaxed"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bio / Biography (English)</label>
-                                  <textarea
-                                    required
-                                    value={member.bio_en}
-                                    onChange={(e) => handleUpdateTeamMember(index, 'bio_en', e.target.value)}
-                                    className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-20 resize-none leading-relaxed"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Team Member Photo Upload */}
+                          <div className="grid md:grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Photo / Foto (400x400)</label>
-                              <div
-                                onClick={() => document.getElementById(`team-member-file-input-${index}`)?.click()}
-                                onPaste={(e) => handlePasteTeamMember(index, e)}
-                                onDragOver={(e) => { e.preventDefault(); setDraggingMemberIndex(index); }}
-                                onDragLeave={() => setDraggingMemberIndex(null)}
-                                onDrop={(e) => { handleDropTeamMember(index, e); setDraggingMemberIndex(null); }}
-                                className={`relative border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all min-h-[180px] h-full group/drop overflow-hidden ${
-                                  draggingMemberIndex === index 
-                                    ? 'border-amber-500 bg-amber-500/10 scale-[1.01]' 
-                                    : 'border-slate-800 hover:border-amber-500/50 bg-slate-950/50'
-                                }`}
-                              >
-                                <input
-                                  type="file"
-                                  id={`team-member-file-input-${index}`}
-                                  accept="image/*"
-                                  className="hidden"
-                                  onChange={(e) => handleTeamMemberFile(index, e.target.files?.[0])}
-                                />
+                              <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Department Header (Français)</label>
+                              <input
+                                type="text"
+                                required
+                                value={department.title_ht}
+                                onChange={(e) => handleUpdateTeamDepartment(deptIndex, 'title_ht', e.target.value)}
+                                className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white font-semibold"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Department Header (English)</label>
+                              <input
+                                type="text"
+                                required
+                                value={department.title_en}
+                                onChange={(e) => handleUpdateTeamDepartment(deptIndex, 'title_en', e.target.value)}
+                                className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white font-semibold"
+                              />
+                            </div>
+                          </div>
 
-                                {member.image_url ? (
-                                  <div className="text-center z-10 w-full space-y-2">
-                                    <div className="relative w-20 h-20 mx-auto shrink-0">
-                                      <div className="w-20 h-20 rounded-full border-2 border-slate-800 overflow-hidden shadow-lg group-hover/drop:scale-105 transition-all">
-                                        <img src={member.image_url} alt="Team member preview" className="w-full h-full object-cover" />
-                                      </div>
+                          <div className="space-y-5">
+                            {department.members.map((member, memberIndex) => {
+                              const memberKey: TeamMemberKey = `${deptIndex}-${memberIndex}`;
+                              return (
+                                <div
+                                  key={memberKey}
+                                  className={`p-5 rounded-lg bg-slate-900/30 border space-y-4 transition-all ${
+                                    translatingTeamMemberKey === memberKey
+                                      ? 'border-amber-500 ring-2 ring-amber-500/30 bg-amber-500/5'
+                                      : 'border-slate-850'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between border-b border-slate-850 pb-2">
+                                    <h6 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                                      {language === 'fr_ht'
+                                        ? `Membre ${memberIndex + 1}`
+                                        : `Member ${memberIndex + 1}`}
+                                      {member.name ? ` - ${member.name}` : ''}
+                                    </h6>
+                                    <div className="flex items-center gap-1.5">
                                       <button
                                         type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleUpdateTeamMember(index, 'image_url', '');
-                                        }}
-                                        className="absolute -top-1 -right-1 p-1 rounded-full bg-slate-950 border border-rose-900 hover:border-rose-500 hover:bg-rose-950 text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
-                                        title={language === 'fr_ht' ? 'Supprimer la photo' : 'Remove photo'}
+                                        title={language === 'fr_ht' ? 'Monter' : 'Move Up'}
+                                        onClick={() => handleMoveTeamMember(deptIndex, memberIndex, 'up')}
+                                        disabled={memberIndex === 0}
+                                        className="p-1 rounded bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 text-slate-400 hover:text-amber-400 disabled:opacity-30 transition-all cursor-pointer"
                                       >
-                                        <Trash2 className="w-3 h-3" />
+                                        <ArrowUp className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        title={language === 'fr_ht' ? 'Descendre' : 'Move Down'}
+                                        onClick={() => handleMoveTeamMember(deptIndex, memberIndex, 'down')}
+                                        disabled={memberIndex === department.members.length - 1}
+                                        className="p-1 rounded bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 text-slate-400 hover:text-amber-400 disabled:opacity-30 transition-all cursor-pointer"
+                                      >
+                                        <ArrowDown className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        title={language === 'fr_ht' ? 'Supprimer' : 'Delete'}
+                                        onClick={() => handleDeleteTeamMember(deptIndex, memberIndex)}
+                                        className="p-1 rounded bg-slate-950 border border-rose-950 hover:border-rose-500 hover:bg-rose-950/20 text-rose-400/80 hover:text-rose-400 transition-all cursor-pointer"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
                                       </button>
                                     </div>
-                                    <span className="text-[10px] font-bold text-slate-300 block truncate">
-                                      {member.name ? `${member.name.replace(/\s+/g, '_')}.jpg` : `Member_${index + 1}.jpg`}
-                                    </span>
-                                    <span className="text-[9px] text-slate-400 block leading-tight">
-                                      {language === 'fr_ht' ? 'Glissez, cliquez ou collez pour remplacer' : 'Drag, click or paste to change'}
-                                    </span>
                                   </div>
-                                ) : (
-                                  <div className="flex flex-col items-center gap-1 text-slate-400 text-center">
-                                    <UploadCloud className="w-6 h-6 group-hover/drop:text-amber-400 transition-all animate-bounce" />
-                                    <span className="text-[10px] font-bold">
-                                      {language === 'fr_ht' ? 'Choisir ou coller une photo' : 'Choose or Paste Photo'}
-                                    </span>
-                                    <span className="text-[9px] text-slate-500">
-                                      {language === 'fr_ht' ? 'Image carrée (PNG/JPG)' : 'Square image (PNG/JPG)'}
-                                    </span>
+
+                                  <AdminBilingualTranslateBar
+                                    compact
+                                    language={language}
+                                    direction={bilingualTranslateDirection}
+                                    onDirectionChange={setBilingualTranslateDirection}
+                                    onTranslate={() => handleTranslateTeamMember(deptIndex, memberIndex)}
+                                    isTranslating={isBilingualTranslating && translatingTeamMemberKey === memberKey}
+                                    hint={language === 'fr_ht'
+                                      ? `Traduit le rôle et la biographie de ${member.name || `membre ${memberIndex + 1}`} uniquement.`
+                                      : `Translates only the role and biography for ${member.name || `member ${memberIndex + 1}`}.`}
+                                  />
+
+                                  <div className="grid md:grid-cols-3 gap-4">
+                                    <div className="md:col-span-2 space-y-4">
+                                      <div className="grid md:grid-cols-2 gap-4">
+                                        <div>
+                                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Name / Non</label>
+                                          <input
+                                            type="text"
+                                            required
+                                            value={member.name}
+                                            onChange={(e) => handleUpdateTeamMember(deptIndex, memberIndex, 'name', e.target.value)}
+                                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white font-semibold"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Email / Adresse courriel (optionnel)</label>
+                                          <input
+                                            type="text"
+                                            value={member.email || ''}
+                                            onChange={(e) => handleUpdateTeamMember(deptIndex, memberIndex, 'email', e.target.value)}
+                                            placeholder={language === 'fr_ht' ? 'Laisser vide si non applicable' : 'Leave blank if not applicable'}
+                                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                                          />
+                                        </div>
+                                      </div>
+
+                                      <div className="grid md:grid-cols-2 gap-4">
+                                        <div>
+                                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Rôle (français)</label>
+                                          <input
+                                            type="text"
+                                            value={member.role_ht}
+                                            onChange={(e) => handleUpdateTeamMember(deptIndex, memberIndex, 'role_ht', e.target.value)}
+                                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Role (English)</label>
+                                          <input
+                                            type="text"
+                                            value={member.role_en}
+                                            onChange={(e) => handleUpdateTeamMember(deptIndex, memberIndex, 'role_en', e.target.value)}
+                                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                                          />
+                                        </div>
+                                      </div>
+
+                                      <div className="grid md:grid-cols-2 gap-4">
+                                        <div>
+                                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Biographie (français)</label>
+                                          <textarea
+                                            value={member.bio_ht}
+                                            onChange={(e) => handleUpdateTeamMember(deptIndex, memberIndex, 'bio_ht', e.target.value)}
+                                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-20 resize-none leading-relaxed"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Bio / Biography (English)</label>
+                                          <textarea
+                                            value={member.bio_en}
+                                            onChange={(e) => handleUpdateTeamMember(deptIndex, memberIndex, 'bio_en', e.target.value)}
+                                            className="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white h-20 resize-none leading-relaxed"
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div>
+                                      <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Photo / Foto (400x400)</label>
+                                      <div
+                                        onClick={() => document.getElementById(`team-member-file-input-${memberKey}`)?.click()}
+                                        onPaste={(e) => handlePasteTeamMember(deptIndex, memberIndex, e)}
+                                        onDragOver={(e) => { e.preventDefault(); setDraggingMemberIndex(memberKey); }}
+                                        onDragLeave={() => setDraggingMemberIndex(null)}
+                                        onDrop={(e) => { handleDropTeamMember(deptIndex, memberIndex, e); setDraggingMemberIndex(null); }}
+                                        className={`relative border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all min-h-[180px] h-full group/drop overflow-hidden ${
+                                          draggingMemberIndex === memberKey
+                                            ? 'border-amber-500 bg-amber-500/10 scale-[1.01]'
+                                            : 'border-slate-800 hover:border-amber-500/50 bg-slate-950/50'
+                                        }`}
+                                      >
+                                        <input
+                                          type="file"
+                                          id={`team-member-file-input-${memberKey}`}
+                                          accept="image/*"
+                                          className="hidden"
+                                          onChange={(e) => handleTeamMemberFile(deptIndex, memberIndex, e.target.files?.[0])}
+                                        />
+
+                                        {member.image_url ? (
+                                          <div className="text-center z-10 w-full space-y-2">
+                                            <div className="relative w-20 h-20 mx-auto shrink-0">
+                                              <div className="w-20 h-20 rounded-full border-2 border-slate-800 overflow-hidden shadow-lg group-hover/drop:scale-105 transition-all">
+                                                <img src={member.image_url} alt="Team member preview" className="w-full h-full object-cover" />
+                                              </div>
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleUpdateTeamMember(deptIndex, memberIndex, 'image_url', '');
+                                                }}
+                                                className="absolute -top-1 -right-1 p-1 rounded-full bg-slate-950 border border-rose-900 hover:border-rose-500 hover:bg-rose-950 text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
+                                                title={language === 'fr_ht' ? 'Supprimer la photo' : 'Remove photo'}
+                                              >
+                                                <Trash2 className="w-3 h-3" />
+                                              </button>
+                                            </div>
+                                            <span className="text-[10px] font-bold text-slate-300 block truncate">
+                                              {member.name ? `${member.name.replace(/\s+/g, '_')}.jpg` : `Member_${memberIndex + 1}.jpg`}
+                                            </span>
+                                          </div>
+                                        ) : (
+                                          <div className="flex flex-col items-center gap-1 text-slate-400 text-center">
+                                            <UploadCloud className="w-6 h-6 group-hover/drop:text-amber-400 transition-all" />
+                                            <span className="text-[10px] font-bold">
+                                              {language === 'fr_ht' ? 'Choisir ou coller une photo' : 'Choose or Paste Photo'}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
-                                )}
-                              </div>
-                            </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          <div className="flex justify-center border-t border-slate-850 pt-4">
+                            <button
+                              type="button"
+                              onClick={() => handleAddTeamMember(deptIndex)}
+                              className="px-4 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-amber-500/50 text-amber-400 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
+                            >
+                              <Plus className="w-4 h-4" />
+                              <span>{language === 'fr_ht' ? 'Ajouter un membre' : 'Add Member'}</span>
+                            </button>
                           </div>
                         </div>
                       ))}
                     </div>
 
-                    {/* Add Team Member Button */}
                     <div className="flex justify-center border-t border-slate-900 pt-4">
                       <button
                         type="button"
-                        onClick={handleAddTeamMember}
+                        onClick={handleAddTeamDepartment}
                         className="px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 hover:border-amber-500/50 hover:bg-amber-500/20 text-amber-400 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-lg hover:shadow-amber-500/5 hover:-translate-y-0.5"
                       >
                         <Plus className="w-4 h-4" />
-                        <span>{language === 'fr_ht' ? 'Ajouter un membre à l’équipe' : 'Add Team Member'}</span>
+                        <span>{language === 'fr_ht' ? 'Ajouter un département' : 'Add Department'}</span>
                       </button>
                     </div>
                   </div>

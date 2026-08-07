@@ -17,7 +17,7 @@ import {
 import MinistrySignupForm from '@/components/MinistrySignupForm';
 import { setAdminUiClient } from '@/lib/admin-cookies';
 import { MinistrySignupSlug } from '@/lib/ministry-signup-fields';
-import { EXECUTIVE_COMMITTEE_MEMBERS } from '@/lib/executive-committee';
+import { parseTeamDepartments, type TeamDepartment, type TeamMember } from '@/lib/team-departments';
 import { getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from '@/lib/youtube';
 import { 
   Church, 
@@ -768,37 +768,18 @@ export default function PublicHome({
     : (settings.beliefs_title_en || t.tabBeliefs || 'Our Beliefs');
 
   const dTeamTitle = isHt 
-    ? (settings.team_title_ht || 'Comité exécutif')
-    : (settings.team_title_en || 'Executive Committee');
+    ? (settings.team_title_ht || 'Notre équipe')
+    : (settings.team_title_en || 'Our Team');
+
+  const dTeamSubtitle = isHt
+    ? (settings.team_subtitle_ht || 'Départements et associations')
+    : (settings.team_subtitle_en || 'Departments & Associations');
+
+  const teamDepartments: TeamDepartment[] = parseTeamDepartments(settings);
 
   const dExpectTitle = isHt 
     ? (settings.expect_title_ht || t.tabExpect || 'À quoi vous attendre')
     : (settings.expect_title_en || t.tabExpect || 'What to Expect');
-
-  // Parse dynamic team members with full fallback
-  interface TeamMember {
-    name: string;
-    role_en: string;
-    role_ht: string;
-    bio_en: string;
-    bio_ht: string;
-    image_url: string;
-    email: string;
-  }
-
-  const teamMembers: TeamMember[] = (() => {
-    try {
-      if (settings.team_members_json) {
-        const parsed = JSON.parse(settings.team_members_json);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.error('Error parsing team_members_json in PublicHome:', e);
-    }
-    return EXECUTIVE_COMMITTEE_MEMBERS;
-  })();
 
   // Dynamic Theme Classes
   const bgMain = isLight ? 'bg-slate-50 text-slate-900' : 'bg-slate-950 text-slate-100';
@@ -2073,40 +2054,57 @@ export default function PublicHome({
 
             {activeAboutTab === 'team' && (
               <div className={`p-8 rounded-3xl ${bgCard} animate-fade-in`}>
-                <h5 className={`text-2xl font-bold font-serif ${textTitle} mb-8 border-b border-slate-800 pb-3`}>{dTeamTitle}</h5>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
-                  {teamMembers.map((member, idx) => (
-                    <div 
-                      key={idx} 
-                      className={`rounded-2xl ${bgCardAltNested} overflow-hidden flex flex-col sm:flex-row border ${borderCard} h-full`}
-                    >
-                      {member.image_url && (
-                        <div className="w-full sm:w-44 h-56 sm:h-auto relative flex-shrink-0">
-                          <img
-                            src={member.image_url}
-                            alt={member.name || `Team Member ${idx + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
-                      <div className="p-5 flex flex-col justify-between flex-grow">
-                        <div>
-                          <h6 className={`text-lg font-bold ${textTitle} font-serif`}>{member.name || `Team Member ${idx + 1}`}</h6>
-                          <p className="text-xs font-bold text-amber-400 uppercase mb-2">
-                            {isHt ? member.role_ht : member.role_en}
-                          </p>
-                          <p className={`${textBody} text-xs leading-relaxed`}>
-                            {isHt ? member.bio_ht : member.bio_en}
-                          </p>
-                        </div>
-                        {member.email && (
-                          <div className="pt-3 border-t border-slate-800/50 mt-3 flex items-center gap-2 text-[10px] text-slate-500 truncate">
-                            <Mail className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span className="truncate">{member.email}</span>
+                <div className="mb-10 border-b border-slate-800 pb-4">
+                  <h5 className={`text-2xl font-bold font-serif ${textTitle}`}>{dTeamTitle}</h5>
+                  <p className={`text-sm font-bold uppercase tracking-widest text-amber-400 mt-2`}>{dTeamSubtitle}</p>
+                </div>
+
+                <div className="space-y-12">
+                  {teamDepartments.map((department) => (
+                    <section key={department.id} className="space-y-6">
+                      <h6 className={`text-lg font-bold uppercase tracking-wider text-amber-400 border-b ${borderDivider} pb-2`}>
+                        {isHt ? department.title_ht : department.title_en}
+                      </h6>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                        {department.members.map((member, idx) => (
+                          <div
+                            key={`${department.id}-${idx}`}
+                            className={`rounded-2xl ${bgCardAltNested} overflow-hidden flex flex-col sm:flex-row border ${borderCard} h-full`}
+                          >
+                            {member.image_url && (
+                              <div className="w-full sm:w-44 h-56 sm:h-auto relative flex-shrink-0">
+                                <img
+                                  src={member.image_url}
+                                  alt={member.name || `Team Member ${idx + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            )}
+                            <div className="p-5 flex flex-col justify-between flex-grow">
+                              <div>
+                                <h6 className={`text-lg font-bold ${textTitle} font-serif`}>{member.name || `Team Member ${idx + 1}`}</h6>
+                                {(member.role_en || member.role_ht) && (
+                                  <p className="text-xs font-bold text-amber-400 uppercase mb-2">
+                                    {isHt ? member.role_ht : member.role_en}
+                                  </p>
+                                )}
+                                {(member.bio_en || member.bio_ht) && (
+                                  <p className={`${textBody} text-xs leading-relaxed`}>
+                                    {isHt ? member.bio_ht : member.bio_en}
+                                  </p>
+                                )}
+                              </div>
+                              {member.email && (
+                                <div className="pt-3 border-t border-slate-800/50 mt-3 flex items-center gap-2 text-[10px] text-slate-500 truncate">
+                                  <Mail className="w-3.5 h-3.5 flex-shrink-0" />
+                                  <span className="truncate">{member.email}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        )}
+                        ))}
                       </div>
-                    </div>
+                    </section>
                   ))}
                 </div>
               </div>
