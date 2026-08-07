@@ -69,14 +69,14 @@ jobs:
             --project="${{ env.PROJECT_ID }}" \
             --format='value(status.url)')
           mkdir -p /tmp/prod-assets
-          PATHS=$(
-            for route in "" "free-gift" "devotional"; do
-              curl -fsSL "${PROD_URL}/${route}" || true
-            done | grep -oE '/api/assets/[^"'"'"'<> ]+' | sed 's|/api/assets/||' | sort -u
-          )
-          for file in $PATHS; do
+          curl -fsSL "${PROD_URL}" "${PROD_URL}/free-gift" "${PROD_URL}/devotional" \
+            | grep -oE '/api/assets/[^"'"'"'<> ]+' \
+            | sed 's|/api/assets/||' \
+            | sort -u > /tmp/prod-asset-names.txt
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
             curl -fsSL "${PROD_URL}/api/assets/${file}" -o "/tmp/prod-assets/${file}" || true
-          done
+          done < /tmp/prod-asset-names.txt
           if [ "$(ls -A /tmp/prod-assets 2>/dev/null)" ]; then
             gcloud storage cp /tmp/prod-assets/* "gs://${ASSET_BUCKET}/" --no-clobber || true
           fi
