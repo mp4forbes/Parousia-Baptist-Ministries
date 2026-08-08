@@ -18,6 +18,7 @@ import MinistrySignupForm from '@/components/MinistrySignupForm';
 import { setAdminUiClient } from '@/lib/admin-cookies';
 import { MinistrySignupSlug } from '@/lib/ministry-signup-fields';
 import { parseTeamDepartments, type TeamDepartment, type TeamMember } from '@/lib/team-departments';
+import { downloadAssetFile } from '@/lib/client-download';
 import { getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from '@/lib/youtube';
 import { 
   Church, 
@@ -611,6 +612,7 @@ export default function PublicHome({
   const [leadSubmitting, setLeadSubmitting] = useState(false);
   const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [leadError, setLeadError] = useState('');
+  const [giftDownloadError, setGiftDownloadError] = useState('');
 
   const handleLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -626,9 +628,20 @@ export default function PublicHome({
       const res = await submitLead(leadName, leadEmail, leadPhone);
       if (res.success) {
         setLeadSubmitted(true);
+        setGiftDownloadError('');
         setLeadName('');
         setLeadEmail('');
         setLeadPhone('');
+
+        const giftUrl = settings.free_gift_file_url || '/devotional_parousie_2026.txt';
+        const downloadRes = await downloadAssetFile(giftUrl, '/devotional_parousie_2026.txt');
+        if (!downloadRes.success) {
+          setGiftDownloadError(
+            language === 'fr_ht'
+              ? 'Votre inscription a réussi, mais le fichier de dévotion n’est pas disponible pour le moment. Utilisez le bouton ci-dessous ou contactez l’église.'
+              : downloadRes.error || 'Your signup succeeded, but the devotional file is unavailable right now. Use the button below or contact the church office.'
+          );
+        }
       } else {
         setLeadError(res.error || (language === 'fr_ht' ? 'Une erreur est survenue. Veuillez réessayer.' : 'An error occurred. Please try again.'));
       }
@@ -639,7 +652,21 @@ export default function PublicHome({
     }
   };
 
-  const handleGiftDownloadClick = () => {
+  const handleGiftDownloadClick = async (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    setGiftDownloadError('');
+
+    const giftUrl = settings.free_gift_file_url || '/devotional_parousie_2026.txt';
+    const downloadRes = await downloadAssetFile(giftUrl, '/devotional_parousie_2026.txt');
+    if (!downloadRes.success) {
+      setGiftDownloadError(
+        language === 'fr_ht'
+          ? 'Le fichier de dévotion n’est pas disponible pour le moment. Veuillez contacter l’église.'
+          : downloadRes.error || 'The devotional file is unavailable right now. Please contact the church office.'
+      );
+      return;
+    }
+
     // Smoothly scroll back to the top/home section of the page
     setTimeout(() => {
       const element = document.getElementById('home');
@@ -3872,16 +3899,21 @@ export default function PublicHome({
                     <p className={`text-sm ${textBody} leading-relaxed max-w-md mb-8`}>
                       {t.leadSuccessMessage}
                     </p>
+
+                    {giftDownloadError && (
+                      <div className="w-full max-w-md mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-semibold">
+                        {giftDownloadError}
+                      </div>
+                    )}
                     
-                    <a 
-                      href={settings.free_gift_file_url || "/devotional_parousie_2026.txt"}
-                      download={(settings.free_gift_file_url || "/devotional_parousie_2026.txt").split('/').pop()}
+                    <button
+                      type="button"
                       onClick={handleGiftDownloadClick}
-                      className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-extrabold text-sm shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all"
+                      className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-extrabold text-sm shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
                     >
                       <FileText className="w-5 h-5" />
                       <span>{t.leadDownloadBtn}</span>
-                    </a>
+                    </button>
                   </div>
                 )}
               </div>

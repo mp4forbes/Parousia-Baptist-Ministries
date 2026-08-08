@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { submitLead } from '@/lib/actions';
+import { downloadAssetFile } from '@/lib/client-download';
 import { 
   BookOpen, 
   Sparkles, 
@@ -31,6 +32,7 @@ export default function DevotionalDownloadClient({ settings }: DevotionalDownloa
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [downloadError, setDownloadError] = useState('');
   const [countdown, setCountdown] = useState(5);
 
   const themePrimary = settings.theme_primary || '#f59e0b';
@@ -56,6 +58,7 @@ export default function DevotionalDownloadClient({ settings }: DevotionalDownloa
     : (settings.free_gift_desc_english || t.leadSectionSubtitle);
 
   const fileUrl = settings.free_gift_file_url || '/devotional_parousie_2026.txt';
+  const fallbackFileUrl = '/devotional_parousie_2026.txt';
 
   const toggleLanguage = () => {
     setLanguage(language === 'fr_ht' ? 'en' : 'fr_ht');
@@ -74,14 +77,16 @@ export default function DevotionalDownloadClient({ settings }: DevotionalDownloa
         const res = await submitLead(leadName, leadEmail, leadPhone);
         if (res.success) {
           setSubmitted(true);
-          
-          // Trigger file download automatically
-          const link = document.createElement('a');
-          link.href = fileUrl;
-          link.download = fileUrl.split('/').pop() || 'devotional.txt';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+          setDownloadError('');
+
+          const downloadRes = await downloadAssetFile(fileUrl, fallbackFileUrl);
+          if (!downloadRes.success) {
+            setDownloadError(
+              language === 'fr_ht'
+                ? 'Votre inscription a réussi, mais le fichier de dévotion n’est pas disponible pour le moment. Veuillez contacter l’église.'
+                : downloadRes.error || 'Your signup succeeded, but the devotional file is unavailable right now. Please contact the church office.'
+            );
+          }
         } else {
           setError(res.error || (language === 'fr_ht' ? 'Une erreur est survenue. Veuillez réessayer.' : 'An error occurred. Please try again.'));
         }
@@ -283,9 +288,19 @@ export default function DevotionalDownloadClient({ settings }: DevotionalDownloa
                   </h3>
                   <p className={`text-sm ${textBody} leading-relaxed max-w-md mb-8`}>
                     {language === 'fr_ht'
-                      ? "Merci ! Votre téléchargement a démarré automatiquement. Vous serez bientôt redirigé vers la page d'accueil."
-                      : 'Thank you! Your download has started automatically. You will be returned to the home page shortly.'}
+                      ? downloadError
+                        ? "Merci pour votre inscription. Le téléchargement automatique n'a pas pu démarrer."
+                        : "Merci ! Votre téléchargement a démarré automatiquement. Vous serez bientôt redirigé vers la page d'accueil."
+                      : downloadError
+                        ? 'Thank you for signing up. The automatic download could not start.'
+                        : 'Thank you! Your download has started automatically. You will be returned to the home page shortly.'}
                   </p>
+
+                  {downloadError && (
+                    <div className="w-full max-w-md mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-semibold">
+                      {downloadError}
+                    </div>
+                  )}
 
                   <div className="flex flex-col items-center gap-4 w-full">
                     {/* Progress Indicator */}

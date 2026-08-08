@@ -1217,6 +1217,25 @@ export async function deleteSermon(id: number): Promise<{ success: boolean; erro
 
 // REMOTELY MOUNTED FILE ASSETS & BACKUP OPERATIONS
 
+export async function verifyAssetUrl(assetUrl: string): Promise<{ exists: boolean }> {
+  if (!assetUrl.startsWith('/api/assets/')) {
+    return { exists: true };
+  }
+
+  try {
+    const filename = decodeURIComponent(assetUrl.replace('/api/assets/', '').split('?')[0]);
+    const assetDir = getAssetDir();
+    const filePath = path.join(assetDir, filename);
+    const relative = path.relative(assetDir, filePath);
+    if (relative.startsWith('..') || path.isAbsolute(relative)) {
+      return { exists: false };
+    }
+    return { exists: fs.existsSync(filePath) };
+  } catch {
+    return { exists: false };
+  }
+}
+
 export async function uploadAsset(fileName: string, base64Data: string): Promise<{ success: boolean; url?: string; error?: string }> {
   const isAuthed = await checkAdminAuth();
   if (!isAuthed) return { success: false, error: 'Unauthorized' };

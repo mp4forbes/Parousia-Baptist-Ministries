@@ -72,6 +72,8 @@ jobs:
           curl -fsSL "${PROD_URL}" "${PROD_URL}/free-gift" "${PROD_URL}/devotional" \
             | grep -oE '/api/assets/[^"'"'"'<> ]+' \
             | sed 's|/api/assets/||' \
+            | sed 's/\\$//' \
+            | tr -d '\\' \
             | sort -u > /tmp/prod-asset-names.txt
           while IFS= read -r file; do
             [ -n "$file" ] || continue

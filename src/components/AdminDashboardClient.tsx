@@ -62,6 +62,7 @@ import {
   deleteMinistrySignup,
   exportMinistrySignupsSpreadsheet,
   markAdminEntryFromSite,
+  verifyAssetUrl,
 } from '@/lib/actions';
 import AdminSectionContactExport from '@/components/AdminSectionContactExport';
 import AdminBilingualTranslateBar from '@/components/AdminBilingualTranslateBar';
@@ -685,6 +686,20 @@ export default function AdminDashboardClient({
   const [giftDescEn, setGiftDescEn] = useState(settings.free_gift_desc_english || 'Enter your name, email, and phone to receive our beautiful Daily Devotional booklet containing scripture plans and prayers designed to help you grow daily in Christ.');
   const [giftFileUrl, setGiftFileUrl] = useState(settings.free_gift_file_url || '/devotional_parousie_2026.txt');
   const [giftAdminNotes, setGiftAdminNotes] = useState(settings.free_gift_admin_notes || '');
+
+  useEffect(() => {
+    if (!giftFileUrl.startsWith('/api/assets/')) return;
+    verifyAssetUrl(giftFileUrl).then((result) => {
+      if (!result.exists) {
+        triggerAlert(
+          language === 'fr_ht'
+            ? 'Le fichier du cadeau gratuit configuré est introuvable. Téléversez-le à nouveau dans les paramètres du site.'
+            : 'The configured free gift file is missing. Please upload it again in site settings.',
+          'error'
+        );
+      }
+    });
+  }, [giftFileUrl, language]);
   const [isDraggingGift, setIsDraggingGift] = useState(false);
   const [giftIsUploading, setGiftIsUploading] = useState(false);
 
@@ -2475,6 +2490,17 @@ export default function AdminDashboardClient({
         setGiftFileUrl(uploadRes.url); // Update state
       } else {
         triggerAlert(language === 'fr_ht' ? 'Erreur lors du téléversement du cadeau : ' + uploadRes.error : 'Error uploading free gift: ' + uploadRes.error, 'error');
+        return;
+      }
+    } else if (finalGiftFileUrl.startsWith('/api/assets/')) {
+      const assetCheck = await verifyAssetUrl(finalGiftFileUrl);
+      if (!assetCheck.exists) {
+        triggerAlert(
+          language === 'fr_ht'
+            ? 'Le fichier du cadeau gratuit est introuvable sur le serveur. Veuillez le téléverser à nouveau avant d’enregistrer.'
+            : 'The free gift file is missing from server storage. Please upload it again before saving.',
+          'error'
+        );
         return;
       }
     }

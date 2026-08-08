@@ -33,10 +33,15 @@ export async function GET(
     else if (ext === '.webp') contentType = 'image/webp';
     else if (ext === '.mp4') contentType = 'video/mp4';
     else if (ext === '.pdf') contentType = 'application/pdf';
+    else if (ext === '.txt') contentType = 'text/plain';
+
+    const forceDownload = request.nextUrl.searchParams.get('download') === '1';
+    const dispositionType = forceDownload || ext === '.pdf' || ext === '.txt' ? 'attachment' : 'inline';
 
     return new NextResponse(fileBuffer, {
       headers: {
         'Content-Type': contentType,
+        'Content-Disposition': `${dispositionType}; filename="${filename}"`,
         'Cache-Control': 'public, max-age=31536000, immutable',
       },
     });
