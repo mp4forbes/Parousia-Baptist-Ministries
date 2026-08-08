@@ -19,6 +19,7 @@ import { setAdminUiClient } from '@/lib/admin-cookies';
 import { MinistrySignupSlug } from '@/lib/ministry-signup-fields';
 import { parseTeamDepartments, type TeamDepartment, type TeamMember } from '@/lib/team-departments';
 import { downloadAssetFile } from '@/lib/client-download';
+import { getGiftDownloadUrls } from '@/lib/gift-download';
 import { getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from '@/lib/youtube';
 import { 
   Church, 
@@ -633,8 +634,8 @@ export default function PublicHome({
         setLeadEmail('');
         setLeadPhone('');
 
-        const giftUrl = settings.free_gift_file_url || '/devotional_parousie_2026.txt';
-        const downloadRes = await downloadAssetFile(giftUrl, '/devotional_parousie_2026.txt');
+        const { primary: giftUrl, fallback: giftFallback } = getGiftDownloadUrls(settings, language);
+        const downloadRes = await downloadAssetFile(giftUrl, giftFallback);
         if (!downloadRes.success) {
           setGiftDownloadError(
             language === 'fr_ht'
@@ -656,8 +657,8 @@ export default function PublicHome({
     e?.preventDefault();
     setGiftDownloadError('');
 
-    const giftUrl = settings.free_gift_file_url || '/devotional_parousie_2026.txt';
-    const downloadRes = await downloadAssetFile(giftUrl, '/devotional_parousie_2026.txt');
+    const { primary: giftUrl, fallback: giftFallback } = getGiftDownloadUrls(settings, language);
+    const downloadRes = await downloadAssetFile(giftUrl, giftFallback);
     if (!downloadRes.success) {
       setGiftDownloadError(
         language === 'fr_ht'

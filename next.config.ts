@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   outputFileTracingExcludes: {
     '/*': ['./data/backups/**/*'],
   },
+  serverExternalPackages: ['sharp'],
   experimental: {
     serverActions: {
       bodySizeLimit: '100mb',

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { submitLead } from '@/lib/actions';
 import { downloadAssetFile } from '@/lib/client-download';
+import { getGiftDownloadUrls } from '@/lib/gift-download';
 import { 
   BookOpen, 
   Sparkles, 
@@ -57,8 +58,7 @@ export default function DevotionalDownloadClient({ settings }: DevotionalDownloa
     ? (settings.free_gift_desc_kreyol || 'Recevez gratuitement ce recueil de méditations et de versets pour nourrir votre foi au quotidien.')
     : (settings.free_gift_desc_english || t.leadSectionSubtitle);
 
-  const fileUrl = settings.free_gift_file_url || '/devotional_parousie_2026.txt';
-  const fallbackFileUrl = '/devotional_parousie_2026.txt';
+  const { primary: fileUrl, fallback: fallbackFileUrl } = getGiftDownloadUrls(settings, language);
 
   const toggleLanguage = () => {
     setLanguage(language === 'fr_ht' ? 'en' : 'fr_ht');

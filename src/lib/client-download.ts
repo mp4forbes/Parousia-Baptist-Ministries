@@ -4,16 +4,24 @@ export async function downloadAssetFile(
   fallbackUrl?: string
 ): Promise<{ success: boolean; error?: string }> {
   const tryDownload = async (url: string): Promise<boolean> => {
-    const downloadUrl = url.startsWith('/api/assets/')
-      ? `${url}${url.includes('?') ? '&' : '?'}download=1`
+    const needsDownloadParam =
+      url.startsWith('/api/assets/') || url.startsWith('/api/devotional/pdf');
+    const cacheBuster =
+      url.startsWith('/api/devotional/pdf') ? `&t=${Date.now()}` : '';
+    const downloadUrl = needsDownloadParam
+      ? `${url}${url.includes('?') ? '&' : '?'}download=1${cacheBuster}`
       : url;
 
     const response = await fetch(downloadUrl);
     if (!response.ok) return false;
 
     const blob = await response.blob();
+    const disposition = response.headers.get('Content-Disposition');
+    const filenameFromHeader = disposition?.match(/filename="([^"]+)"/)?.[1];
     const filename =
-      decodeURIComponent(url.split('/').pop()?.split('?')[0] || 'download') || 'download';
+      filenameFromHeader ||
+      decodeURIComponent(url.split('/').pop()?.split('?')[0] || 'download') ||
+      'download';
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = objectUrl;

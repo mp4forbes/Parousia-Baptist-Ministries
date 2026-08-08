@@ -684,24 +684,33 @@ export default function AdminDashboardClient({
   const [giftTitleEn, setGiftTitleEn] = useState(settings.free_gift_title_english || 'Parousie Devotional 2026');
   const [giftDescHt, setGiftDescHt] = useState(settings.free_gift_desc_kreyol || 'Indiquez votre nom, votre adresse courriel et votre numéro de téléphone pour télécharger notre magnifique livre de dévotion, qui contient des méditations et des versets pour vous aider à grandir chaque jour dans la Parole.');
   const [giftDescEn, setGiftDescEn] = useState(settings.free_gift_desc_english || 'Enter your name, email, and phone to receive our beautiful Daily Devotional booklet containing scripture plans and prayers designed to help you grow daily in Christ.');
-  const [giftFileUrl, setGiftFileUrl] = useState(settings.free_gift_file_url || '/devotional_parousie_2026.txt');
+  const [giftFileUrlEn, setGiftFileUrlEn] = useState(
+    settings.free_gift_file_url_english || settings.free_gift_file_url || ''
+  );
+  const [giftFileUrlFr, setGiftFileUrlFr] = useState(
+    settings.free_gift_file_url_french || settings.free_gift_file_url_kreyol || ''
+  );
   const [giftAdminNotes, setGiftAdminNotes] = useState(settings.free_gift_admin_notes || '');
 
   useEffect(() => {
-    if (!giftFileUrl.startsWith('/api/assets/')) return;
-    verifyAssetUrl(giftFileUrl).then((result) => {
-      if (!result.exists) {
-        triggerAlert(
-          language === 'fr_ht'
-            ? 'Le fichier du cadeau gratuit configuré est introuvable. Téléversez-le à nouveau dans les paramètres du site.'
-            : 'The configured free gift file is missing. Please upload it again in site settings.',
-          'error'
-        );
-      }
+    const urls = [giftFileUrlEn, giftFileUrlFr].filter((url) => url.startsWith('/api/assets/'));
+    urls.forEach((giftFileUrl) => {
+      verifyAssetUrl(giftFileUrl).then((result) => {
+        if (!result.exists) {
+          triggerAlert(
+            language === 'fr_ht'
+              ? 'Un fichier du cadeau gratuit configuré est introuvable. Téléversez-le à nouveau dans les paramètres du site.'
+              : 'A configured free gift file is missing. Please upload it again in site settings.',
+            'error'
+          );
+        }
+      });
     });
-  }, [giftFileUrl, language]);
-  const [isDraggingGift, setIsDraggingGift] = useState(false);
-  const [giftIsUploading, setGiftIsUploading] = useState(false);
+  }, [giftFileUrlEn, giftFileUrlFr, language]);
+  const [isDraggingGiftEn, setIsDraggingGiftEn] = useState(false);
+  const [isDraggingGiftFr, setIsDraggingGiftFr] = useState(false);
+  const [giftIsUploadingEn, setGiftIsUploadingEn] = useState(false);
+  const [giftIsUploadingFr, setGiftIsUploadingFr] = useState(false);
 
   // Drag visual feedback states
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
@@ -1920,38 +1929,93 @@ export default function AdminDashboardClient({
   };
 
   // FREE GIFT FILE HANDLERS & HELPERS
-  const handleGiftFile = (file: File | undefined) => {
+  const handleGiftFile = (
+    file: File | undefined,
+    setUrl: (url: string) => void,
+    setUploading: (uploading: boolean) => void
+  ) => {
     if (!file) return;
-    setGiftIsUploading(true);
+    setUploading(true);
     const reader = new FileReader();
     reader.onload = async (e) => {
       if (e.target?.result) {
-        setGiftFileUrl(e.target.result as string);
+        setUrl(e.target.result as string);
         triggerAlert(language === 'fr_ht' ? 'Fichier chargé dans le cache avec succès !' : 'File loaded into cache successfully!', 'success');
       }
-      setGiftIsUploading(false);
+      setUploading(false);
     };
     reader.readAsDataURL(file);
   };
 
-  const handlePasteGift = (e: React.ClipboardEvent) => {
+  const handlePasteGift = (
+    e: React.ClipboardEvent,
+    setUrl: (url: string) => void,
+    setUploading: (uploading: boolean) => void
+  ) => {
     const items = e.clipboardData.items;
     for (let i = 0; i < items.length; i++) {
       const file = items[i].getAsFile();
       if (file) {
-        handleGiftFile(file);
+        handleGiftFile(file, setUrl, setUploading);
         break;
       }
     }
   };
 
-  const handleDropGift = (e: React.DragEvent) => {
+  const handleDropGift = (
+    e: React.DragEvent,
+    setUrl: (url: string) => void,
+    setUploading: (uploading: boolean) => void,
+    setDragging: (dragging: boolean) => void
+  ) => {
     e.preventDefault();
-    setIsDraggingGift(false);
+    setDragging(false);
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      handleGiftFile(files[0]);
+      handleGiftFile(files[0], setUrl, setUploading);
     }
+  };
+
+  const uploadGiftFileIfNeeded = async (
+    giftUrl: string,
+    label: string
+  ): Promise<{ success: boolean; url?: string; error?: string }> => {
+    if (!giftUrl) {
+      return { success: true, url: '' };
+    }
+
+    if (!giftUrl.startsWith('data:')) {
+      if (giftUrl.startsWith('/api/assets/')) {
+        const assetCheck = await verifyAssetUrl(giftUrl);
+        if (!assetCheck.exists) {
+          return {
+            success: false,
+            error:
+              language === 'fr_ht'
+                ? `Le fichier ${label} est introuvable sur le serveur. Veuillez le téléverser à nouveau avant d’enregistrer.`
+                : `The ${label} gift file is missing from server storage. Please upload it again before saving.`,
+          };
+        }
+      }
+      return { success: true, url: giftUrl };
+    }
+
+    let ext = 'pdf';
+    if (giftUrl.includes('text/plain')) ext = 'txt';
+    else if (giftUrl.includes('msword') || giftUrl.includes('officedocument')) ext = 'docx';
+
+    const uploadRes = await clientUploadAsset(`free_gift_${label}_${Date.now()}.${ext}`, giftUrl);
+    if (uploadRes.success && uploadRes.url) {
+      return { success: true, url: uploadRes.url };
+    }
+    return {
+      success: false,
+      error:
+        uploadRes.error ||
+        (language === 'fr_ht'
+          ? `Erreur lors du téléversement du cadeau (${label}).`
+          : `Error uploading ${label} free gift file.`),
+    };
   };
 
   // SUBSCRIBERS UTILITY ACTIONS
@@ -2452,9 +2516,24 @@ export default function AdminDashboardClient({
     
     let finalLogoUrl = logoUrl;
     let finalBgUrl = bgUrl;
-    let finalGiftFileUrl = giftFileUrl;
+    let finalGiftFileUrlEn = giftFileUrlEn;
+    let finalGiftFileUrlFr = giftFileUrlFr;
 
-    // Check if new logo needs to be uploaded as a file
+    const englishUpload = await uploadGiftFileIfNeeded(finalGiftFileUrlEn, 'english');
+    if (!englishUpload.success) {
+      triggerAlert(englishUpload.error || 'Error uploading English free gift file.', 'error');
+      return;
+    }
+    finalGiftFileUrlEn = englishUpload.url || '';
+    setGiftFileUrlEn(finalGiftFileUrlEn);
+
+    const frenchUpload = await uploadGiftFileIfNeeded(finalGiftFileUrlFr, 'french');
+    if (!frenchUpload.success) {
+      triggerAlert(frenchUpload.error || 'Error uploading French free gift file.', 'error');
+      return;
+    }
+    finalGiftFileUrlFr = frenchUpload.url || '';
+    setGiftFileUrlFr(finalGiftFileUrlFr);
     if (logoUrl.startsWith('data:')) {
       const uploadRes = await clientUploadAsset('logo.png', logoUrl);
       if (uploadRes.success && uploadRes.url) {
@@ -2474,33 +2553,6 @@ export default function AdminDashboardClient({
         setBgUrl(uploadRes.url); // Update state
       } else {
         triggerAlert(language === 'fr_ht' ? 'Erreur lors du téléversement de l’arrière-plan : ' + uploadRes.error : 'Error uploading background: ' + uploadRes.error, 'error');
-        return;
-      }
-    }
-
-    // Check if new free gift file needs to be uploaded as a file
-    if (giftFileUrl.startsWith('data:')) {
-      let ext = 'txt';
-      if (giftFileUrl.includes('application/pdf')) ext = 'pdf';
-      else if (giftFileUrl.includes('msword') || giftFileUrl.includes('officedocument')) ext = 'docx';
-      
-      const uploadRes = await clientUploadAsset(`free_gift_${Date.now()}.${ext}`, giftFileUrl);
-      if (uploadRes.success && uploadRes.url) {
-        finalGiftFileUrl = uploadRes.url;
-        setGiftFileUrl(uploadRes.url); // Update state
-      } else {
-        triggerAlert(language === 'fr_ht' ? 'Erreur lors du téléversement du cadeau : ' + uploadRes.error : 'Error uploading free gift: ' + uploadRes.error, 'error');
-        return;
-      }
-    } else if (finalGiftFileUrl.startsWith('/api/assets/')) {
-      const assetCheck = await verifyAssetUrl(finalGiftFileUrl);
-      if (!assetCheck.exists) {
-        triggerAlert(
-          language === 'fr_ht'
-            ? 'Le fichier du cadeau gratuit est introuvable sur le serveur. Veuillez le téléverser à nouveau avant d’enregistrer.'
-            : 'The free gift file is missing from server storage. Please upload it again before saving.',
-          'error'
-        );
         return;
       }
     }
@@ -2556,7 +2608,10 @@ export default function AdminDashboardClient({
       free_gift_title_english: giftTitleEn,
       free_gift_desc_kreyol: giftDescHt,
       free_gift_desc_english: giftDescEn,
-      free_gift_file_url: finalGiftFileUrl,
+      free_gift_file_url: finalGiftFileUrlEn,
+      free_gift_file_url_english: finalGiftFileUrlEn,
+      free_gift_file_url_french: finalGiftFileUrlFr,
+      free_gift_file_url_kreyol: finalGiftFileUrlFr,
       free_gift_admin_notes: giftAdminNotes
     });
 
@@ -4052,68 +4107,143 @@ export default function AdminDashboardClient({
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1.5">Fichier cadeau (Giveaway E-Book/PDF/File Resource)</label>
-                  
-                  <div 
-                    onClick={() => document.getElementById('gift-file-input')?.click()}
-                    onPaste={handlePasteGift}
-                    onDragOver={(e) => { e.preventDefault(); setIsDraggingGift(true); }}
-                    onDragLeave={() => setIsDraggingGift(false)}
-                    onDrop={handleDropGift}
-                    className={`relative border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all min-h-[140px] group overflow-hidden ${
-                      isDraggingGift 
-                        ? 'border-amber-500 bg-amber-500/10 scale-[1.02]' 
-                        : 'border-slate-800 hover:border-amber-500/50 bg-slate-950/50'
-                    }`}
-                  >
-                    <input 
-                      type="file" 
-                      id="gift-file-input" 
-                      accept=".pdf,.txt,.docx,.doc" 
-                      className="hidden" 
-                      onChange={(e) => handleGiftFile(e.target.files?.[0])} 
-                    />
-                    
-                    {giftFileUrl ? (
-                      <div className="flex items-center gap-4 z-10 w-full">
-                        <div className="w-12 h-12 rounded-lg bg-amber-500/10 border border-amber-500/20 overflow-hidden flex items-center justify-center shrink-0 shadow-lg">
-                          <FileText className="w-6 h-6 text-amber-400" />
-                        </div>
-                        <div className="flex-1 text-left">
-                          <span className="text-xs font-bold text-slate-200 block truncate">
-                            {giftFileUrl.startsWith('data:') ? 'Nouveau_Fichier_Téléversé.pdf' : giftFileUrl.split('/').pop()}
-                          </span>
-                          <span className="text-[10px] text-slate-400 mt-0.5 block">
-                            Faites glisser un autre fichier ou collez-en un ici pour le remplacer
-                          </span>
-                          {giftFileUrl.startsWith('/') && (
-                            <a 
-                              href={giftFileUrl} 
-                              target="_blank" 
-                              rel="noreferrer" 
-                              onClick={(e) => e.stopPropagation()} 
-                              className="text-[10px] text-amber-500 hover:underline mt-1 inline-block"
-                            >
-                              Afficher le fichier actuel
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center gap-2 text-slate-400">
-                        <UploadCloud className="w-8 h-8 group-hover:text-amber-400 transition-all animate-bounce" />
-                        <span className="text-xs font-bold">Choisir, glisser ou coller le livre ou PDF cadeau</span>
-                        <span className="text-[10px] text-slate-500">Formats acceptés : PDF, TXT ou DOCX</span>
-                      </div>
-                    )}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1.5">
+                      Fichier cadeau — Français (French PDF)
+                    </label>
+                    <p className="text-[10px] text-slate-500 mb-2">
+                      Laissez vide pour utiliser le PDF intégré généré automatiquement.
+                    </p>
+                    <div
+                      onClick={() => document.getElementById('gift-file-input-fr')?.click()}
+                      onPaste={(e) => handlePasteGift(e, setGiftFileUrlFr, setGiftIsUploadingFr)}
+                      onDragOver={(e) => { e.preventDefault(); setIsDraggingGiftFr(true); }}
+                      onDragLeave={() => setIsDraggingGiftFr(false)}
+                      onDrop={(e) => handleDropGift(e, setGiftFileUrlFr, setGiftIsUploadingFr, setIsDraggingGiftFr)}
+                      className={`relative border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all min-h-[140px] group overflow-hidden ${
+                        isDraggingGiftFr
+                          ? 'border-amber-500 bg-amber-500/10 scale-[1.02]'
+                          : 'border-slate-800 hover:border-amber-500/50 bg-slate-950/50'
+                      }`}
+                    >
+                      <input
+                        type="file"
+                        id="gift-file-input-fr"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={(e) => handleGiftFile(e.target.files?.[0], setGiftFileUrlFr, setGiftIsUploadingFr)}
+                      />
 
-                    {giftIsUploading && (
-                      <div className="absolute inset-0 bg-slate-950/80 flex items-center justify-center gap-3">
-                        <RefreshCw className="w-5 h-5 text-amber-500 animate-spin" />
-                        <span className="text-xs text-slate-300 font-semibold">Chargement du fichier dans le cache...</span>
-                      </div>
-                    )}
+                      {giftFileUrlFr ? (
+                        <div className="flex items-center gap-4 z-10 w-full">
+                          <div className="w-12 h-12 rounded-lg bg-amber-500/10 border border-amber-500/20 overflow-hidden flex items-center justify-center shrink-0 shadow-lg">
+                            <FileText className="w-6 h-6 text-amber-400" />
+                          </div>
+                          <div className="flex-1 text-left">
+                            <span className="text-xs font-bold text-slate-200 block truncate">
+                              {giftFileUrlFr.startsWith('data:') ? 'Nouveau_Fichier_Francais.pdf' : giftFileUrlFr.split('/').pop()}
+                            </span>
+                            <span className="text-[10px] text-slate-400 mt-0.5 block">
+                              Glissez ou collez un autre PDF pour le remplacer
+                            </span>
+                            {giftFileUrlFr.startsWith('/') && (
+                              <a
+                                href={giftFileUrlFr}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-[10px] text-amber-500 hover:underline mt-1 inline-block"
+                              >
+                                Afficher le fichier actuel
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 text-slate-400">
+                          <UploadCloud className="w-8 h-8 group-hover:text-amber-400 transition-all" />
+                          <span className="text-xs font-bold text-center">PDF français (optionnel)</span>
+                          <span className="text-[10px] text-slate-500">PDF recommandé</span>
+                        </div>
+                      )}
+
+                      {giftIsUploadingFr && (
+                        <div className="absolute inset-0 bg-slate-950/80 flex items-center justify-center gap-3">
+                          <RefreshCw className="w-5 h-5 text-amber-500 animate-spin" />
+                          <span className="text-xs text-slate-300 font-semibold">Chargement...</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1.5">
+                      Fichier cadeau — English (English PDF)
+                    </label>
+                    <p className="text-[10px] text-slate-500 mb-2">
+                      Leave empty to use the built-in auto-generated English PDF.
+                    </p>
+                    <div
+                      onClick={() => document.getElementById('gift-file-input-en')?.click()}
+                      onPaste={(e) => handlePasteGift(e, setGiftFileUrlEn, setGiftIsUploadingEn)}
+                      onDragOver={(e) => { e.preventDefault(); setIsDraggingGiftEn(true); }}
+                      onDragLeave={() => setIsDraggingGiftEn(false)}
+                      onDrop={(e) => handleDropGift(e, setGiftFileUrlEn, setGiftIsUploadingEn, setIsDraggingGiftEn)}
+                      className={`relative border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all min-h-[140px] group overflow-hidden ${
+                        isDraggingGiftEn
+                          ? 'border-amber-500 bg-amber-500/10 scale-[1.02]'
+                          : 'border-slate-800 hover:border-amber-500/50 bg-slate-950/50'
+                      }`}
+                    >
+                      <input
+                        type="file"
+                        id="gift-file-input-en"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={(e) => handleGiftFile(e.target.files?.[0], setGiftFileUrlEn, setGiftIsUploadingEn)}
+                      />
+
+                      {giftFileUrlEn ? (
+                        <div className="flex items-center gap-4 z-10 w-full">
+                          <div className="w-12 h-12 rounded-lg bg-amber-500/10 border border-amber-500/20 overflow-hidden flex items-center justify-center shrink-0 shadow-lg">
+                            <FileText className="w-6 h-6 text-amber-400" />
+                          </div>
+                          <div className="flex-1 text-left">
+                            <span className="text-xs font-bold text-slate-200 block truncate">
+                              {giftFileUrlEn.startsWith('data:') ? 'New_English_File.pdf' : giftFileUrlEn.split('/').pop()}
+                            </span>
+                            <span className="text-[10px] text-slate-400 mt-0.5 block">
+                              Drag or paste another PDF to replace
+                            </span>
+                            {giftFileUrlEn.startsWith('/') && (
+                              <a
+                                href={giftFileUrlEn}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-[10px] text-amber-500 hover:underline mt-1 inline-block"
+                              >
+                                View current file
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 text-slate-400">
+                          <UploadCloud className="w-8 h-8 group-hover:text-amber-400 transition-all" />
+                          <span className="text-xs font-bold text-center">English PDF (optional)</span>
+                          <span className="text-[10px] text-slate-500">PDF recommended</span>
+                        </div>
+                      )}
+
+                      {giftIsUploadingEn && (
+                        <div className="absolute inset-0 bg-slate-950/80 flex items-center justify-center gap-3">
+                          <RefreshCw className="w-5 h-5 text-amber-500 animate-spin" />
+                          <span className="text-xs text-slate-300 font-semibold">Uploading...</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
