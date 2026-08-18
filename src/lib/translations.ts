@@ -9,7 +9,7 @@ export const translations = {
     
     // Navigation
     navHome: "Accueil",
-    navPrayerWall: "Prayer Wall",
+    navPrayerWall: "Mur de prière",
     navSchedules: "Horaires des cultes",
     navOutreach: "Action communautaire",
     navMissions: "Missions en Haïti",

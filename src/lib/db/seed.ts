@@ -1,6 +1,8 @@
 import crypto from 'crypto';
 import type { Pool } from 'pg';
 import { getSuperAdminEmails } from '../super-admin';
+import { HOME_FRENCH_DEFAULTS, MINISTRY_FRENCH_DEFAULTS, resolveFrenchContent } from '../french-content';
+import { sanitizeTeamDepartmentsForFrench } from '../team-departments';
 
 async function countRows(pool: Pool, table: string): Promise<number> {
   const result = await pool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM ${table}`);
@@ -22,6 +24,79 @@ async function upsertSetting(pool: Pool, key: string, value: string, replace = f
      ON CONFLICT (key) DO NOTHING`,
     [key, value]
   );
+}
+
+async function migrateLegacyFrenchContent(pool: Pool): Promise<void> {
+  for (const [key, canonical] of Object.entries(HOME_FRENCH_DEFAULTS)) {
+    const englishKey = key.replace(/_ht$/, '_en');
+    const current = await pool.query<{ value: string }>('SELECT value FROM settings WHERE key = $1', [key]);
+    const english = await pool.query<{ value: string }>('SELECT value FROM settings WHERE key = $1', [englishKey]);
+    const stored = current.rows[0]?.value;
+    const englishValue = english.rows[0]?.value;
+    const resolved = resolveFrenchContent(stored, canonical, englishValue);
+
+    if (!stored) {
+      await upsertSetting(pool, key, canonical, true);
+      continue;
+    }
+
+    if (resolved !== stored) {
+      await upsertSetting(pool, key, resolved, true);
+    }
+  }
+
+  for (const [slug, defaults] of Object.entries(MINISTRY_FRENCH_DEFAULTS)) {
+    const result = await pool.query<{
+      title_kreyol: string;
+      title_english: string;
+      description_kreyol: string;
+      description_english: string;
+      bullets_kreyol: string;
+      bullets_english: string;
+    }>(
+      `SELECT title_kreyol, title_english, description_kreyol, description_english, bullets_kreyol, bullets_english
+       FROM ministries WHERE slug = $1`,
+      [slug]
+    );
+    const row = result.rows[0];
+    if (!row) continue;
+
+    const title = resolveFrenchContent(row.title_kreyol, defaults.title, row.title_english);
+    const description = resolveFrenchContent(row.description_kreyol, defaults.description, row.description_english);
+    const bullets = resolveFrenchContent(row.bullets_kreyol, defaults.bullets, row.bullets_english);
+
+    if (
+      title !== row.title_kreyol ||
+      description !== row.description_kreyol ||
+      bullets !== row.bullets_kreyol
+    ) {
+      await pool.query(
+        `UPDATE ministries
+         SET title_kreyol = $1, description_kreyol = $2, bullets_kreyol = $3
+         WHERE slug = $4`,
+        [title, description, bullets, slug]
+      );
+    }
+  }
+
+  const teamSetting = await pool.query<{ value: string }>(
+    "SELECT value FROM settings WHERE key = 'team_departments_json'"
+  );
+  const teamJson = teamSetting.rows[0]?.value;
+  if (!teamJson) return;
+
+  try {
+    const parsed = JSON.parse(teamJson);
+    if (!Array.isArray(parsed) || parsed.length === 0) return;
+
+    const sanitized = sanitizeTeamDepartmentsForFrench(parsed);
+    const updated = JSON.stringify(sanitized);
+    if (updated !== teamJson) {
+      await upsertSetting(pool, 'team_departments_json', updated, true);
+    }
+  } catch {
+    // Ignore invalid team JSON during migration.
+  }
 }
 
 export async function seedDatabase(pool: Pool): Promise<void> {
@@ -292,4 +367,6 @@ export async function seedDatabase(pool: Pool): Promise<void> {
       'School and healthcare projects in Haiti\nLocal evangelism support\nVolunteer opportunities for community outreach',
     ]
   );
+
+  await migrateLegacyFrenchContent(pool);
 }

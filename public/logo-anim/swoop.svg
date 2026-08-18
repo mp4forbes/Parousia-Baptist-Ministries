@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 200" role="img" aria-labelledby="title desc">
+  <title id="title">Parousie blue swoop</title>
+  <desc id="desc">Large curved blue Parousie emblem shape aligned to the right side.</desc>
+  <g id="swoop" fill="#03259A">
+    <!-- Outer crescent / P-D contour -->
+    <path d="M334 8
+             C430 3 498 58 498 116
+             C498 154 472 181 433 194
+             L426 158
+             C451 147 466 132 466 112
+             C466 75 425 42 369 43
+             L391 63
+             C422 63 444 83 444 110
+             C444 135 427 153 402 163
+             L407 194
+             C383 201 361 202 338 199
+             C372 188 388 168 388 145
+             C388 116 359 98 327 98
+             L354 74
+             C367 62 373 48 368 36
+             C362 24 351 15 334 8 Z"/>
+    <!-- Lower sweeping tail -->
+    <path d="M88 164
+             C141 191 211 197 284 190
+             C324 186 363 177 401 159
+             L407 194
+             C365 203 321 207 278 207
+             C199 207 132 194 88 164 Z"/>
+  </g>
+</svg>

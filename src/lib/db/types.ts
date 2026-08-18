@@ -90,6 +90,14 @@ export interface EventRecord {
   location_english: string;
   description_kreyol: string;
   description_english: string;
+  images_json?: string;
+  registration_type?: string;
+  payment_required?: number | boolean;
+  payment_amount?: string;
+  payment_zelle_name?: string;
+  payment_zelle_phone?: string;
+  payment_instructions_english?: string;
+  payment_instructions_kreyol?: string;
 }
 
 export interface Registration {
@@ -97,10 +105,14 @@ export interface Registration {
   event_id: number;
   event_title_kreyol?: string;
   event_title_english?: string;
+  event_registration_type?: string;
   name: string;
   email: string;
   phone: string;
   notes: string;
+  responses_json?: string;
+  payment_status?: string;
+  event_payment_required?: number | boolean;
 }
 
 export interface Lead {

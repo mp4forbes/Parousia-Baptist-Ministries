@@ -7,6 +7,15 @@ import { buildMinistrySignupSpreadsheet } from './ministry-signup-spreadsheet';
 import { buildAdminSpreadsheet } from './admin-spreadsheet';
 import { AdminExportSlug, isAdminExportSlug, isAdminSectionSlug } from './admin-sections';
 import { MINISTRY_SIGNUP_FIELDS, MINISTRY_SIGNUP_SLUGS, MinistrySignupSlug } from './ministry-signup-fields';
+import {
+  formatEventRegistrationResponses,
+  getEventRegistrationFields,
+  parseEventRegistrationResponses,
+  resolveEventRegistrationType,
+  summarizeEventHeadcount,
+} from './event-registration-fields';
+import { formatRegistrationPaymentStatus, isEventPaymentRequired } from './event-payment';
+import { mergeSettingsPreservingRestricted } from './admin-permissions';
 import { cookies } from 'next/headers';
 import fs from 'fs';
 import path from 'path';
@@ -353,21 +362,30 @@ export async function exportAdminSectionSpreadsheet(
       }
       case 'event_registrations': {
         const registrations = await db.prepare(`
-          SELECT r.*, e.title_english AS event_title_english, e.title_kreyol AS event_title_kreyol
+          SELECT r.*, e.title_english AS event_title_english, e.title_kreyol AS event_title_kreyol,
+            e.registration_type, e.payment_required AS event_payment_required
           FROM registrations r
           LEFT JOIN events e ON e.id = r.event_id
           ORDER BY r.id ASC
-        `).all() as Registration[];
+        `).all() as (Registration & { registration_type?: string })[];
         sheetTitle = 'Event Registrations';
-        headers = ['ID', 'Event (English)', 'Name', 'Email', 'Phone', 'Notes'];
-        rows = registrations.map((reg) => [
-          String(reg.id),
-          reg.event_title_english || '',
-          reg.name,
-          reg.email || '',
-          reg.phone || '',
-          reg.notes || '',
-        ]);
+        headers = ['ID', 'Event (English)', 'Name', 'Email', 'Phone', 'Headcount', 'Paid / Not Paid', 'Registration Details'];
+        rows = registrations.map((reg) => {
+          const responses = parseEventRegistrationResponses(reg.responses_json);
+          const details = formatEventRegistrationResponses(reg.registration_type, responses, 'en');
+          const legacyDetails = reg.notes?.trim() && !details ? reg.notes.trim() : details;
+          const paymentRequired = isEventPaymentRequired(reg);
+          return [
+            String(reg.id),
+            reg.event_title_english || '',
+            reg.name,
+            reg.email || '',
+            reg.phone || '',
+            summarizeEventHeadcount(reg.registration_type, responses),
+            formatRegistrationPaymentStatus(reg.payment_status, paymentRequired),
+            legacyDetails,
+          ];
+        });
         filename = 'event-registrations.xlsx';
         break;
       }
@@ -490,6 +508,9 @@ export async function addKnowledgeBaseItem(
 ): Promise<{ success: boolean; error?: string }> {
   const isAuthed = await checkAdminAuth();
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
+  if (!(await isSuperAdminUser(await getLoggedInAdminEmail()))) {
+    return { success: false, error: 'Only super administrators can manage the knowledge base.' };
+  }
 
   try {
     const createdAt = new Date().toISOString().split('T')[0];
@@ -513,6 +534,9 @@ export async function addKnowledgeBaseItem(
 export async function deleteKnowledgeBaseItem(id: number): Promise<{ success: boolean; error?: string }> {
   const isAuthed = await checkAdminAuth();
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
+  if (!(await isSuperAdminUser(await getLoggedInAdminEmail()))) {
+    return { success: false, error: 'Only super administrators can manage the knowledge base.' };
+  }
 
   try {
     // Optionally delete from disk if it was an uploaded PDF file
@@ -548,28 +572,85 @@ export async function registerForEvent(
   name: string,
   email: string,
   phone: string,
-  notes: string
+  responses: Record<string, string> = {}
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const insert = await db.prepare(`
-      INSERT INTO registrations (event_id, name, email, phone, notes)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-    await insert.run(eventId, name, email, phone, notes);
+    const event = await db.prepare(`
+      SELECT title_english, registration_type, payment_required, payment_amount, payment_zelle_name, payment_zelle_phone
+      FROM events WHERE id = ?
+    `).get(eventId) as
+      | {
+          title_english: string;
+          registration_type?: string;
+          payment_required?: number | boolean;
+          payment_amount?: string;
+          payment_zelle_name?: string;
+          payment_zelle_phone?: string;
+        }
+      | undefined;
+    if (!event) {
+      return { success: false, error: 'Event not found.' };
+    }
 
-    const event = await db.prepare('SELECT title_english FROM events WHERE id = ?').get(eventId) as { title_english: string } | undefined;
+    const paymentRequired = isEventPaymentRequired(event);
+    if (paymentRequired && responses.zelle_payment_sent !== 'yes') {
+      return { success: false, error: 'Please confirm that you have sent payment via Zelle.' };
+    }
+
+    const registrationType = resolveEventRegistrationType(event.registration_type);
+    for (const field of getEventRegistrationFields(registrationType)) {
+      if (field.required && !responses[field.key]?.trim()) {
+        return { success: false, error: `Missing required field: ${field.label_en}` };
+      }
+      if (field.type === 'number' && responses[field.key]?.trim()) {
+        const num = Number(responses[field.key]);
+        const min = field.min ?? 0;
+        if (Number.isNaN(num) || num < min) {
+          return { success: false, error: `${field.label_en} must be at least ${min}.` };
+        }
+      }
+    }
+
+    const normalizedResponses = Object.fromEntries(
+      Object.entries(responses).map(([key, value]) => [key, value.trim()])
+    );
+    const legacyNotes = normalizedResponses.notes || '';
+
+    const insert = await db.prepare(`
+      INSERT INTO registrations (event_id, name, email, phone, notes, responses_json, payment_status)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    await insert.run(
+      eventId,
+      name.trim(),
+      email.trim(),
+      phone.trim(),
+      legacyNotes,
+      JSON.stringify(normalizedResponses),
+      paymentRequired ? 'not_paid' : 'not_paid'
+    );
+
     const recipients = await getAdminSectionNotificationEmails('events_signups');
     if (recipients.length > 0) {
+      const responseLines = formatEventRegistrationResponses(registrationType, normalizedResponses, 'en');
+      const headcount = summarizeEventHeadcount(registrationType, normalizedResponses);
+
       await sendEmail({
         to: recipients,
-        subject: `New event registration: ${event?.title_english || `Event #${eventId}`}`,
+        subject: `New event registration: ${event.title_english || `Event #${eventId}`}`,
         text: [
-          `A new registration was submitted for ${event?.title_english || `event #${eventId}`}.`,
+          `A new registration was submitted for ${event.title_english || `event #${eventId}`}.`,
           '',
-          `Name: ${name}`,
-          `Email: ${email}`,
-          `Phone: ${phone}`,
-          notes?.trim() ? `Notes: ${notes.trim()}` : null,
+          `Name: ${name.trim()}`,
+          `Email: ${email.trim()}`,
+          `Phone: ${phone.trim()}`,
+          headcount ? `Headcount: ${headcount}` : null,
+          paymentRequired
+            ? `Payment: Not Paid (Zelle to ${event.payment_zelle_name || 'organizer'} — ${event.payment_zelle_phone || 'see event'}${
+                event.payment_amount ? `, amount: ${event.payment_amount}` : ''
+              })`
+            : null,
+          responseLines ? `\nRegistration details:\n${responseLines}` : null,
         ].filter(Boolean).join('\n'),
       });
     }
@@ -871,16 +952,21 @@ export async function updateGlobalSettings(settingsMap: Record<string, string>):
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
+    const loggedInEmail = await getLoggedInAdminEmail();
+    const superAdmin = await isSuperAdminUser(loggedInEmail);
+
     // Check if the user is attempting to modify the admin_password
     if ('admin_password' in settingsMap && settingsMap.admin_password && settingsMap.admin_password.trim() !== '') {
-      const loggedInEmail = await getLoggedInAdminEmail();
-      if (!(await isSuperAdminUser(loggedInEmail))) {
+      if (!superAdmin) {
         return { success: false, error: `Only a Super-Administrator (${formatSuperAdminEmailsForDisplay()}) can modify the master administrator access code.` };
       }
     }
 
+    const existingSettings = superAdmin ? {} : await getSettings();
+    const finalSettingsMap = mergeSettingsPreservingRestricted(settingsMap, existingSettings, superAdmin);
+
     const update = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
-    for (const [key, value] of Object.entries(settingsMap)) {
+    for (const [key, value] of Object.entries(finalSettingsMap)) {
       if (key === 'admin_password') {
         if (!value || value.trim() === '') {
           continue;
@@ -1031,19 +1117,96 @@ export async function saveEvent(id: number | null, data: Partial<EventRecord>): 
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
+    const loggedInEmail = await getLoggedInAdminEmail();
+    const superAdmin = await isSuperAdminUser(loggedInEmail);
+
+    if (!superAdmin) {
+      if (id) {
+        const existing = await db.prepare(`
+          SELECT payment_required, payment_amount, payment_zelle_name, payment_zelle_phone,
+                 payment_instructions_english, payment_instructions_kreyol
+          FROM events WHERE id = ?
+        `).get(id) as Partial<EventRecord> | undefined;
+        if (existing) {
+          data.payment_required = existing.payment_required;
+          data.payment_amount = existing.payment_amount;
+          data.payment_zelle_name = existing.payment_zelle_name;
+          data.payment_zelle_phone = existing.payment_zelle_phone;
+          data.payment_instructions_english = existing.payment_instructions_english;
+          data.payment_instructions_kreyol = existing.payment_instructions_kreyol;
+        }
+      } else {
+        data.payment_required = 0;
+        data.payment_amount = '';
+        data.payment_zelle_name = '';
+        data.payment_zelle_phone = '';
+        data.payment_instructions_english = '';
+        data.payment_instructions_kreyol = '';
+      }
+    }
+
+    if (superAdmin && isEventPaymentRequired(data) && !data.payment_zelle_phone?.trim()) {
+      return { success: false, error: 'Zelle phone or email is required when payment is enabled.' };
+    }
+
+    const paymentRequired = isEventPaymentRequired(data) ? 1 : 0;
+
     if (id) {
       const update = db.prepare(`
         UPDATE events
-        SET title_kreyol = ?, title_english = ?, date = ?, time = ?, location_kreyol = ?, location_english = ?, description_kreyol = ?, description_english = ?
+        SET title_kreyol = ?, title_english = ?, date = ?, time = ?, location_kreyol = ?, location_english = ?,
+            description_kreyol = ?, description_english = ?, images_json = ?, registration_type = ?,
+            payment_required = ?, payment_amount = ?, payment_zelle_name = ?, payment_zelle_phone = ?,
+            payment_instructions_english = ?, payment_instructions_kreyol = ?
         WHERE id = ?
       `);
-      await update.run(data.title_kreyol, data.title_english, data.date, data.time, data.location_kreyol, data.location_english, data.description_kreyol, data.description_english, id);
+      await update.run(
+        data.title_kreyol,
+        data.title_english,
+        data.date,
+        data.time,
+        data.location_kreyol,
+        data.location_english,
+        data.description_kreyol,
+        data.description_english,
+        data.images_json || '[]',
+        data.registration_type || 'general',
+        paymentRequired,
+        data.payment_amount || '',
+        data.payment_zelle_name || '',
+        data.payment_zelle_phone || '',
+        data.payment_instructions_english || '',
+        data.payment_instructions_kreyol || '',
+        id
+      );
     } else {
       const insert = db.prepare(`
-        INSERT INTO events (title_kreyol, title_english, date, time, location_kreyol, location_english, description_kreyol, description_english)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO events (
+          title_kreyol, title_english, date, time, location_kreyol, location_english,
+          description_kreyol, description_english, images_json, registration_type,
+          payment_required, payment_amount, payment_zelle_name, payment_zelle_phone,
+          payment_instructions_english, payment_instructions_kreyol
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      await insert.run(data.title_kreyol, data.title_english, data.date, data.time, data.location_kreyol, data.location_english, data.description_kreyol, data.description_english);
+      await insert.run(
+        data.title_kreyol,
+        data.title_english,
+        data.date,
+        data.time,
+        data.location_kreyol,
+        data.location_english,
+        data.description_kreyol,
+        data.description_english,
+        data.images_json || '[]',
+        data.registration_type || 'general',
+        paymentRequired,
+        data.payment_amount || '',
+        data.payment_zelle_name || '',
+        data.payment_zelle_phone || '',
+        data.payment_instructions_english || '',
+        data.payment_instructions_kreyol || ''
+      );
     }
     revalidatePath('/');
     revalidatePath('/admin/dashboard');
@@ -1075,7 +1238,8 @@ export async function getRegistrations(): Promise<Registration[]> {
 
   try {
     return await db.prepare(`
-      SELECT r.*, e.title_kreyol as event_title_kreyol, e.title_english as event_title_english
+      SELECT r.*, e.title_kreyol as event_title_kreyol, e.title_english as event_title_english,
+        e.registration_type as event_registration_type, e.payment_required as event_payment_required
       FROM registrations r
       JOIN events e ON r.event_id = e.id
       ORDER BY r.id DESC
@@ -1092,6 +1256,26 @@ export async function deleteRegistration(id: number): Promise<{ success: boolean
 
   try {
     await db.prepare('DELETE FROM registrations WHERE id = ?').run(id);
+    revalidatePath('/admin/dashboard');
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateRegistrationPaymentStatus(
+  id: number,
+  paymentStatus: 'paid' | 'not_paid'
+): Promise<{ success: boolean; error?: string }> {
+  const isAuthed = await checkAdminAuth();
+  if (!isAuthed) return { success: false, error: 'Unauthorized' };
+
+  if (paymentStatus !== 'paid' && paymentStatus !== 'not_paid') {
+    return { success: false, error: 'Invalid payment status.' };
+  }
+
+  try {
+    await db.prepare('UPDATE registrations SET payment_status = ? WHERE id = ?').run(paymentStatus, id);
     revalidatePath('/admin/dashboard');
     return { success: true };
   } catch (error: any) {
@@ -1271,6 +1455,9 @@ export async function uploadAsset(fileName: string, base64Data: string): Promise
 export async function backupWebsite(): Promise<{ success: boolean; error?: string; timestamp?: string }> {
   const isAuthed = await checkAdminAuth();
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
+  if (!(await isSuperAdminUser(await getLoggedInAdminEmail()))) {
+    return { success: false, error: 'Only super administrators can create site backups.' };
+  }
 
   try {
     const backupBaseDir = getBackupDir();
@@ -1748,6 +1935,9 @@ export async function automateWebsiteContentFromPdf(
 ): Promise<{ success: boolean; message?: string; error?: string }> {
   const isAuthed = await checkAdminAuth();
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
+  if (!(await isSuperAdminUser(await getLoggedInAdminEmail()))) {
+    return { success: false, error: 'Only super administrators can run automated website updates.' };
+  }
 
   try {
     const fileName = pdfUrl.replace('/api/assets/', '');

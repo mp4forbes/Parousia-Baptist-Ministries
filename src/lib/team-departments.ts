@@ -1,3 +1,5 @@
+import { resolveFrenchContent } from './french-content';
+
 export type TeamMember = {
   name: string;
   role_en: string;
@@ -153,12 +155,42 @@ export function flattenTeamMembers(departments: TeamDepartment[]): TeamMember[] 
   return departments.flatMap((department) => department.members);
 }
 
+export function sanitizeTeamDepartmentsForFrench(departments: TeamDepartment[]): TeamDepartment[] {
+  return departments.map((department) => {
+    const defaultDepartment = DEFAULT_TEAM_DEPARTMENTS.find((item) => item.id === department.id);
+    return {
+      ...department,
+      title_ht: resolveFrenchContent(
+        department.title_ht,
+        defaultDepartment?.title_ht || department.title_ht,
+        department.title_en
+      ),
+      members: department.members.map((member) => {
+        const defaultMember = defaultDepartment?.members.find((item) => item.name === member.name);
+        return {
+          ...member,
+          role_ht: resolveFrenchContent(
+            member.role_ht,
+            defaultMember?.role_ht || member.role_ht,
+            member.role_en
+          ),
+          bio_ht: resolveFrenchContent(
+            member.bio_ht,
+            defaultMember?.bio_ht || member.bio_ht,
+            member.bio_en
+          ),
+        };
+      }),
+    };
+  });
+}
+
 export function parseTeamDepartments(settings: Record<string, string | undefined>): TeamDepartment[] {
   try {
     if (settings.team_departments_json) {
       const parsed = JSON.parse(settings.team_departments_json);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        return sanitizeTeamDepartmentsForFrench(parsed);
       }
     }
   } catch (e) {

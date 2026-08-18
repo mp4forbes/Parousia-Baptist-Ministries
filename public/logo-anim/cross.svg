@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 200" role="img" aria-labelledby="title desc">
+  <title id="title">Parousie blue cross</title>
+  <desc id="desc">Upright tapered blue cross aligned inside the swoop opening.</desc>
+  <g id="cross" fill="#03259A">
+    <path d="M347 61
+             L363 61
+             L365 86
+             L390 84
+             L394 97
+             L366 101
+             L375 171
+             L353 181
+             L347 104
+             L322 106
+             L325 94
+             L346 90 Z"/>
+  </g>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 200" role="img" aria-labelledby="title desc">
+  <title id="title">Église Baptiste Parousie wordmark</title>
+  <desc id="desc">Three-line black italic church wordmark.</desc>
+  <g id="wordmark" fill="#111827" font-family="Arial, Helvetica, sans-serif" font-style="italic">
+    <text x="24" y="91" font-size="22" font-weight="700" letter-spacing="0.3">ÉGLISE BAPTISTE</text>
+    <text x="22" y="137" font-size="44" font-weight="900" letter-spacing="-1.5">PAROUSIE</text>
+    <text x="105" y="167" font-size="18" font-weight="700" letter-spacing="1">1 TH. 4:17</text>
+  </g>
+</svg>

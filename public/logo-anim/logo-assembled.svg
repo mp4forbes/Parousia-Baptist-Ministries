@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 200" role="img" aria-labelledby="title desc">
+  <title id="title">Église Baptiste Parousie assembled logo</title>
+  <desc id="desc">Combined church wordmark, blue swoop, blue cross, and gold dove.</desc>
+
+  <g id="wordmark" fill="#111827" font-family="Arial, Helvetica, sans-serif" font-style="italic">
+    <text x="24" y="91" font-size="22" font-weight="700" letter-spacing="0.3">ÉGLISE BAPTISTE</text>
+    <text x="22" y="137" font-size="44" font-weight="900" letter-spacing="-1.5">PAROUSIE</text>
+    <text x="105" y="167" font-size="18" font-weight="700" letter-spacing="1">1 TH. 4:17</text>
+  </g>
+
+  <g id="swoop" fill="#03259A">
+    <path d="M334 8
+             C430 3 498 58 498 116
+             C498 154 472 181 433 194
+             L426 158
+             C451 147 466 132 466 112
+             C466 75 425 42 369 43
+             L391 63
+             C422 63 444 83 444 110
+             C444 135 427 153 402 163
+             L407 194
+             C383 201 361 202 338 199
+             C372 188 388 168 388 145
+             C388 116 359 98 327 98
+             L354 74
+             C367 62 373 48 368 36
+             C362 24 351 15 334 8 Z"/>
+    <path d="M88 164
+             C141 191 211 197 284 190
+             C324 186 363 177 401 159
+             L407 194
+             C365 203 321 207 278 207
+             C199 207 132 194 88 164 Z"/>
+  </g>
+
+  <g id="cross" fill="#03259A">
+    <path d="M347 61
+             L363 61
+             L365 86
+             L390 84
+             L394 97
+             L366 101
+             L375 171
+             L353 181
+             L347 104
+             L322 106
+             L325 94
+             L346 90 Z"/>
+  </g>
+
+  <g id="dove" fill="none" stroke="#D4A504" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M300 18
+             C286 30 279 43 280 61
+             C284 50 290 41 301 31
+             C299 45 302 55 309 65
+             C315 53 321 41 322 28
+             C328 42 333 53 343 62"/>
+    <path d="M281 63
+             C287 61 293 62 299 67
+             C303 71 305 78 303 85
+             C312 74 321 68 332 64
+             C342 60 352 53 361 42
+             C359 59 352 72 340 82
+             C351 78 360 73 370 64
+             C365 80 354 91 339 99
+             C326 106 315 111 306 121
+             C305 111 300 104 294 98
+             C287 91 282 83 281 75"/>
+    <path d="M281 63 L272 68 L282 70"/>
+  </g>
+</svg>

@@ -5,7 +5,6 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { useAdminUi } from '@/lib/AdminUiContext';
 import { ServiceSchedule, HaitiMission, LocalOutreach, EventRecord, Sermon, DailyDevotional, BlogPost, PrayerRequest, Ministry } from '@/lib/db';
 import { 
-  registerForEvent, 
   simulateOffering, 
   submitLead, 
   getBlogPosts, 
@@ -14,12 +13,18 @@ import {
   submitContactForm,
   markAdminEntryFromSite,
 } from '@/lib/actions';
+import { frenchSetting, frenchMinistryField } from '@/lib/french-content';
 import MinistrySignupForm from '@/components/MinistrySignupForm';
 import { setAdminUiClient } from '@/lib/admin-cookies';
 import { MinistrySignupSlug } from '@/lib/ministry-signup-fields';
 import { parseTeamDepartments, type TeamDepartment, type TeamMember } from '@/lib/team-departments';
 import { downloadAssetFile } from '@/lib/client-download';
 import { getGiftDownloadUrls } from '@/lib/gift-download';
+import { parseEventImages } from '@/lib/event-images';
+import { googleMapsUrl } from '@/lib/rich-text';
+import FormattedText from '@/components/FormattedText';
+import EventRegistrationModal from '@/components/EventRegistrationModal';
+import { isEventPaymentRequired } from '@/lib/event-payment';
 import { getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from '@/lib/youtube';
 import { 
   Church, 
@@ -575,14 +580,8 @@ export default function PublicHome({
     return title.includes(term) || speaker.includes(term) || desc.includes(term);
   });
 
-  // Event Registration Modal states
+  // Event Registration Modal state
   const [selectedEvent, setSelectedEvent] = useState<EventRecord | null>(null);
-  const [regName, setRegName] = useState('');
-  const [regEmail, setRegEmail] = useState('');
-  const [regPhone, setRegPhone] = useState('');
-  const [regNotes, setRegNotes] = useState('');
-  const [regSuccess, setRegSuccess] = useState(false);
-  const [regError, setRegError] = useState('');
 
   // Giving module states
   const [giveAmount, setRegGiveAmount] = useState('50');
@@ -715,27 +714,6 @@ export default function PublicHome({
     setLanguage(language === 'fr_ht' ? 'en' : 'fr_ht');
   };
 
-  // Event Registration Submit Handler
-  const handleRegisterSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedEvent) return;
-    
-    setRegError('');
-    startTransition(async () => {
-      const res = await registerForEvent(selectedEvent.id, regName, regEmail, regPhone, regNotes);
-      if (res.success) {
-        setRegSuccess(true);
-        // Reset form
-        setRegName('');
-        setRegEmail('');
-        setRegPhone('');
-        setRegNotes('');
-      } else {
-        setRegError(res.error || 'Failed to submit registration');
-      }
-    });
-  };
-
   // Giving Form Submit Handler
   const handleGivingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -788,25 +766,25 @@ export default function PublicHome({
 
   // Dynamic Home Tabs titles/content
   const dAboutUsTitle = isHt 
-    ? (settings.about_us_title_ht || t.tabAboutUs || 'Qui sommes-nous ?')
+    ? frenchSetting(settings, 'about_us_title_ht', 'about_us_title_en')
     : (settings.about_us_title_en || t.tabAboutUs || 'About Us');
 
   const dBeliefsTitle = isHt 
-    ? (settings.beliefs_title_ht || t.tabBeliefs || 'Nos croyances')
+    ? frenchSetting(settings, 'beliefs_title_ht', 'beliefs_title_en')
     : (settings.beliefs_title_en || t.tabBeliefs || 'Our Beliefs');
 
   const dTeamTitle = isHt 
-    ? (settings.team_title_ht || 'Notre équipe')
+    ? frenchSetting(settings, 'team_title_ht', 'team_title_en')
     : (settings.team_title_en || 'Our Team');
 
   const dTeamSubtitle = isHt
-    ? (settings.team_subtitle_ht || 'Départements et associations')
+    ? frenchSetting(settings, 'team_subtitle_ht', 'team_subtitle_en')
     : (settings.team_subtitle_en || 'Departments & Associations');
 
   const teamDepartments: TeamDepartment[] = parseTeamDepartments(settings);
 
   const dExpectTitle = isHt 
-    ? (settings.expect_title_ht || t.tabExpect || 'À quoi vous attendre')
+    ? frenchSetting(settings, 'expect_title_ht', 'expect_title_en')
     : (settings.expect_title_en || t.tabExpect || 'What to Expect');
 
   // Dynamic Theme Classes
@@ -1841,9 +1819,9 @@ export default function PublicHome({
               const m = ministries.find(item => item.slug === activeMinistryTab);
               if (!m) return null;
               
-              const title = language === 'fr_ht' ? m.title_kreyol : m.title_english;
-              const desc = language === 'fr_ht' ? m.description_kreyol : m.description_english;
-              const bulletsStr = language === 'fr_ht' ? m.bullets_kreyol : m.bullets_english;
+              const title = isHt ? frenchMinistryField(m, 'title') : m.title_english;
+              const desc = isHt ? frenchMinistryField(m, 'description') : m.description_english;
+              const bulletsStr = isHt ? frenchMinistryField(m, 'bullets') : m.bullets_english;
               const bullets = bulletsStr.split('\n').filter(b => b.trim());
               
               return (
@@ -2024,13 +2002,13 @@ export default function PublicHome({
                 <div>
                   <h5 className={`text-2xl font-bold font-serif ${textTitle} mb-4`}>{dAboutUsTitle}</h5>
                   <p className={`${textBody} text-base leading-relaxed mb-4`}>
-                    {language === 'fr_ht'
-                      ? (settings.about_us_p1_ht || "Parousia Baptist Ministries est une communauté vivante de croyants consacrés à l'adoration de Dieu et dans l'attente du retour de Jésus-Christ. Notre mission est d'annoncer fidèlement l'Évangile, de former des disciples et de servir notre communauté locale ainsi que la diaspora.")
+                    {isHt
+                      ? frenchSetting(settings, 'about_us_p1_ht', 'about_us_p1_en')
                       : (settings.about_us_p1_en || 'Parousia Baptist Ministries is a vibrant community of believers devoted to worshiping God and anticipating the second coming (Parousia) of our Lord Jesus Christ. Our mission is to preach the true Gospel, foster deep discipleship, and serve our local and diaspora community.')}
                   </p>
                   <p className={`${textBody} text-base leading-relaxed`}>
-                    {language === 'fr_ht'
-                      ? (settings.about_us_p2_ht || "Depuis nos débuts, nous nous attachons à vivre une foi biblique authentique, à soutenir des projets éducatifs et sanitaires en Haïti et à offrir un lieu accueillant où chacun peut trouver une véritable famille spirituelle.")
+                    {isHt
+                      ? frenchSetting(settings, 'about_us_p2_ht', 'about_us_p2_en')
                       : (settings.about_us_p2_en || 'From our inception, we have focused on authentic biblical living, establishing direct educational and healthcare mission support in Haiti, and cultivating a welcoming space where everyone can experience genuine spiritual family.')}
                   </p>
                 </div>
@@ -2050,35 +2028,35 @@ export default function PublicHome({
                 <div className="grid md:grid-cols-2 gap-8">
                   {[
                     {
-                      title: language === 'fr_ht' 
-                        ? (settings.belief_1_title_ht || "L'autorité infaillible des Écritures")
+                      title: isHt
+                        ? frenchSetting(settings, 'belief_1_title_ht', 'belief_1_title_en')
                         : (settings.belief_1_title_en || 'Infallible Scripture'),
-                      desc: language === 'fr_ht' 
-                        ? (settings.belief_1_desc_ht || "Nous croyons que toute la Bible est la Parole inspirée, infaillible et sans erreur de Dieu, notre autorité suprême en matière de foi, de doctrine et de conduite.")
+                      desc: isHt
+                        ? frenchSetting(settings, 'belief_1_desc_ht', 'belief_1_desc_en')
                         : (settings.belief_1_desc_en || 'We believe the Bible is the inspired, infallible, and inerrant Word of God, serving as our final authority in all matters of faith, doctrine, and conduct.')
                     },
                     {
-                      title: language === 'fr_ht' 
-                        ? (settings.belief_2_title_ht || 'La Sainte Trinité')
+                      title: isHt
+                        ? frenchSetting(settings, 'belief_2_title_ht', 'belief_2_title_en')
                         : (settings.belief_2_title_en || 'Holy Trinity'),
-                      desc: language === 'fr_ht'
-                        ? (settings.belief_2_desc_ht || "Nous croyons en un seul Dieu, existant éternellement en trois personnes égales : le Père, le Fils (Jésus-Christ) et le Saint-Esprit.")
+                      desc: isHt
+                        ? frenchSetting(settings, 'belief_2_desc_ht', 'belief_2_desc_en')
                         : (settings.belief_2_desc_en || 'We believe in one God, eternally existing in three co-equal persons: God the Father, God the Son (Jesus Christ), and God the Holy Spirit.')
                     },
                     {
-                      title: language === 'fr_ht' 
-                        ? (settings.belief_3_title_ht || 'Le salut par la grâce')
+                      title: isHt
+                        ? frenchSetting(settings, 'belief_3_title_ht', 'belief_3_title_en')
                         : (settings.belief_3_title_en || 'Salvation by Grace'),
-                      desc: language === 'fr_ht'
-                        ? (settings.belief_3_desc_ht || "Le salut est un don de Dieu reçu par la repentance et la foi dans le sacrifice de Jésus-Christ. Nous sommes sauvés par la grâce seule, et non par nos œuvres.")
+                      desc: isHt
+                        ? frenchSetting(settings, 'belief_3_desc_ht', 'belief_3_desc_en')
                         : (settings.belief_3_desc_en || "Salvation is a gift of God received through repentance and faith in Christ's substitutionary sacrifice on the cross. It is entirely by grace alone, not works.")
                     },
                     {
-                      title: language === 'fr_ht' 
-                        ? (settings.belief_4_title_ht || 'Le retour du Seigneur (Parousie)')
+                      title: isHt
+                        ? frenchSetting(settings, 'belief_4_title_ht', 'belief_4_title_en')
                         : (settings.belief_4_title_en || 'The Blessed Hope (Parousia)'),
-                      desc: language === 'fr_ht'
-                        ? (settings.belief_4_desc_ht || "Nous attendons avec espérance le retour personnel, visible et glorieux de Jésus-Christ, qui rassemblera son Église et établira son règne de justice.")
+                      desc: isHt
+                        ? frenchSetting(settings, 'belief_4_desc_ht', 'belief_4_desc_en')
                         : (settings.belief_4_desc_en || 'We eagerly anticipate the personal, visible, and glorious return of Jesus Christ to gather His Church and establish His righteous kingdom.')
                     }
                   ].map((belief, idx) => (
@@ -2157,26 +2135,26 @@ export default function PublicHome({
                 <div>
                   <h5 className={`text-2xl font-bold font-serif ${textTitle} mb-4`}>{dExpectTitle}</h5>
                   <p className={`${textBody} text-base leading-relaxed mb-4`}>
-                    {language === 'fr_ht'
-                      ? (settings.expect_p1_ht || "Lorsque vous venez adorer avec nous à Parousia Baptist Ministries, vous découvrez une atmosphère chaleureuse, accueillante et respectueuse. Nos cultes, en français et en anglais, permettent à chacun de participer pleinement.")
+                    {isHt
+                      ? frenchSetting(settings, 'expect_p1_ht', 'expect_p1_en')
                       : (settings.expect_p1_en || 'When you step into a service at Parousia Baptist Ministries, you will experience a warm, friendly, and reverent atmosphere. Our worship is spirit-filled and biblical, and our bilingual environment welcomes all.')}
                   </p>
                   <ul className="space-y-3">
                     {[
                       {
                         en: settings.expect_bullet1_en || 'Christ-centered praise, blending traditional hymns and modern worship',
-                        ht: settings.expect_bullet1_ht || 'Une louange centrée sur le Christ, entre cantiques traditionnels et chants contemporains'
+                        ht: frenchSetting(settings, 'expect_bullet1_ht', 'expect_bullet1_en')
                       },
                       {
                         en: settings.expect_bullet2_en || 'Expository, practical teaching straight from the holy scriptures',
-                        ht: settings.expect_bullet2_ht || 'Un enseignement biblique, concret et fidèle aux Écritures'
+                        ht: frenchSetting(settings, 'expect_bullet2_ht', 'expect_bullet2_en')
                       },
                       {
                         en: settings.expect_bullet3_en || 'A supportive, tight-knit family that will welcome you with open arms',
-                        ht: settings.expect_bullet3_ht || 'Une communauté fraternelle qui vous accueille à bras ouverts'
+                        ht: frenchSetting(settings, 'expect_bullet3_ht', 'expect_bullet3_en')
                       }
                     ].map((bulletObj, idx) => {
-                      const bulletText = language === 'fr_ht' ? bulletObj.ht : bulletObj.en;
+                      const bulletText = isHt ? bulletObj.ht : bulletObj.en;
                       return (
                         <li key={idx} className="flex items-center gap-2 text-sm">
                           <CheckCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
@@ -2211,12 +2189,32 @@ export default function PublicHome({
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {events.map((event, index) => (
+            {events.map((event, index) => {
+              const eventImages = parseEventImages(event.images_json);
+              const eventLocation = language === 'fr_ht' ? event.location_kreyol : event.location_english;
+              const eventDescription = language === 'fr_ht' ? event.description_kreyol : event.description_english;
+              const mapsUrl = googleMapsUrl(eventLocation);
+
+              return (
               <div 
                 key={event.id || index} 
-                className={`rounded-2xl ${bgCard} p-6 md:p-8 flex flex-col justify-between`}
+                className={`rounded-2xl ${bgCard} overflow-hidden flex flex-col justify-between`}
               >
-                <div>
+                {eventImages.length > 0 && (
+                  <div className={`${eventImages.length === 1 ? '' : 'grid grid-cols-2 gap-1'}`}>
+                    {eventImages.slice(0, 4).map((imageUrl, imageIndex) => (
+                      <img
+                        key={`${event.id}-${imageIndex}`}
+                        src={imageUrl}
+                        alt=""
+                        className={`w-full object-cover ${eventImages.length === 1 ? 'h-52' : 'h-36'}`}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                <div className="p-6 md:p-8 flex flex-col flex-1">
+                <div className="flex-1">
                   {/* Event badge details */}
                   <div className="flex justify-between items-center mb-6">
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md ${isLight ? 'bg-blue-50 border border-blue-100 text-blue-600' : 'bg-blue-500/10 border border-blue-500/20 text-blue-400'} text-xs font-bold`}>
@@ -2232,16 +2230,66 @@ export default function PublicHome({
                     {language === 'fr_ht' ? event.title_kreyol : event.title_english}
                   </h5>
                   
-                  <p className={`${textBody} text-sm leading-relaxed mb-6`}>
-                    {language === 'fr_ht' ? event.description_kreyol : event.description_english}
-                  </p>
+                  <FormattedText
+                    text={eventDescription}
+                    className={`${textBody} text-sm leading-relaxed mb-4`}
+                  />
+
+                  {isEventPaymentRequired(event) && (
+                    <div
+                      className={`mb-6 rounded-lg border px-3 py-2.5 text-xs ${
+                        isLight ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                      }`}
+                    >
+                      <span className="font-bold">
+                        {language === 'fr_ht' ? 'Paiement Zelle requis' : 'Zelle payment required'}
+                      </span>
+                      {event.payment_amount?.trim() && (
+                        <span>
+                          {' '}
+                          — {event.payment_amount.trim()}
+                        </span>
+                      )}
+                      <span className={`block mt-1.5 ${isLight ? 'text-amber-700' : 'text-amber-200/90'}`}>
+                        {language === 'fr_ht'
+                          ? 'Payable à l’organisateur (pas à l’église).'
+                          : 'Payable to the event organizer (not the church).'}
+                      </span>
+                      {(event.payment_zelle_name?.trim() || event.payment_zelle_phone?.trim()) && (
+                        <div className={`mt-2 space-y-1 ${isLight ? 'text-amber-900' : 'text-amber-100'}`}>
+                          {event.payment_zelle_name?.trim() && (
+                            <p>
+                              <span className="font-semibold">
+                                {language === 'fr_ht' ? 'Nom Zelle : ' : 'Zelle name: '}
+                              </span>
+                              {event.payment_zelle_name.trim()}
+                            </p>
+                          )}
+                          {event.payment_zelle_phone?.trim() && (
+                            <p>
+                              <span className="font-semibold">
+                                {language === 'fr_ht' ? 'Zelle : ' : 'Zelle: '}
+                              </span>
+                              {event.payment_zelle_phone.trim()}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                <div className={`pt-6 border-t ${borderDivider} flex items-center justify-between`}>
-                  <div className={`flex items-center gap-1.5 text-xs ${textMuted} font-medium`}>
-                    <MapPin className="w-3.5 h-3.5 text-amber-500" />
-                    <span>{language === 'fr_ht' ? event.location_kreyol : event.location_english}</span>
-                  </div>
+                <div className={`pt-6 border-t ${borderDivider} flex items-center justify-between gap-4`}>
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`flex items-center gap-1.5 text-xs ${textMuted} font-medium hover:text-amber-500 transition-colors group`}
+                    title={language === 'fr_ht' ? 'Ouvrir dans Google Maps' : 'Open in Google Maps'}
+                  >
+                    <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span className="underline-offset-2 group-hover:underline">{eventLocation}</span>
+                  </a>
                   
                   <div className="flex items-center gap-2">
                     {/* Add to Calendar Dropdown */}
@@ -2324,19 +2372,17 @@ export default function PublicHome({
 
                     {/* Signup trigger button */}
                     <button 
-                      onClick={() => {
-                        setSelectedEvent(event);
-                        setRegSuccess(false);
-                        setRegError('');
-                      }}
+                      onClick={() => setSelectedEvent(event)}
                       className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all duration-300 hover:scale-105 cursor-pointer"
                     >
                       {t.btnRegister}
                     </button>
                   </div>
                 </div>
+                </div>
               </div>
-            ))}
+            );
+            })}
           </div>
 
         </div>
@@ -2344,120 +2390,27 @@ export default function PublicHome({
 
       {/* EVENT REGISTRATION MODAL PANEL */}
       {selectedEvent && (
-        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className={`relative w-full max-w-lg rounded-2xl ${bgCard} p-6 md:p-8 animate-scale-up`}>
-            
-            {/* Close Button */}
-            <button 
-              onClick={() => setSelectedEvent(null)}
-              className={`absolute top-4 right-4 p-1.5 rounded-lg ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800' : 'bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-white'}`}
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            {!regSuccess ? (
-              <form onSubmit={handleRegisterSubmit}>
-                <h5 className={`text-2xl font-extrabold font-serif ${textTitle} mb-2`}>
-                  {t.eventRegisterTitle}
-                </h5>
-                <p className="text-sm text-amber-400 font-medium mb-6">
-                  {language === 'fr_ht' ? selectedEvent.title_kreyol : selectedEvent.title_english}
-                </p>
-
-                {regError && (
-                  <div className="mb-4 p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-medium">
-                    {regError}
-                  </div>
-                )}
-
-                <div className="space-y-4 mb-6">
-                  <div>
-                    <label className={`block text-xs font-bold uppercase ${textMuted} mb-1.5`}>{t.eventFieldName}</label>
-                    <input 
-                      type="text" 
-                      required
-                      value={regName}
-                      onChange={(e) => setRegName(e.target.value)}
-                      placeholder="e.g. Jean Baptiste" 
-                      className={`w-full px-4 py-3 rounded-lg ${bgInput} focus:border-blue-500 focus:outline-none text-sm transition-all`}
-                    />
-                  </div>
-
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className={`block text-xs font-bold uppercase ${textMuted} mb-1.5`}>{t.eventFieldEmail}</label>
-                      <input 
-                        type="email" 
-                        value={regEmail}
-                        onChange={(e) => setRegEmail(e.target.value)}
-                        placeholder="e.g. jean@gmail.com" 
-                        className={`w-full px-4 py-3 rounded-lg ${bgInput} focus:border-blue-500 focus:outline-none text-sm transition-all`}
-                      />
-                    </div>
-                    <div>
-                      <label className={`block text-xs font-bold uppercase ${textMuted} mb-1.5`}>{t.eventFieldPhone}</label>
-                      <input 
-                        type="tel" 
-                        required
-                        value={regPhone}
-                        onChange={(e) => setRegPhone(e.target.value)}
-                        placeholder="e.g. (954) 555-1122" 
-                        className={`w-full px-4 py-3 rounded-lg ${bgInput} focus:border-blue-500 focus:outline-none text-sm transition-all`}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className={`block text-xs font-bold uppercase ${textMuted} mb-1.5`}>{t.eventFieldNotes}</label>
-                    <textarea 
-                      rows={3}
-                      value={regNotes}
-                      onChange={(e) => setRegNotes(e.target.value)}
-                      placeholder="..." 
-                      className={`w-full px-4 py-3 rounded-lg ${bgInput} focus:border-blue-500 focus:outline-none text-sm transition-all resize-none`}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-4 justify-end">
-                  <button 
-                    type="button"
-                    onClick={() => setSelectedEvent(null)}
-                    className={`px-5 py-2.5 rounded-lg ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-slate-950 hover:bg-slate-850 text-slate-300'} font-semibold text-sm transition-all`}
-                  >
-                    {t.btnCancel}
-                  </button>
-                  <button 
-                    type="submit"
-                    disabled={isPending}
-                    className="px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-sm transition-all"
-                  >
-                    {isPending ? t.btnLoading : t.btnSubmit}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="text-center py-6">
-                <div className={`w-16 h-14 rounded-2xl ${isLight ? 'bg-emerald-50 text-emerald-600' : 'bg-emerald-500/10 text-emerald-400'} flex items-center justify-center mx-auto mb-6`}>
-                  <CheckCircle className="w-8 h-8" />
-                </div>
-                <h5 className={`text-2xl font-extrabold font-serif ${textTitle} mb-2`}>
-                  {t.eventSuccessTitle}
-                </h5>
-                <p className={`${textBody} text-sm mb-8 leading-relaxed`}>
-                  {t.eventSuccessMessage}
-                </p>
-                <button 
-                  onClick={() => setSelectedEvent(null)}
-                  className={`px-6 py-2.5 rounded-lg ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200' : 'bg-slate-950 hover:bg-slate-800 border-slate-800 text-slate-200'} font-bold text-sm`}
-                >
-                  OK
-                </button>
-              </div>
-            )}
-
-          </div>
-        </div>
+        <EventRegistrationModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          language={language}
+          isLight={isLight}
+          textTitle={textTitle}
+          textBody={textBody}
+          textMuted={textMuted}
+          bgCard={bgCard}
+          bgInput={bgInput}
+          registerTitle={t.eventRegisterTitle}
+          fieldName={t.eventFieldName}
+          fieldEmail={t.eventFieldEmail}
+          fieldPhone={t.eventFieldPhone}
+          cancelLabel={t.btnCancel}
+          submitLabel={t.btnSubmit}
+          loadingLabel={t.btnLoading}
+          successTitle={t.eventSuccessTitle}
+          successMessage={t.eventSuccessMessage}
+          okLabel="OK"
+        />
       )}
 
       {/* 10. PASTOR'S BLOG SECTION */}
@@ -2609,7 +2562,7 @@ export default function PublicHome({
               <span>{t.prayerTitle}</span>
             </div>
             <h2 className={`text-3xl md:text-5xl font-extrabold font-serif ${textTitle} tracking-tight mb-4`}>
-              {language === 'fr_ht' ? 'Mur public de prière' : 'Public Prayer Wall'}
+              {t.prayerTitle}
             </h2>
             <p className={`${textMuted} text-base md:text-lg leading-relaxed`}>
               {t.prayerSubtitle}

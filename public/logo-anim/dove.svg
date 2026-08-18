@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 200" role="img" aria-labelledby="title desc">
+  <title id="title">Gold outline dove</title>
+  <desc id="desc">A gold line-art dove flying toward the upper left.</desc>
+  <g id="dove" fill="none" stroke="#D4A504" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- upper wing -->
+    <path d="M300 18
+             C286 30 279 43 280 61
+             C284 50 290 41 301 31
+             C299 45 302 55 309 65
+             C315 53 321 41 322 28
+             C328 42 333 53 343 62"/>
+    <!-- body and lower wing -->
+    <path d="M281 63
+             C287 61 293 62 299 67
+             C303 71 305 78 303 85
+             C312 74 321 68 332 64
+             C342 60 352 53 361 42
+             C359 59 352 72 340 82
+             C351 78 360 73 370 64
+             C365 80 354 91 339 99
+             C326 106 315 111 306 121
+             C305 111 300 104 294 98
+             C287 91 282 83 281 75"/>
+    <!-- beak / head detail -->
+    <path d="M281 63 L272 68 L282 70"/>
+  </g>
+</svg>

@@ -31,6 +31,7 @@ import {
   saveEvent,
   deleteEvent,
   deleteRegistration,
+  updateRegistrationPaymentStatus,
   saveSermon,
   deleteSermon,
   backupWebsite,
@@ -71,6 +72,17 @@ import { MINISTRY_SIGNUP_FIELDS, MinistrySignupSlug } from '@/lib/ministry-signu
 import { useRouter } from 'next/navigation';
 import { clearAdminUiClient, setAdminUiClient } from '@/lib/admin-cookies';
 import { flattenTeamMembers, parseTeamDepartments, type TeamDepartment, type TeamMember } from '@/lib/team-departments';
+import { parseEventImages, serializeEventImages } from '@/lib/event-images';
+import {
+  EVENT_REGISTRATION_TYPE_LABELS,
+  EVENT_REGISTRATION_TYPES,
+  formatEventRegistrationResponses,
+  parseEventRegistrationResponses,
+  resolveEventRegistrationType,
+  summarizeEventHeadcount,
+} from '@/lib/event-registration-fields';
+import { isEventPaymentRequired } from '@/lib/event-payment';
+import AdminSuperAdminGate from '@/components/AdminSuperAdminGate';
 import { getYouTubeThumbnailUrl } from '@/lib/youtube';
 import {
   BilingualTextField,
@@ -163,7 +175,7 @@ export default function AdminDashboardClient({
   }, []);
 
   // Active Management Tab State
-  const [activeTab, setActiveTab] = useState<TabType>('settings');
+  const [activeTab, setActiveTab] = useState<TabType>(isSuperAdmin ? 'settings' : 'events');
 
   // Parousia Baptist Ministries new state variables
   const [devotionalThemeEnabled, setDevotionalThemeEnabled] = useState(settings.devotional_theme_enabled === 'true');
@@ -2618,14 +2630,15 @@ export default function AdminDashboardClient({
     if (res.success) {
       triggerAlert(t.adminSaveSuccess, 'success');
       
-      // Auto-trigger a website backup on successful settings save for total convenience!
-      const backupRes = await backupWebsite();
-      if (backupRes.success) {
-        triggerAlert(language === 'fr_ht' 
-          ? `Site sauvegardé dans Parousie/backups/backup_${backupRes.timestamp}!`
-          : `Website backed up successfully in Parousie/backups/backup_${backupRes.timestamp}!`, 
-          'success'
-        );
+      if (isSuperAdmin) {
+        const backupRes = await backupWebsite();
+        if (backupRes.success) {
+          triggerAlert(language === 'fr_ht' 
+            ? `Site sauvegardé dans Parousie/backups/backup_${backupRes.timestamp}!`
+            : `Website backed up successfully in Parousie/backups/backup_${backupRes.timestamp}!`, 
+            'success'
+          );
+        }
       }
       
       router.refresh();
@@ -2946,9 +2959,55 @@ export default function AdminDashboardClient({
   const [evLocEn, setEvLocEn] = useState('');
   const [evDescHt, setEvDescHt] = useState('');
   const [evDescEn, setEvDescEn] = useState('');
+  const [evImages, setEvImages] = useState<string[]>([]);
+  const [evImagesUploading, setEvImagesUploading] = useState(false);
+  const [evRegistrationType, setEvRegistrationType] = useState('general');
+  const [evPaymentRequired, setEvPaymentRequired] = useState(false);
+  const [evPaymentAmount, setEvPaymentAmount] = useState('');
+  const [evPaymentZelleName, setEvPaymentZelleName] = useState('');
+  const [evPaymentZellePhone, setEvPaymentZellePhone] = useState('');
+  const [evPaymentInstructionsEn, setEvPaymentInstructionsEn] = useState('');
+  const [evPaymentInstructionsHt, setEvPaymentInstructionsHt] = useState('');
+
+  const handleEventImageFiles = (files: FileList | null) => {
+    if (!files?.length) return;
+    setEvImagesUploading(true);
+    const fileArray = Array.from(files);
+    let loaded = 0;
+
+    fileArray.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setEvImages((prev) => [...prev, event.target!.result as string]);
+        }
+        loaded += 1;
+        if (loaded === fileArray.length) {
+          setEvImagesUploading(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
 
   const handleSaveEvent = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const finalImages: string[] = [];
+    for (const image of evImages) {
+      if (image.startsWith('data:')) {
+        const uploadRes = await clientUploadAsset(`event_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`, image);
+        if (uploadRes.success && uploadRes.url) {
+          finalImages.push(uploadRes.url);
+        } else {
+          triggerAlert(uploadRes.error || 'Error uploading event image.', 'error');
+          return;
+        }
+      } else {
+        finalImages.push(image);
+      }
+    }
+
     const res = await saveEvent(editingEventId, {
       title_kreyol: evTitleHt,
       title_english: evTitleEn,
@@ -2957,7 +3016,15 @@ export default function AdminDashboardClient({
       location_kreyol: evLocHt,
       location_english: evLocEn,
       description_kreyol: evDescHt,
-      description_english: evDescEn
+      description_english: evDescEn,
+      images_json: serializeEventImages(finalImages),
+      registration_type: evRegistrationType,
+      payment_required: evPaymentRequired,
+      payment_amount: evPaymentAmount,
+      payment_zelle_name: evPaymentZelleName,
+      payment_zelle_phone: evPaymentZellePhone,
+      payment_instructions_english: evPaymentInstructionsEn,
+      payment_instructions_kreyol: evPaymentInstructionsHt,
     });
     if (res.success) {
       triggerAlert(t.adminSaveSuccess, 'success');
@@ -2978,6 +3045,14 @@ export default function AdminDashboardClient({
     setEvLocEn('');
     setEvDescHt('');
     setEvDescEn('');
+    setEvImages([]);
+    setEvRegistrationType('general');
+    setEvPaymentRequired(false);
+    setEvPaymentAmount('');
+    setEvPaymentZelleName('');
+    setEvPaymentZellePhone('');
+    setEvPaymentInstructionsEn('');
+    setEvPaymentInstructionsHt('');
   };
 
   const handleEditEventClick = (ev: EventRecord) => {
@@ -2990,6 +3065,24 @@ export default function AdminDashboardClient({
     setEvLocEn(ev.location_english);
     setEvDescHt(ev.description_kreyol || '');
     setEvDescEn(ev.description_english || '');
+    setEvImages(parseEventImages(ev.images_json));
+    setEvRegistrationType(resolveEventRegistrationType(ev.registration_type));
+    setEvPaymentRequired(isEventPaymentRequired(ev));
+    setEvPaymentAmount(ev.payment_amount || '');
+    setEvPaymentZelleName(ev.payment_zelle_name || '');
+    setEvPaymentZellePhone(ev.payment_zelle_phone || '');
+    setEvPaymentInstructionsEn(ev.payment_instructions_english || '');
+    setEvPaymentInstructionsHt(ev.payment_instructions_kreyol || '');
+  };
+
+  const handleUpdateRegistrationPayment = async (id: number, paymentStatus: 'paid' | 'not_paid') => {
+    const res = await updateRegistrationPaymentStatus(id, paymentStatus);
+    if (res.success) {
+      triggerAlert(language === 'fr_ht' ? 'Statut de paiement mis à jour.' : 'Payment status updated.', 'success');
+      router.refresh();
+    } else {
+      triggerAlert(res.error || 'Failed to update payment status', 'error');
+    }
   };
 
   const handleDeleteEvent = async (id: number) => {
@@ -3078,6 +3171,32 @@ export default function AdminDashboardClient({
     }
   };
 
+  const showHeaderSaveButton =
+    activeTab === 'settings' ||
+    activeTab === 'hometabs' ||
+    activeTab === 'schedules' ||
+    activeTab === 'missions' ||
+    activeTab === 'outreach' ||
+    activeTab === 'events' ||
+    activeTab === 'sermons' ||
+    activeTab === 'devotional' ||
+    activeTab === 'ministries' ||
+    (activeTab === 'blog' && editingBlogPostId !== null);
+
+  const handleSaveAllChanges = () => {
+    const form = document.getElementById('admin-active-form') as HTMLFormElement | null;
+    if (form) {
+      form.requestSubmit();
+      return;
+    }
+    triggerAlert(
+      language === 'fr_ht'
+        ? 'Aucun formulaire à enregistrer dans cet onglet.'
+        : 'There is no save form in this tab.',
+      'error'
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       <style dangerouslySetInnerHTML={{ __html: `
@@ -3089,19 +3208,33 @@ export default function AdminDashboardClient({
       `}} />
       
       {/* Admin Dashboard header */}
-      <header className="bg-slate-900 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white border border-slate-800 overflow-hidden flex items-center justify-center p-0.5 shadow-md">
+      <header className="sticky top-0 z-40 bg-slate-900/95 border-b border-slate-800 backdrop-blur-md supports-[backdrop-filter]:bg-slate-900/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-white border border-slate-800 overflow-hidden flex items-center justify-center p-0.5 shadow-md shrink-0">
               <img src={logoUrl} alt="Eglise Baptiste de la Parousie Logo" className="w-full h-full object-contain" />
             </div>
-            <div>
-              <h1 className="text-base md:text-lg font-bold font-serif text-white">{t.churchName}</h1>
-              <p className="text-xs text-amber-400 font-semibold uppercase tracking-wider">{t.adminWelcome}</p>
+            <div className="min-w-0">
+              <h1 className="text-base md:text-lg font-bold font-serif text-white truncate">{t.churchName}</h1>
+              <p className="text-xs text-amber-400 font-semibold uppercase tracking-wider truncate">{t.adminWelcome}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {showHeaderSaveButton && (
+              <button
+                type="button"
+                onClick={handleSaveAllChanges}
+                className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold transition-all shadow-lg shadow-amber-500/20 cursor-pointer"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">
+                  {language === 'fr_ht' ? 'Enregistrer toutes les modifications' : 'Save All Changes'}
+                </span>
+                <span className="sm:hidden">{language === 'fr_ht' ? 'Enregistrer' : 'Save'}</span>
+              </button>
+            )}
+
             <AdminDocumentsMenu language={language} />
 
             <button
@@ -3139,7 +3272,7 @@ export default function AdminDashboardClient({
         
         {/* Floating Admin alerts */}
         {alertMsg && (
-          <div className={`fixed top-6 right-6 z-50 px-5 py-4 rounded-xl border shadow-2xl flex items-center gap-3 animate-slide-in ${alertType === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-rose-500/10 border-rose-500/30 text-rose-400'}`}>
+          <div className={`fixed top-24 right-6 z-50 px-5 py-4 rounded-xl border shadow-2xl flex items-center gap-3 animate-slide-in ${alertType === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-rose-500/10 border-rose-500/30 text-rose-400'}`}>
             <Check className="w-5 h-5" />
             <span className="text-sm font-semibold">{alertMsg}</span>
           </div>
@@ -3335,7 +3468,7 @@ export default function AdminDashboardClient({
           
           {/* TAB 1: GLOBAL SITE SETTINGS */}
           {activeTab === 'settings' && (<>
-            <form onSubmit={handleSettingsSubmit} className="space-y-6">
+            <form id="admin-active-form" onSubmit={handleSettingsSubmit} className="space-y-6">
               <h3 className="text-xl font-bold text-white mb-6 border-b border-slate-800 pb-3 font-serif">
                 {t.adminTabSettings}
               </h3>
@@ -3427,6 +3560,11 @@ export default function AdminDashboardClient({
               </div>
 
               {/* CHURCH BRANDING, LOGO, & COLORS SECTION */}
+              <AdminSuperAdminGate
+                isSuperAdmin={isSuperAdmin}
+                language={language === 'fr_ht' ? 'fr_ht' : 'en'}
+                title={language === 'fr_ht' ? 'Image de marque, logo et couleurs' : 'Branding, logo & colors'}
+              >
               <div className="grid lg:grid-cols-2 gap-6 p-6 rounded-2xl bg-slate-900 border border-slate-800/80 shadow-xl">
                 {/* Church Logo Customizer */}
                 <div className="flex flex-col h-full justify-between">
@@ -3666,9 +3804,15 @@ export default function AdminDashboardClient({
                   </div>
                 </div>
               </div>
+              </AdminSuperAdminGate>
 
               {/* HERO BACKGROUND IMAGE AND LIVE BROADCAST SETTINGS */}
               <div className="grid md:grid-cols-2 gap-6 p-4 rounded-xl bg-slate-950 border border-slate-850">
+                <AdminSuperAdminGate
+                  isSuperAdmin={isSuperAdmin}
+                  language={language === 'fr_ht' ? 'fr_ht' : 'en'}
+                  title={language === 'fr_ht' ? 'Image d’arrière-plan de la page d’accueil' : 'Home page hero background'}
+                >
                 <div className="flex flex-col justify-between h-full">
                   <div>
                     <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Home Page Hero Background Image</label>
@@ -3726,6 +3870,7 @@ export default function AdminDashboardClient({
                     />
                   </div>
                 </div>
+                </AdminSuperAdminGate>
 
                 <div className="flex flex-col justify-between h-full">
                   <div>
@@ -3882,6 +4027,11 @@ export default function AdminDashboardClient({
 
 
               {/* Stripe & Cash Transfer Payment Panel Control */}
+              <AdminSuperAdminGate
+                isSuperAdmin={isSuperAdmin}
+                language={language === 'fr_ht' ? 'fr_ht' : 'en'}
+                title={language === 'fr_ht' ? 'Dîmes et offrandes (Zelle, Cash App, etc.)' : 'Tithes & offerings (Zelle, Cash App, etc.)'}
+              >
               <div className="p-5 rounded-xl bg-slate-950 border border-slate-850 shadow-inner">
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Tithes & Offerings / Dîmes et offrandes</label>
                 <div className="flex items-start gap-3 mt-3">
@@ -4040,6 +4190,7 @@ export default function AdminDashboardClient({
                   </div>
                 </div>
               </div>
+              </AdminSuperAdminGate>
 
               {/* Free Giveaway Spiritual Resource Customizer */}
               <div className="p-6 rounded-xl bg-slate-950 border border-slate-850 space-y-6">
@@ -4294,6 +4445,7 @@ export default function AdminDashboardClient({
               )}
 
               <div className="flex justify-between items-center pt-4">
+                {isSuperAdmin && (
                 <button 
                   type="button"
                   onClick={handleBackupClick}
@@ -4303,10 +4455,11 @@ export default function AdminDashboardClient({
                   <Database className="w-3.5 h-3.5 text-amber-500" />
                   <span>{isBackingUp ? (language === 'fr_ht' ? 'Sauvegarde en cours...' : 'Backing up...') : (language === 'fr_ht' ? 'Créer une sauvegarde du site' : 'Create Site Backup')}</span>
                 </button>
+                )}
 
                 <button 
                   type="submit"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold transition-all shadow-lg cursor-pointer"
+                  className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold transition-all shadow-lg cursor-pointer ${!isSuperAdmin ? 'ml-auto' : ''}`}
                 >
                   <Save className="w-4 h-4" />
                   <span>{t.btnSave}</span>
@@ -4314,6 +4467,7 @@ export default function AdminDashboardClient({
               </div>
             </form>
 
+              {isSuperAdmin && (
               <div className="border-t border-slate-800 my-10 pt-8">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500">
@@ -4587,6 +4741,7 @@ export default function AdminDashboardClient({
                   </div>
                 </div>
               </div>
+              )}
           </>)}
 
           {/* TAB 1.5: HOME SUB-TABS MANAGER */}
@@ -4653,7 +4808,7 @@ export default function AdminDashboardClient({
                 </button>
               </div>
 
-              <form onSubmit={handleHomeTabsSubmit} className="space-y-6">
+              <form id="admin-active-form" onSubmit={handleHomeTabsSubmit} className="space-y-6">
                 
                 {/* SUB-TAB: ABOUT US */}
                 {homeSubTab === 'about' && (
@@ -5590,7 +5745,7 @@ export default function AdminDashboardClient({
               </div>
 
               {/* Form to Add or Edit */}
-              <form onSubmit={handleSaveSchedule} className="p-5 rounded-xl bg-slate-950 border border-slate-850 space-y-4">
+              <form id="admin-active-form" onSubmit={handleSaveSchedule} className="p-5 rounded-xl bg-slate-950 border border-slate-850 space-y-4">
                 <h4 className="text-xs font-bold uppercase text-amber-400">
                   {editingScheduleId ? 'Modify Schedule / Modifier' : 'Create New Schedule / Ajouter un horaire'}
                 </h4>
@@ -5867,7 +6022,7 @@ export default function AdminDashboardClient({
               </div>
 
               {/* Form */}
-              <form onSubmit={handleSaveMission} className="p-5 rounded-xl bg-slate-950 border border-slate-850 space-y-4">
+              <form id="admin-active-form" onSubmit={handleSaveMission} className="p-5 rounded-xl bg-slate-950 border border-slate-850 space-y-4">
                 <h4 className="text-xs font-bold uppercase text-amber-400">
                   {editingMissionId ? 'Modify Haiti Project' : 'Create New Haiti Mission'}
                 </h4>
@@ -6076,7 +6231,7 @@ export default function AdminDashboardClient({
               </div>
 
               {/* Form */}
-              <form onSubmit={handleSaveOutreach} className="p-5 rounded-xl bg-slate-950 border border-slate-850 space-y-4">
+              <form id="admin-active-form" onSubmit={handleSaveOutreach} className="p-5 rounded-xl bg-slate-950 border border-slate-850 space-y-4">
                 <h4 className="text-xs font-bold uppercase text-amber-400">
                   {editingOutreachId ? 'Modify Outreach Project' : 'Create New Outreach Project'}
                 </h4>
@@ -6201,7 +6356,7 @@ export default function AdminDashboardClient({
               </div>
 
               {/* Form */}
-              <form onSubmit={handleSaveEvent} className="p-5 rounded-xl bg-slate-950 border border-slate-850 space-y-4">
+              <form id="admin-active-form" onSubmit={handleSaveEvent} className="p-5 rounded-xl bg-slate-950 border border-slate-850 space-y-4">
                 <h4 className="text-xs font-bold uppercase text-amber-400">
                   {editingEventId ? 'Modify Event Details' : 'Create New Event'}
                 </h4>
@@ -6250,6 +6405,7 @@ export default function AdminDashboardClient({
                     <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Location (Français)</label>
                     <input 
                       type="text" required value={evLocHt} onChange={e => setEvLocHt(e.target.value)}
+                      placeholder="Adresse complète pour Google Maps"
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
                     />
                   </div>
@@ -6257,26 +6413,214 @@ export default function AdminDashboardClient({
                     <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Location (English)</label>
                     <input 
                       type="text" required value={evLocEn} onChange={e => setEvLocEn(e.target.value)}
+                      placeholder="Full address for Google Maps"
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
                     />
                   </div>
                 </div>
 
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                    {language === 'fr_ht' ? 'Type de formulaire d’inscription' : 'Registration Form Type'}
+                  </label>
+                  <select
+                    value={evRegistrationType}
+                    onChange={(e) => setEvRegistrationType(e.target.value)}
+                    className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                  >
+                    {EVENT_REGISTRATION_TYPES.map((type) => {
+                      const labels = EVENT_REGISTRATION_TYPE_LABELS[type];
+                      const label = language === 'fr_ht' ? labels.ht : labels.en;
+                      const description = language === 'fr_ht' ? labels.description_ht : labels.description_en;
+                      return (
+                        <option key={type} value={type}>
+                          {label} — {description}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <p className="text-[10px] text-slate-500 mt-2">
+                    {language === 'fr_ht'
+                      ? 'Choisissez le formulaire adapté à l’événement (pique-nique, conférence, jeunesse, etc.).'
+                      : 'Choose the signup form that matches this event (picnic, conference, youth, etc.).'}
+                  </p>
+                </div>
+
+                <AdminSuperAdminGate
+                  isSuperAdmin={isSuperAdmin}
+                  language={language === 'fr_ht' ? 'fr_ht' : 'en'}
+                  title={language === 'fr_ht' ? 'Paiement organisateur (Zelle)' : 'Organizer payment (Zelle)'}
+                >
+                <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h5 className="text-xs font-bold uppercase text-amber-400">
+                        {language === 'fr_ht' ? 'Paiement organisateur (Zelle)' : 'Organizer Payment (Zelle)'}
+                      </h5>
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        {language === 'fr_ht'
+                          ? 'Pour les retraites et événements payants : le paiement va à l’organisateur, pas à l’église.'
+                          : 'For retreats and paid events: payment goes to the organizer, not the church.'}
+                      </p>
+                    </div>
+                    <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={evPaymentRequired}
+                        onChange={(e) => setEvPaymentRequired(e.target.checked)}
+                      />
+                      {language === 'fr_ht' ? 'Paiement requis' : 'Payment required'}
+                    </label>
+                  </div>
+
+                  {evPaymentRequired && (
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                          {language === 'fr_ht' ? 'Montant (affiché)' : 'Amount (display)'}
+                        </label>
+                        <input
+                          type="text"
+                          value={evPaymentAmount}
+                          onChange={(e) => setEvPaymentAmount(e.target.value)}
+                          placeholder="e.g. $150 per person"
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                          {language === 'fr_ht' ? 'Nom Zelle de l’organisateur' : 'Organizer Zelle Name'}
+                        </label>
+                        <input
+                          type="text"
+                          value={evPaymentZelleName}
+                          onChange={(e) => setEvPaymentZelleName(e.target.value)}
+                          placeholder="e.g. Retreat Coordinator"
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                          {language === 'fr_ht' ? 'Zelle (téléphone ou courriel) *' : 'Zelle Phone or Email *'}
+                        </label>
+                        <input
+                          type="text"
+                          required={evPaymentRequired}
+                          value={evPaymentZellePhone}
+                          onChange={(e) => setEvPaymentZellePhone(e.target.value)}
+                          placeholder="e.g. 954-555-1122 or organizer@email.com"
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                          Instructions de paiement (Français)
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={evPaymentInstructionsHt}
+                          onChange={(e) => setEvPaymentInstructionsHt(e.target.value)}
+                          placeholder="Incluez votre nom dans le mémo Zelle. Paiement dû avant..."
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-y"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                          Payment Instructions (English)
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={evPaymentInstructionsEn}
+                          onChange={(e) => setEvPaymentInstructionsEn(e.target.value)}
+                          placeholder="Include your name in the Zelle memo. Payment due by..."
+                          className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-y"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                </AdminSuperAdminGate>
+
+                {!isSuperAdmin && (evPaymentRequired || evPaymentZellePhone.trim()) && (
+                  <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs text-slate-300 space-y-1">
+                    <p className="font-bold text-amber-400">
+                      {language === 'fr_ht' ? 'Paiement organisateur (lecture seule)' : 'Organizer payment (read-only)'}
+                    </p>
+                    {evPaymentAmount.trim() && <p>{language === 'fr_ht' ? 'Montant : ' : 'Amount: '}{evPaymentAmount}</p>}
+                    {evPaymentZelleName.trim() && <p>Zelle: {evPaymentZelleName}</p>}
+                    {evPaymentZellePhone.trim() && <p>{evPaymentZellePhone}</p>}
+                  </div>
+                )}
+
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (Français)</label>
                     <textarea 
-                      rows={2} value={evDescHt} onChange={e => setEvDescHt(e.target.value)}
-                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-none"
+                      rows={8} value={evDescHt} onChange={e => setEvDescHt(e.target.value)}
+                      placeholder="Utilisez des lignes vides entre les paragraphes. Markdown pris en charge : **gras**, *italique*, * listes."
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-y min-h-[160px]"
                     />
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Description (English)</label>
                     <textarea 
-                      rows={2} value={evDescEn} onChange={e => setEvDescEn(e.target.value)}
-                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-none"
+                      rows={8} value={evDescEn} onChange={e => setEvDescEn(e.target.value)}
+                      placeholder="Use blank lines between paragraphs. Markdown supported: **bold**, *italic*, * bullet lists."
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white resize-y min-h-[160px]"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1.5">
+                    {language === 'fr_ht' ? 'Photos de l’événement' : 'Event Photos'}
+                  </label>
+                  <p className="text-[10px] text-slate-500 mb-3">
+                    {language === 'fr_ht'
+                      ? 'Ajoutez une ou plusieurs images (JPG/PNG). Elles s’afficheront sur la carte de l’événement.'
+                      : 'Add one or more images (JPG/PNG). They will appear on the event card.'}
+                  </p>
+
+                  <div
+                    onClick={() => document.getElementById('event-images-input')?.click()}
+                    className="border-2 border-dashed border-slate-800 hover:border-amber-500/50 rounded-xl p-5 flex flex-col items-center justify-center gap-2 cursor-pointer bg-slate-950/40"
+                  >
+                    <input
+                      type="file"
+                      id="event-images-input"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => handleEventImageFiles(e.target.files)}
+                    />
+                    <UploadCloud className="w-7 h-7 text-slate-500" />
+                    <span className="text-xs font-bold text-slate-300">
+                      {language === 'fr_ht' ? 'Choisir ou glisser des photos' : 'Choose or drag event photos'}
+                    </span>
+                    {evImagesUploading && (
+                      <span className="text-[10px] text-amber-400 font-semibold">
+                        {language === 'fr_ht' ? 'Chargement...' : 'Uploading...'}
+                      </span>
+                    )}
+                  </div>
+
+                  {evImages.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+                      {evImages.map((image, index) => (
+                        <div key={`${image.slice(0, 24)}-${index}`} className="relative rounded-lg overflow-hidden border border-slate-800 bg-slate-900">
+                          <img src={image} alt="" className="w-full h-28 object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setEvImages((prev) => prev.filter((_, i) => i !== index))}
+                            className="absolute top-2 right-2 p-1 rounded bg-slate-950/80 text-rose-400 hover:text-rose-300 cursor-pointer"
+                            aria-label={language === 'fr_ht' ? 'Supprimer la photo' : 'Remove photo'}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-2 justify-end">
@@ -6298,6 +6642,11 @@ export default function AdminDashboardClient({
                     <div>
                       <h4 className="text-sm font-bold text-white">{ev.title_kreyol} <span className="text-slate-500">|</span> {ev.title_english}</h4>
                       <p className="text-xs text-slate-400 mt-1">{ev.date} at {ev.time} | {ev.location_kreyol}</p>
+                      {isEventPaymentRequired(ev) && (
+                        <p className="text-[10px] text-amber-400 font-semibold mt-1">
+                          Zelle {ev.payment_amount ? `— ${ev.payment_amount}` : ''} → {ev.payment_zelle_phone || 'organizer'}
+                        </p>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => handleEditEventClick(ev)} className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-500 transition-colors cursor-pointer">
@@ -6361,12 +6710,25 @@ export default function AdminDashboardClient({
                         <th className="p-4 uppercase tracking-wider">Registrant</th>
                         <th className="p-4 uppercase tracking-wider">Contact</th>
                         <th className="p-4 uppercase tracking-wider">Event Details</th>
-                        <th className="p-4 uppercase tracking-wider">Notes</th>
+                        <th className="p-4 uppercase tracking-wider">Headcount</th>
+                        <th className="p-4 uppercase tracking-wider">Paid / Not Paid</th>
+                        <th className="p-4 uppercase tracking-wider">Registration Details</th>
                         <th className="p-4 uppercase tracking-wider text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-850/80">
-                      {registrations.map(reg => (
+                      {registrations.map(reg => {
+                        const responses = parseEventRegistrationResponses(reg.responses_json);
+                        const details = formatEventRegistrationResponses(
+                          reg.event_registration_type,
+                          responses,
+                          language === 'fr_ht' ? 'fr_ht' : 'en'
+                        );
+                        const legacyDetails = reg.notes?.trim() && !details ? reg.notes.trim() : details;
+                        const headcount = summarizeEventHeadcount(reg.event_registration_type, responses);
+                        const paymentRequired = isEventPaymentRequired(reg);
+
+                        return (
                         <tr key={reg.id} className="hover:bg-slate-900/30 transition-colors">
                           <td className="p-4">
                             <span className="font-bold text-white text-sm block">{reg.name}</span>
@@ -6378,8 +6740,29 @@ export default function AdminDashboardClient({
                           <td className="p-4 font-medium text-amber-400">
                             {language === 'fr_ht' ? reg.event_title_kreyol : reg.event_title_english}
                           </td>
-                          <td className="p-4 max-w-xs truncate font-normal text-slate-400">
-                            {reg.notes || '—'}
+                          <td className="p-4 font-medium text-slate-300 whitespace-nowrap">
+                            {headcount || '—'}
+                          </td>
+                          <td className="p-4">
+                            {paymentRequired ? (
+                              <select
+                                value={reg.payment_status === 'paid' ? 'paid' : 'not_paid'}
+                                onChange={(e) => handleUpdateRegistrationPayment(reg.id, e.target.value as 'paid' | 'not_paid')}
+                                className={`px-2 py-1.5 rounded border text-xs font-bold cursor-pointer ${
+                                  reg.payment_status === 'paid'
+                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                                    : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                                }`}
+                              >
+                                <option value="not_paid">{language === 'fr_ht' ? 'Non payé' : 'Not Paid'}</option>
+                                <option value="paid">{language === 'fr_ht' ? 'Payé' : 'Paid'}</option>
+                              </select>
+                            ) : (
+                              <span className="text-slate-500 text-xs">N/A</span>
+                            )}
+                          </td>
+                          <td className="p-4 max-w-sm font-normal text-slate-400 whitespace-pre-wrap">
+                            {legacyDetails || '—'}
                           </td>
                           <td className="p-4 text-right">
                             <button 
@@ -6390,7 +6773,8 @@ export default function AdminDashboardClient({
                             </button>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -6463,7 +6847,7 @@ export default function AdminDashboardClient({
               </div>
 
               {/* Form */}
-              <form onSubmit={handleSaveSermon} className="p-5 rounded-2xl bg-slate-950/40 border border-slate-850 space-y-4">
+              <form id="admin-active-form" onSubmit={handleSaveSermon} className="p-5 rounded-2xl bg-slate-950/40 border border-slate-850 space-y-4">
                 <h4 className="text-sm font-bold text-amber-400 uppercase tracking-wider">
                   {editingSermonId ? (language === 'fr_ht' ? 'Modifier le sermon' : 'Edit Sermon') : (language === 'fr_ht' ? 'Ajouter un sermon' : 'Add a New Sermon')}
                 </h4>
@@ -6815,7 +7199,7 @@ export default function AdminDashboardClient({
 
               {/* Editing Form (if editing) */}
               {editingDevotionalId !== null && (
-                <form onSubmit={handleDevotionalSave} className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
+                <form id="admin-active-form" onSubmit={handleDevotionalSave} className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
                   <div className="flex justify-between items-center border-b border-slate-850 pb-3">
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <Edit className="w-4 h-4 text-amber-500" />
@@ -7354,7 +7738,7 @@ export default function AdminDashboardClient({
 
               {/* Creation / Editing Form overlay / view */}
               {editingBlogPostId !== null ? (
-                <form onSubmit={handleSaveBlog} className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4 animate-fade-in">
+                <form id="admin-active-form" onSubmit={handleSaveBlog} className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4 animate-fade-in">
                   <div className="flex justify-between items-center border-b border-slate-850 pb-3 mb-2">
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <Edit className="w-4 h-4 text-amber-500" />
@@ -7567,7 +7951,7 @@ export default function AdminDashboardClient({
               />
 
               {/* Form */}
-              <form onSubmit={handleSaveMinistry} className="p-5 rounded-2xl bg-slate-950/30 border border-slate-850 space-y-4">
+              <form id="admin-active-form" onSubmit={handleSaveMinistry} className="p-5 rounded-2xl bg-slate-950/30 border border-slate-850 space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
