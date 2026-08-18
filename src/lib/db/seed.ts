@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import type { Pool } from 'pg';
 import { getSuperAdminEmails } from '../super-admin';
 import { HOME_FRENCH_DEFAULTS, MINISTRY_FRENCH_DEFAULTS, resolveFrenchContent } from '../french-content';
+import { FREE_GIFT_FILE_SETTING_KEYS, assetFileExists } from '../asset-storage';
 import { sanitizeTeamDepartmentsForFrench } from '../team-departments';
 
 async function countRows(pool: Pool, table: string): Promise<number> {
@@ -96,6 +97,18 @@ async function migrateLegacyFrenchContent(pool: Pool): Promise<void> {
     }
   } catch {
     // Ignore invalid team JSON during migration.
+  }
+}
+
+async function sanitizeMissingFreeGiftAssets(pool: Pool): Promise<void> {
+  for (const key of FREE_GIFT_FILE_SETTING_KEYS) {
+    const result = await pool.query<{ value: string }>('SELECT value FROM settings WHERE key = $1', [key]);
+    const value = result.rows[0]?.value || '';
+    if (!value.startsWith('/api/assets/') || assetFileExists(value)) {
+      continue;
+    }
+
+    await pool.query('DELETE FROM settings WHERE key = $1', [key]);
   }
 }
 
@@ -369,4 +382,5 @@ export async function seedDatabase(pool: Pool): Promise<void> {
   );
 
   await migrateLegacyFrenchContent(pool);
+  await sanitizeMissingFreeGiftAssets(pool);
 }

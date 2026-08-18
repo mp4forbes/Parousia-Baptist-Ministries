@@ -1399,24 +1399,51 @@ export async function deleteSermon(id: number): Promise<{ success: boolean; erro
   }
 }
 
+import { assetFileExists, FREE_GIFT_FILE_SETTING_KEYS } from './asset-storage';
+
 // REMOTELY MOUNTED FILE ASSETS & BACKUP OPERATIONS
 
 export async function verifyAssetUrl(assetUrl: string): Promise<{ exists: boolean }> {
-  if (!assetUrl.startsWith('/api/assets/')) {
-    return { exists: true };
+  return { exists: assetFileExists(assetUrl) };
+}
+
+export async function repairMissingFreeGiftAssetSettings(): Promise<{
+  success: boolean;
+  clearedEnglish: boolean;
+  clearedFrench: boolean;
+}> {
+  const isAuthed = await checkAdminAuth();
+  if (!isAuthed) {
+    return { success: false, clearedEnglish: false, clearedFrench: false };
   }
 
   try {
-    const filename = decodeURIComponent(assetUrl.replace('/api/assets/', '').split('?')[0]);
-    const assetDir = getAssetDir();
-    const filePath = path.join(assetDir, filename);
-    const relative = path.relative(assetDir, filePath);
-    if (relative.startsWith('..') || path.isAbsolute(relative)) {
-      return { exists: false };
+    let clearedEnglish = false;
+    let clearedFrench = false;
+
+    for (const key of FREE_GIFT_FILE_SETTING_KEYS) {
+      const result = await db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as
+        | { value: string }
+        | undefined;
+      const value = result?.value || '';
+      if (!value.startsWith('/api/assets/') || assetFileExists(value)) {
+        continue;
+      }
+
+      await db.prepare('DELETE FROM settings WHERE key = ?').run(key);
+
+      if (key === 'free_gift_file_url' || key === 'free_gift_file_url_english') {
+        clearedEnglish = true;
+      }
+      if (key === 'free_gift_file_url_french' || key === 'free_gift_file_url_kreyol') {
+        clearedFrench = true;
+      }
     }
-    return { exists: fs.existsSync(filePath) };
-  } catch {
-    return { exists: false };
+
+    return { success: true, clearedEnglish, clearedFrench };
+  } catch (error: any) {
+    console.error('Error repairing missing free gift asset settings:', error);
+    return { success: false, clearedEnglish: false, clearedFrench: false };
   }
 }
 

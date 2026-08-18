@@ -63,6 +63,7 @@ import {
   deleteMinistrySignup,
   exportMinistrySignupsSpreadsheet,
   markAdminEntryFromSite,
+  repairMissingFreeGiftAssetSettings,
   verifyAssetUrl,
 } from '@/lib/actions';
 import AdminSectionContactExport from '@/components/AdminSectionContactExport';
@@ -705,20 +706,12 @@ export default function AdminDashboardClient({
   const [giftAdminNotes, setGiftAdminNotes] = useState(settings.free_gift_admin_notes || '');
 
   useEffect(() => {
-    const urls = [giftFileUrlEn, giftFileUrlFr].filter((url) => url.startsWith('/api/assets/'));
-    urls.forEach((giftFileUrl) => {
-      verifyAssetUrl(giftFileUrl).then((result) => {
-        if (!result.exists) {
-          triggerAlert(
-            language === 'fr_ht'
-              ? 'Un fichier du cadeau gratuit configuré est introuvable. Téléversez-le à nouveau dans les paramètres du site.'
-              : 'A configured free gift file is missing. Please upload it again in site settings.',
-            'error'
-          );
-        }
-      });
+    repairMissingFreeGiftAssetSettings().then((result) => {
+      if (!result.success) return;
+      if (result.clearedEnglish) setGiftFileUrlEn('');
+      if (result.clearedFrench) setGiftFileUrlFr('');
     });
-  }, [giftFileUrlEn, giftFileUrlFr, language]);
+  }, []);
   const [isDraggingGiftEn, setIsDraggingGiftEn] = useState(false);
   const [isDraggingGiftFr, setIsDraggingGiftFr] = useState(false);
   const [giftIsUploadingEn, setGiftIsUploadingEn] = useState(false);
@@ -2000,13 +1993,7 @@ export default function AdminDashboardClient({
       if (giftUrl.startsWith('/api/assets/')) {
         const assetCheck = await verifyAssetUrl(giftUrl);
         if (!assetCheck.exists) {
-          return {
-            success: false,
-            error:
-              language === 'fr_ht'
-                ? `Le fichier ${label} est introuvable sur le serveur. Veuillez le téléverser à nouveau avant d’enregistrer.`
-                : `The ${label} gift file is missing from server storage. Please upload it again before saving.`,
-          };
+          return { success: true, url: '' };
         }
       }
       return { success: true, url: giftUrl };
