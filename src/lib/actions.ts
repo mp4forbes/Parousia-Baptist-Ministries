@@ -1,8 +1,18 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { db, ServiceSchedule, HaitiMission, LocalOutreach, EventRecord, Registration, Sermon, KnowledgeBaseItem, Lead, DailyDevotional, AdminRecord, AdminDevice, PrayerRequest, ContactSubmission, BlogPost, Ministry, MinistrySignup, AdminSectionConfig } from './db';
+import { db, ServiceSchedule, HaitiMission, LocalOutreach, EventRecord, Registration, Sermon, KnowledgeBaseItem, Lead, DailyDevotional, AdminRecord, AdminDevice, PrayerRequest, ContactSubmission, BlogPost, Ministry, MinistrySignup, AdminSectionConfig, AdministrativeCareCategory, AdministrativeCareSubmission } from './db';
 import { sendEmail, sendAdminOtpEmail } from './notify';
+import { buildChurchEmailHtml, getChurchFromEmail, textToHtmlParagraphs } from './email-templates';
+import { getChurchContact } from './church-contact';
+import {
+  ADMINISTRATIVE_CARE_BASE_FIELDS,
+  ADMINISTRATIVE_CARE_FIELDS,
+  formatAdministrativeCareFieldValue,
+  isCheckedResponse,
+} from './administrative-care-fields';
+import { isAdministrativeCareSlug, type AdministrativeCareSlug } from './site-nav';
+import { serializeEventImages } from './event-images';
 import { buildMinistrySignupSpreadsheet } from './ministry-signup-spreadsheet';
 import { buildAdminSpreadsheet } from './admin-spreadsheet';
 import { AdminExportSlug, isAdminExportSlug, isAdminSectionSlug } from './admin-sections';
@@ -232,6 +242,350 @@ export async function exportMinistrySignupsSpreadsheet(
   }
 }
 
+function revalidateAdministrativeCarePaths(slug?: string) {
+  revalidatePath('/');
+  revalidatePath('/administrative-care');
+  if (slug) {
+    revalidatePath(`/administrative-care/${slug}`);
+  }
+  revalidatePath('/admin/dashboard');
+}
+
+function allAdministrativeCareFields(slug: AdministrativeCareSlug) {
+  return [...ADMINISTRATIVE_CARE_BASE_FIELDS, ...ADMINISTRATIVE_CARE_FIELDS[slug]];
+}
+
+export async function getAdministrativeCareCategories(): Promise<AdministrativeCareCategory[]> {
+  try {
+    const rows = await db.prepare('SELECT * FROM administrative_care_categories').all() as AdministrativeCareCategory[];
+    const order = ['weddings', 'funerals', 'baptisms', 'childrens-dedications', 'hospice-support'];
+    return rows.sort((a, b) => order.indexOf(a.slug) - order.indexOf(b.slug));
+  } catch (error) {
+    console.error('Error fetching administrative care categories:', error);
+    return [];
+  }
+}
+
+export async function getAdministrativeCareCategory(slug: string): Promise<AdministrativeCareCategory | null> {
+  if (!isAdministrativeCareSlug(slug)) return null;
+  try {
+    const row = await db.prepare('SELECT * FROM administrative_care_categories WHERE slug = ?').get(slug) as AdministrativeCareCategory | undefined;
+    return row || null;
+  } catch (error) {
+    console.error(`Error fetching administrative care category ${slug}:`, error);
+    return null;
+  }
+}
+
+export async function saveAdministrativeCareCategory(
+  slug: string,
+  data: Partial<AdministrativeCareCategory>
+): Promise<{ success: boolean; error?: string }> {
+  const isAuthed = await checkAdminAuth();
+  if (!isAuthed) return { success: false, error: 'Unauthorized' };
+  if (!isAdministrativeCareSlug(slug)) return { success: false, error: 'Invalid category.' };
+
+  try {
+    const payload: Record<string, string> = {
+      title_english: data.title_english || '',
+      title_kreyol: data.title_kreyol || '',
+      description_english: data.description_english || '',
+      description_kreyol: data.description_kreyol || '',
+      images_json: data.images_json || serializeEventImages([]),
+      contact_name: data.contact_name || '',
+      contact_email: data.contact_email || '',
+      contact_phone: data.contact_phone || '',
+      notification_emails: data.notification_emails || '',
+    };
+
+    await db.prepare(`
+      INSERT INTO administrative_care_categories
+        (slug, title_english, title_kreyol, description_english, description_kreyol, images_json, contact_name, contact_email, contact_phone, notification_emails)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT (slug) DO UPDATE SET
+        title_english = EXCLUDED.title_english,
+        title_kreyol = EXCLUDED.title_kreyol,
+        description_english = EXCLUDED.description_english,
+        description_kreyol = EXCLUDED.description_kreyol,
+        images_json = EXCLUDED.images_json,
+        contact_name = EXCLUDED.contact_name,
+        contact_email = EXCLUDED.contact_email,
+        contact_phone = EXCLUDED.contact_phone,
+        notification_emails = EXCLUDED.notification_emails
+    `).run(
+      slug,
+      payload.title_english,
+      payload.title_kreyol,
+      payload.description_english,
+      payload.description_kreyol,
+      payload.images_json,
+      payload.contact_name,
+      payload.contact_email,
+      payload.contact_phone,
+      payload.notification_emails
+    );
+
+    revalidateAdministrativeCarePaths(slug);
+    return { success: true };
+  } catch (error: any) {
+    console.error(`Error saving administrative care category ${slug}:`, error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function submitAdministrativeCareForm(
+  slug: string,
+  data: {
+    name: string;
+    email: string;
+    phone?: string;
+    responses: Record<string, string>;
+    language?: string;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!isAdministrativeCareSlug(slug)) {
+      return { success: false, error: 'Invalid category.' };
+    }
+
+    const categorySlug = slug as AdministrativeCareSlug;
+    if (!data.name.trim() || !data.email.trim()) {
+      return { success: false, error: 'Name and email are required.' };
+    }
+
+    for (const field of allAdministrativeCareFields(categorySlug)) {
+      if (!field.required) continue;
+      const value = data.responses[field.key];
+      if (field.type === 'checkbox') {
+        if (!isCheckedResponse(value)) {
+          return { success: false, error: `Missing required field: ${field.label_en}` };
+        }
+      } else if (!value?.trim()) {
+        return { success: false, error: `Missing required field: ${field.label_en}` };
+      }
+    }
+
+    const createdAt = new Date().toISOString();
+    const language = data.language === 'fr_ht' ? 'fr_ht' : 'en';
+    await db.prepare(`
+      INSERT INTO administrative_care_submissions (category_slug, name, email, phone, responses, language, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      categorySlug,
+      data.name.trim(),
+      data.email.toLowerCase().trim(),
+      data.phone?.trim() || null,
+      JSON.stringify(data.responses),
+      language,
+      createdAt
+    );
+
+    const category = await getAdministrativeCareCategory(categorySlug);
+    const settings = await getSettings();
+    const church = await getChurchContact();
+    const categoryTitle = language === 'fr_ht'
+      ? (category?.title_kreyol || category?.title_english || categorySlug)
+      : (category?.title_english || category?.title_kreyol || categorySlug);
+    const fromEmail = getChurchFromEmail();
+    const responseLines = allAdministrativeCareFields(categorySlug)
+      .map((field) => {
+        const formatted = formatAdministrativeCareFieldValue(field, data.responses[field.key], language === 'fr_ht' ? 'fr_ht' : 'en');
+        if (!formatted) return null;
+        const label = language === 'fr_ht' ? field.label_ht : field.label_en;
+        return `${label}: ${formatted}`;
+      })
+      .filter(Boolean)
+      .join('\n');
+
+    const recipients = parseNotificationEmails(category?.notification_emails);
+    if (recipients.length > 0) {
+      const staffText = [
+        `A new Administrative Care request was submitted for ${category?.title_english || categorySlug}.`,
+        '',
+        `Name: ${data.name.trim()}`,
+        `Email: ${data.email.trim()}`,
+        data.phone?.trim() ? `Phone: ${data.phone.trim()}` : null,
+        `Submitted: ${new Date(createdAt).toLocaleString()}`,
+        responseLines ? `\nDetails:\n${responseLines}` : null,
+      ].filter(Boolean).join('\n');
+
+      await sendEmail({
+        to: recipients,
+        fromEmail,
+        fromName: settings.church_name || 'Parousia Baptist Ministries',
+        subject: `New ${category?.title_english || categorySlug} request: ${data.name.trim()}`,
+        text: staffText,
+        html: buildChurchEmailHtml({
+          title: `New ${category?.title_english || categorySlug} request`,
+          bodyHtml: textToHtmlParagraphs(staffText),
+          logoUrl: settings.logo_url,
+          churchName: 'Parousia Baptist Ministries',
+          address: church.address,
+          contactEmail: fromEmail,
+        }),
+      });
+    }
+
+    const ackTitle = language === 'fr_ht'
+      ? 'Nous avons bien reçu votre demande'
+      : 'We received your request';
+    const ackBody = language === 'fr_ht'
+      ? [
+          `Bonjour ${data.name.trim()},`,
+          '',
+          `Nous avons bien reçu votre demande concernant « ${categoryTitle} ». Notre équipe pastorale vous contactera prochainement.`,
+          '',
+          'Avec nos prières,',
+          'Parousia Baptist Ministries',
+        ].join('\n')
+      : [
+          `Dear ${data.name.trim()},`,
+          '',
+          `Thank you for your ${categoryTitle} request. Our pastoral team has received it and will be in touch with you soon.`,
+          '',
+          'In His care,',
+          'Parousia Baptist Ministries',
+        ].join('\n');
+
+    await sendEmail({
+      to: [data.email.toLowerCase().trim()],
+      fromEmail,
+      fromName: 'Parousia Baptist Ministries',
+      subject: language === 'fr_ht'
+        ? `Accusé de réception — ${categoryTitle}`
+        : `We received your ${categoryTitle} request`,
+      text: ackBody,
+      html: buildChurchEmailHtml({
+        title: ackTitle,
+        bodyHtml: textToHtmlParagraphs(ackBody),
+        logoUrl: settings.logo_url,
+        churchName: 'Parousia Baptist Ministries',
+        address: church.address,
+        contactEmail: fromEmail,
+      }),
+    });
+
+    revalidateAdministrativeCarePaths(categorySlug);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error submitting administrative care form:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getAdministrativeCareSubmissions(slug?: string): Promise<AdministrativeCareSubmission[]> {
+  const isAuthed = await checkAdminAuth();
+  if (!isAuthed) return [];
+
+  try {
+    if (slug) {
+      return await db.prepare('SELECT * FROM administrative_care_submissions WHERE category_slug = ? ORDER BY created_at DESC').all(slug) as AdministrativeCareSubmission[];
+    }
+    return await db.prepare('SELECT * FROM administrative_care_submissions ORDER BY created_at DESC').all() as AdministrativeCareSubmission[];
+  } catch (error) {
+    console.error('Error fetching administrative care submissions:', error);
+    return [];
+  }
+}
+
+export async function deleteAdministrativeCareSubmission(id: number): Promise<{ success: boolean; error?: string }> {
+  const isAuthed = await checkAdminAuth();
+  if (!isAuthed) return { success: false, error: 'Unauthorized' };
+
+  try {
+    await db.prepare('DELETE FROM administrative_care_submissions WHERE id = ?').run(id);
+    revalidatePath('/admin/dashboard');
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error deleting administrative care submission:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function exportAdministrativeCareSpreadsheet(
+  slug?: string
+): Promise<{ success: boolean; data?: string; filename?: string; mimeType?: string; error?: string }> {
+  const isAuthed = await checkAdminAuth();
+  if (!isAuthed) return { success: false, error: 'Unauthorized' };
+
+  try {
+    const settings = await getSettings();
+    const submissions = slug
+      ? await db.prepare('SELECT * FROM administrative_care_submissions WHERE category_slug = ? ORDER BY created_at ASC').all(slug) as AdministrativeCareSubmission[]
+      : await db.prepare('SELECT * FROM administrative_care_submissions ORDER BY created_at ASC').all() as AdministrativeCareSubmission[];
+    const categories = await getAdministrativeCareCategories();
+    const categoryMap = new Map(categories.map((item) => [item.slug, item]));
+
+    const extraKeys = new Set<string>();
+    for (const submission of submissions) {
+      const categorySlug = isAdministrativeCareSlug(submission.category_slug) ? submission.category_slug : null;
+      const fields = categorySlug ? ADMINISTRATIVE_CARE_FIELDS[categorySlug] : [];
+      fields.forEach((field) => extraKeys.add(field.key));
+    }
+
+    const extraFields = [...extraKeys].map((key) => {
+      for (const slugKey of Object.keys(ADMINISTRATIVE_CARE_FIELDS) as AdministrativeCareSlug[]) {
+        const field = ADMINISTRATIVE_CARE_FIELDS[slugKey].find((item) => item.key === key);
+        if (field) return field;
+      }
+      return { key, type: 'text' as const, label_en: key, label_ht: key };
+    });
+
+    const headers = [
+      'Submitted',
+      'Category',
+      'Name',
+      'Email',
+      'Phone',
+      'Language',
+      ...ADMINISTRATIVE_CARE_BASE_FIELDS.map((field) => field.label_en),
+      ...extraFields.map((field) => field.label_en),
+    ];
+
+    const rows = submissions.map((item) => {
+      let responses: Record<string, string> = {};
+      try {
+        responses = JSON.parse(item.responses || '{}');
+      } catch {
+        responses = {};
+      }
+      const category = categoryMap.get(item.category_slug);
+      return [
+        item.created_at ? new Date(item.created_at).toLocaleString() : '',
+        category?.title_english || item.category_slug,
+        item.name,
+        item.email,
+        item.phone || '',
+        item.language || '',
+        ...ADMINISTRATIVE_CARE_BASE_FIELDS.map((field) =>
+          formatAdministrativeCareFieldValue(field, responses[field.key], 'en')
+        ),
+        ...extraFields.map((field) =>
+          formatAdministrativeCareFieldValue(field, responses[field.key], 'en')
+        ),
+      ];
+    });
+
+    const buffer = await buildAdminSpreadsheet({
+      sheetTitle: slug ? `${categoryMap.get(slug)?.title_english || slug} Requests` : 'Administrative Care Submissions',
+      headers,
+      rows,
+      logoUrl: settings.logo_url,
+      sheetName: 'Requests',
+    });
+
+    return {
+      success: true,
+      data: buffer.toString('base64'),
+      filename: slug ? `${slug}-requests.xlsx` : 'administrative-care-submissions.xlsx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    };
+  } catch (error: any) {
+    console.error('Error exporting administrative care spreadsheet:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 const DEFAULT_ADMIN_SECTION_CONFIG: Omit<AdminSectionConfig, 'section_slug'> = {
   contact_name: '',
   contact_email: '',
@@ -428,6 +782,24 @@ export async function exportAdminSectionSpreadsheet(
           item.phone || '',
         ]);
         filename = 'ebook-subscribers.xlsx';
+        break;
+      }
+      case 'administrative_care_submissions': {
+        const submissions = await db.prepare('SELECT * FROM administrative_care_submissions ORDER BY created_at DESC').all() as AdministrativeCareSubmission[];
+        const categories = await db.prepare('SELECT slug, title_english FROM administrative_care_categories').all() as { slug: string; title_english: string }[];
+        const titles = Object.fromEntries(categories.map((item) => [item.slug, item.title_english]));
+        sheetTitle = 'Administrative Care Submissions';
+        headers = ['Submitted', 'Category', 'Name', 'Email', 'Phone', 'Language', 'Responses'];
+        rows = submissions.map((item) => [
+          item.created_at ? new Date(item.created_at).toLocaleString() : '',
+          titles[item.category_slug] || item.category_slug,
+          item.name,
+          item.email,
+          item.phone || '',
+          item.language || '',
+          item.responses || '',
+        ]);
+        filename = 'administrative-care-submissions.xlsx';
         break;
       }
     }

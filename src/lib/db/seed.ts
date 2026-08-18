@@ -381,6 +381,70 @@ export async function seedDatabase(pool: Pool): Promise<void> {
     ]
   );
 
+  const careCategories = [
+    {
+      slug: 'weddings',
+      title_english: 'Weddings',
+      title_kreyol: 'Mariages',
+      description_english:
+        '“That is why a man leaves his father and mother and is united to his wife, and they become one flesh.” (Genesis 2:24) Marriage is a lifelong commitment and should not be entered into lightly. All couples who desire an ordained minister from Parousia Baptist Ministries to officiate their wedding ceremony must complete premarital counseling sessions.',
+      description_kreyol:
+        '« C’est pourquoi l’homme quittera son père et sa mère et s’attachera à sa femme, et ils deviendront une seule chair. » (Genèse 2:24) Le mariage est un engagement pour la vie et ne doit pas être pris à la légère. Tout couple qui souhaite qu’un ministre ordonné de Parousia Baptist Ministries célèbre son mariage doit suivre des séances de counseling prénuptial.',
+    },
+    {
+      slug: 'funerals',
+      title_english: 'Funerals & Bereavement',
+      title_kreyol: 'Funérailles et deuil',
+      description_english:
+        '“The Lord replied, ‘My Presence will go with you, and I will give you rest.’” (Exodus 33:14) Of all life experiences, death is often the most painful and challenging. Parousia Baptist Ministries is available to comfort, direct, and support you during this season of life.',
+      description_kreyol:
+        '« L’Éternel répondit : Ma présence ira avec toi, et je te donnerai du repos. » (Exode 33:14) Parmi toutes les expériences de la vie, la mort est souvent la plus douloureuse. Parousia Baptist Ministries est là pour vous consoler, vous orienter et vous soutenir en cette période.',
+    },
+    {
+      slug: 'baptisms',
+      title_english: 'Baptisms',
+      title_kreyol: 'Baptêmes',
+      description_english:
+        'Baptism is a public declaration of faith in Jesus Christ. Our pastoral team will walk with you as you prepare for this important step of obedience and celebration with the church family.',
+      description_kreyol:
+        'Le baptême est une déclaration publique de foi en Jésus-Christ. Notre équipe pastorale vous accompagnera dans cette étape importante d’obéissance et de célébration avec la famille de l’église.',
+    },
+    {
+      slug: 'childrens-dedications',
+      title_english: "Children's Dedications",
+      title_kreyol: "Présentation d'enfants",
+      description_english:
+        '“So now I give him to the Lord. For his whole life he will be given over to the Lord.” (1 Samuel 1:28) Any parent who desires to have a child dedicated must complete this request form. Our team will confirm scheduling details with you.',
+      description_kreyol:
+        '« C’est pourquoi je le donne à l’Éternel ; il appartiendra à l’Éternel pour toujours. » (1 Samuel 1:28) Tout parent qui souhaite présenter son enfant au Seigneur doit remplir ce formulaire. Notre équipe vous confirmera les détails de la célébration.',
+    },
+    {
+      slug: 'hospice-support',
+      title_english: 'Hospice & Pastoral Visitation',
+      title_kreyol: 'Soins palliatifs et visites pastorales',
+      description_english:
+        '“I was sick and you looked after me…” (Matthew 25:36) From diagnosis through recuperation or end-of-life care, we provide pastoral support through prayer, visitation, and compassionate presence.',
+      description_kreyol:
+        '« J’étais malade, et vous m’avez visité… » (Matthieu 25:36) Du diagnostic à la convalescence ou aux soins de fin de vie, nous offrons un soutien pastoral par la prière, les visites et une présence compatissante.',
+    },
+  ];
+
+  for (const category of careCategories) {
+    await pool.query(
+      `INSERT INTO administrative_care_categories
+       (slug, title_english, title_kreyol, description_english, description_kreyol, images_json, contact_name, contact_email, contact_phone, notification_emails)
+       VALUES ($1, $2, $3, $4, $5, '[]', '', '', '', '')
+       ON CONFLICT (slug) DO NOTHING`,
+      [
+        category.slug,
+        category.title_english,
+        category.title_kreyol,
+        category.description_english,
+        category.description_kreyol,
+      ]
+    );
+  }
+
   await migrateLegacyFrenchContent(pool);
   await sanitizeMissingFreeGiftAssets(pool);
 }

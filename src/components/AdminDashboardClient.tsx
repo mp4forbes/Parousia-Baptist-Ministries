@@ -67,6 +67,7 @@ import {
   verifyAssetUrl,
 } from '@/lib/actions';
 import AdminSectionContactExport from '@/components/AdminSectionContactExport';
+import AdminAdministrativeCareTab from '@/components/AdminAdministrativeCareTab';
 import AdminBilingualTranslateBar from '@/components/AdminBilingualTranslateBar';
 import AdminDocumentsMenu from '@/components/AdminDocumentsMenu';
 import { MINISTRY_SIGNUP_FIELDS, MinistrySignupSlug } from '@/lib/ministry-signup-fields';
@@ -100,6 +101,7 @@ import {
   Settings, 
   Clock, 
   Heart, 
+  HeartHandshake,
   Users, 
   Calendar, 
   BookOpen, 
@@ -147,7 +149,7 @@ interface AdminDashboardProps {
   envSuperAdminEmails?: string[];
 }
 
-type TabType = 'settings' | 'hometabs' | 'schedules' | 'missions' | 'outreach' | 'events' | 'registrations' | 'sermons' | 'subscribers' | 'devotional' | 'admins' | 'contact' | 'prayers' | 'blog' | 'ministries';
+type TabType = 'settings' | 'hometabs' | 'schedules' | 'missions' | 'outreach' | 'events' | 'registrations' | 'sermons' | 'subscribers' | 'devotional' | 'admins' | 'contact' | 'prayers' | 'blog' | 'ministries' | 'administrative-care';
 
 type TeamMemberKey = `${number}-${number}`;
 
@@ -3215,6 +3217,7 @@ export default function AdminDashboardClient({
     activeTab === 'sermons' ||
     activeTab === 'devotional' ||
     activeTab === 'ministries' ||
+    activeTab === 'administrative-care' ||
     (activeTab === 'blog' && editingBlogPostId !== null);
 
   const handleSaveAllChanges = () => {
@@ -3361,6 +3364,14 @@ export default function AdminDashboardClient({
           >
             <Users className="w-4 h-4" />
             <span>{language === 'en' ? 'Ministries' : 'Ministères'}</span>
+          </button>
+
+          <button 
+            onClick={() => { setActiveTab('administrative-care'); }}
+            className={`w-full text-left px-4 py-3.5 rounded-xl border flex items-center gap-3 text-sm font-semibold transition-all cursor-pointer ${activeTab === 'administrative-care' ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-lg shadow-amber-500/10' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+          >
+            <HeartHandshake className="w-4 h-4" />
+            <span>{language === 'en' ? 'Administrative Care' : 'Soins pastoraux'}</span>
           </button>
 
           <button 
@@ -8357,6 +8368,10 @@ export default function AdminDashboardClient({
                 )}
               </div>
             </div>
+          )}
+
+          {activeTab === 'administrative-care' && (
+            <AdminAdministrativeCareTab language={language} />
           )}
 
         </section>

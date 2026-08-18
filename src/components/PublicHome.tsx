@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useTransition, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
-import { useAdminUi } from '@/lib/AdminUiContext';
 import { ServiceSchedule, HaitiMission, LocalOutreach, EventRecord, Sermon, DailyDevotional, BlogPost, PrayerRequest, Ministry } from '@/lib/db';
 import { 
   simulateOffering, 
@@ -11,12 +11,11 @@ import {
   getPrayerRequests, 
   submitPrayerRequest, 
   submitContactForm,
-  markAdminEntryFromSite,
 } from '@/lib/actions';
 import { frenchSetting, frenchMinistryField } from '@/lib/french-content';
 import MinistrySignupForm from '@/components/MinistrySignupForm';
-import { setAdminUiClient } from '@/lib/admin-cookies';
 import { MinistrySignupSlug } from '@/lib/ministry-signup-fields';
+import { aboutTabHref, ministryHref, type AboutTab, type MinistryNavSlug, type PublicSiteSection } from '@/lib/site-nav';
 import { parseTeamDepartments, type TeamDepartment, type TeamMember } from '@/lib/team-departments';
 import { downloadAssetFile } from '@/lib/client-download';
 import { getGiftDownloadUrls } from '@/lib/gift-download';
@@ -28,7 +27,6 @@ import EventRegistrationModal from '@/components/EventRegistrationModal';
 import { isEventPaymentRequired } from '@/lib/event-payment';
 import { getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from '@/lib/youtube';
 import { 
-  Church, 
   Calendar, 
   Heart, 
   Globe2, 
@@ -45,7 +43,6 @@ import {
   Gift, 
   CreditCard,
   Lock,
-  Menu,
   X,
   Video,
   Play,
@@ -57,11 +54,8 @@ import {
   Download,
   RefreshCw,
   FileText,
-  Settings,
   Send,
   MessageSquare,
-  Eye,
-  Plus
 } from 'lucide-react';
 
 interface PublicHomeProps {
@@ -74,6 +68,9 @@ interface PublicHomeProps {
   dailyDevotional?: DailyDevotional | null;
   isAdmin?: boolean;
   ministries: Ministry[];
+  section?: PublicSiteSection;
+  initialAboutTab?: AboutTab;
+  initialMinistrySlug?: MinistryNavSlug;
 }
 
 export default function PublicHome({ 
@@ -84,29 +81,15 @@ export default function PublicHome({
   settings, 
   sermons,
   dailyDevotional,
-  isAdmin = false,
-  ministries = []
+  ministries = [],
+  section = 'home',
+  initialAboutTab = 'aboutUs',
+  initialMinistrySlug = 'women',
 }: PublicHomeProps) {
-  const { language, setLanguage, t } = useLanguage();
-  const [isPending, startTransition] = useTransition();
-  const showAdminNav = useAdminUi();
+  const { language, t } = useLanguage();
 
-  const openAdminPortal = () => {
-    startTransition(async () => {
-      setAdminUiClient();
-      await markAdminEntryFromSite();
-      window.location.href = showAdminNav ? '/admin/dashboard' : '/admin?from=site';
-    });
-  };
-
-  // Navigation Dropdown & Mobile Accordion states
-  const [activeDropdown, setActiveDropdown] = useState<'home' | 'ministries' | null>(null);
-  const [mobileHomeExpanded, setMobileHomeExpanded] = useState(false);
-  const [mobileMinistriesExpanded, setMobileMinistriesExpanded] = useState(false);
-
-  // Subsection selected tab states
-  const [activeAboutTab, setActiveAboutTab] = useState<'aboutUs' | 'beliefs' | 'team' | 'expect'>('aboutUs');
-  const [activeMinistryTab, setActiveMinistryTab] = useState<'women' | 'men' | 'children' | 'missions'>('women');
+  const activeAboutTab = initialAboutTab;
+  const activeMinistryTab = initialMinistrySlug;
 
   // Dynamic public database states loaded via client side effects
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
@@ -129,14 +112,6 @@ export default function PublicHome({
   const [contactSubmitting, setContactSubmitting] = useState(false);
   const [contactSuccess, setContactSuccess] = useState(false);
   const [contactError, setContactError] = useState('');
-
-  // Helper function to scroll to sections smoothly
-  const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
 
   // Fetch blogs and prayer requests on mount
   useEffect(() => {
@@ -566,9 +541,6 @@ export default function PublicHome({
     document.body.removeChild(link);
   };
 
-  // Mobile menu state
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   // Sermons and live-streaming state
   const [sermonSearch, setSermonSearch] = useState('');
   const [selectedSermonVideo, setSelectedSermonVideo] = useState<Sermon | null>(null);
@@ -710,11 +682,6 @@ export default function PublicHome({
     }
   };
 
-  // Toggle Language Handler
-  const toggleLanguage = () => {
-    setLanguage(language === 'fr_ht' ? 'en' : 'fr_ht');
-  };
-
   // Giving Form Submit Handler
   const handleGivingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -810,7 +777,7 @@ export default function PublicHome({
   const bgHeroOverlay = isLight ? 'bg-gradient-to-b from-slate-100/10 via-slate-100/30 to-slate-50' : 'bg-gradient-to-b from-slate-950/45 via-slate-950/70 to-slate-950';
 
   return (
-    <div className={`flex flex-col min-h-screen ${bgMain} font-sans selection:bg-amber-500 selection:text-slate-950`}>
+    <div className={`flex flex-col ${bgMain} font-sans`}>
       <style dangerouslySetInnerHTML={{ __html: `
         :root {
           --primary-color: ${themePrimary};
@@ -821,225 +788,8 @@ export default function PublicHome({
         }
       `}} />
       
-      {/* 1. FLOATING NAVIGATION HEADER */}
-      <header className={`sticky top-0 z-50 ${bgHeader} backdrop-blur-md border-b`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          
-          {/* Logo Brand */}
-          <a 
-            href="#home" 
-            onClick={(e) => { e.preventDefault(); scrollToSection('home'); }} 
-            className="flex items-center gap-3 cursor-pointer group"
-          >
-            <div className={`relative flex items-center justify-center w-12 h-12 rounded-xl bg-white border ${isLight ? 'border-slate-200' : 'border-slate-800'} overflow-hidden shadow-lg shadow-blue-500/10 p-0.5 group-hover:scale-105 transition-transform duration-300`}>
-              <img src={logoUrl} alt="Eglise Baptiste de la Parousie Logo" className="w-full h-full object-contain" />
-            </div>
-            <div>
-              <h1 className={`text-lg md:text-xl font-bold font-serif ${isLight ? 'text-slate-900 group-hover:text-amber-600' : 'bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-amber-400 group-hover:from-amber-400 group-hover:to-amber-500'} leading-tight transition-all duration-300`}>
-                {t.churchName}
-              </h1>
-              <p className={`text-xs ${isLight ? 'text-slate-500 font-semibold' : 'text-slate-400'} hidden sm:block font-medium`}>
-                1 Th 4:16-17
-              </p>
-            </div>
-          </a>
-
-          {/* Desktop Nav Items */}
-          <nav className="hidden lg:flex items-center gap-7">
-            {/* Home Dropdown */}
-            <div 
-              className="relative group py-2"
-              onMouseEnter={() => setActiveDropdown('home')}
-              onMouseLeave={() => setActiveDropdown(null)}
-            >
-              <button 
-                onClick={() => scrollToSection('home')}
-                className={`flex items-center gap-1 text-sm font-semibold transition-colors cursor-pointer ${textNav}`}
-              >
-                <span>{t.navHome}</span>
-                <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180 duration-300" />
-              </button>
-              <div className={`absolute top-full left-0 w-56 rounded-xl border ${isLight ? 'bg-white border-slate-200 shadow-xl' : 'bg-slate-900 border-slate-800 shadow-2xl shadow-black/50'} py-2 transition-all duration-300 ${activeDropdown === 'home' ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
-                <button onClick={() => { setActiveAboutTab('aboutUs'); scrollToSection('about'); }} className={`w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-amber-500/10 ${textNav} block transition-colors cursor-pointer`}>{dAboutUsTitle}</button>
-                <button onClick={() => { setActiveAboutTab('beliefs'); scrollToSection('about'); }} className={`w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-amber-500/10 ${textNav} block transition-colors cursor-pointer`}>{dBeliefsTitle}</button>
-                <button onClick={() => { setActiveAboutTab('team'); scrollToSection('about'); }} className={`w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-amber-500/10 ${textNav} block transition-colors cursor-pointer`}>{dTeamTitle}</button>
-                <button onClick={() => { setActiveAboutTab('expect'); scrollToSection('about'); }} className={`w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-amber-500/10 ${textNav} block transition-colors cursor-pointer`}>{dExpectTitle}</button>
-              </div>
-            </div>
-
-            <a
-              href="#prayer-wall"
-              onClick={(e) => { e.preventDefault(); scrollToSection('prayer-wall'); }}
-              className={`text-sm font-semibold transition-colors ${textNav}`}
-            >
-              {t.navPrayerWall}
-            </a>
-            <a href="#schedules" className={`text-sm font-semibold transition-colors ${textNav}`}>{t.navSchedules}</a>
-            <a href="#sermons" className={`text-sm font-semibold transition-colors ${textNav}`}>{t.navSermons}</a>
-            <a href="#blog" className={`text-sm font-semibold transition-colors ${textNav}`}>{t.navBlog}</a>
-
-            {/* Ministries Dropdown */}
-            <div 
-              className="relative group py-2"
-              onMouseEnter={() => setActiveDropdown('ministries')}
-              onMouseLeave={() => setActiveDropdown(null)}
-            >
-              <button className={`flex items-center gap-1 text-sm font-semibold transition-colors cursor-pointer ${textNav}`}>
-                <span>{t.navMinistries}</span>
-                <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180 duration-300" />
-              </button>
-              <div className={`absolute top-full left-0 w-56 rounded-xl border ${isLight ? 'bg-white border-slate-200 shadow-xl' : 'bg-slate-900 border-slate-800 shadow-2xl shadow-black/50'} py-2 transition-all duration-300 ${activeDropdown === 'ministries' ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
-                <button onClick={() => { setActiveMinistryTab('women'); scrollToSection('ministries'); }} className={`w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-amber-500/10 ${textNav} block transition-colors cursor-pointer`}>{t.ministryWomen}</button>
-                <button onClick={() => { setActiveMinistryTab('men'); scrollToSection('ministries'); }} className={`w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-amber-500/10 ${textNav} block transition-colors cursor-pointer`}>{t.ministryMen}</button>
-                <button onClick={() => { setActiveMinistryTab('children'); scrollToSection('ministries'); }} className={`w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-amber-500/10 ${textNav} block transition-colors cursor-pointer`}>{t.ministryChildren}</button>
-                <button onClick={() => { setActiveMinistryTab('missions'); scrollToSection('ministries'); }} className={`w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-amber-500/10 ${textNav} block transition-colors cursor-pointer`}>{t.ministryMissions}</button>
-              </div>
-            </div>
-
-            <a href="#events" className={`text-sm font-semibold transition-colors ${textNav}`}>{t.navEvents}</a>
-            <a href="#giving" className={`text-sm font-semibold transition-colors ${textNav}`}>{t.navGiving}</a>
-          </nav>
-
-          {/* Desktop Right Panel */}
-          <div className="hidden lg:flex items-center gap-3">
-            {/* Language Switcher */}
-            <button 
-              onClick={toggleLanguage}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700' : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-amber-400'} border text-sm font-semibold transition-all duration-300 cursor-pointer hover:scale-105`}
-            >
-              <Globe2 className="w-4 h-4" />
-              <span>{t.btnToggleLanguage}</span>
-            </button>
-            
-            {/* Config Gear Icon - Only visible to admin logins */}
-            {showAdminNav && (
-              <button
-                type="button"
-                onClick={openAdminPortal}
-                title={t.navAdmin}
-                className={`flex items-center justify-center p-2 rounded-lg ${isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700' : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-white'} border transition-all duration-300 cursor-pointer hover:scale-105`}
-              >
-                <Settings className="w-5 h-5 text-blue-500 animate-[spin_8s_linear_infinite]" />
-              </button>
-            )}
-
-            {/* Contact Us CTA Button */}
-            <a 
-              href="#contact" 
-              onClick={(e) => { e.preventDefault(); scrollToSection('contact'); }}
-              className="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 text-sm font-bold shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 hover:scale-105 transition-all duration-300"
-            >
-              {t.contactTitle}
-            </a>
-          </div>
-
-          {/* Mobile Menu Toggle */}
-          <div className="flex lg:hidden items-center gap-2">
-            {showAdminNav && (
-              <button
-                type="button"
-                onClick={openAdminPortal}
-                title={t.navAdmin}
-                className={`flex items-center justify-center p-2 rounded-lg border ${isLight ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200' : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'}`}
-              >
-                <Settings className="w-5 h-5 text-blue-500" />
-              </button>
-            )}
-            <button 
-              onClick={toggleLanguage}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border ${isLight ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-slate-900 border-slate-800 text-amber-400'} text-xs font-semibold cursor-pointer`}
-            >
-              <Globe2 className="w-3.5 h-3.5" />
-              <span>{t.btnToggleLanguageShort}</span>
-            </button>
-            <button 
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className={`p-2 rounded-lg border ${isLight ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200' : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'}`}
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
-
-        </div>
-      </header>
-
-      {/* Mobile Drawer */}
-      {mobileMenuOpen && (
-        <div className={`lg:hidden fixed inset-0 top-20 z-40 ${isLight ? 'bg-white/95' : 'bg-slate-950/95'} backdrop-blur-lg border-t ${borderMain} flex flex-col p-6 overflow-y-auto animate-fade-in`}>
-          <nav className={`flex flex-col gap-5 text-lg font-semibold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
-            
-            {/* Mobile Home Accordion */}
-            <div>
-              <button 
-                onClick={() => { setMobileHomeExpanded(!mobileHomeExpanded); scrollToSection('home'); }}
-                className="w-full flex items-center justify-between hover:text-amber-500 transition-colors py-1 cursor-pointer"
-              >
-                <span>{t.navHome}</span>
-                <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${mobileHomeExpanded ? 'rotate-180' : ''}`} />
-              </button>
-              <div className={`pl-4 flex flex-col gap-3 overflow-hidden transition-all duration-300 ${mobileHomeExpanded ? 'max-h-56 mt-3 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'}`}>
-                <button onClick={() => { setActiveAboutTab('aboutUs'); scrollToSection('about'); setMobileMenuOpen(false); }} className="text-left text-base font-semibold hover:text-amber-500 transition-colors cursor-pointer">{dAboutUsTitle}</button>
-                <button onClick={() => { setActiveAboutTab('beliefs'); scrollToSection('about'); setMobileMenuOpen(false); }} className="text-left text-base font-semibold hover:text-amber-500 transition-colors cursor-pointer">{dBeliefsTitle}</button>
-                <button onClick={() => { setActiveAboutTab('team'); scrollToSection('about'); setMobileMenuOpen(false); }} className="text-left text-base font-semibold hover:text-amber-500 transition-colors cursor-pointer">{dTeamTitle}</button>
-                <button onClick={() => { setActiveAboutTab('expect'); scrollToSection('about'); setMobileMenuOpen(false); }} className="text-left text-base font-semibold hover:text-amber-500 transition-colors cursor-pointer">{dExpectTitle}</button>
-              </div>
-            </div>
-
-            <a
-              href="#prayer-wall"
-              onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); scrollToSection('prayer-wall'); }}
-              className="hover:text-amber-500 transition-colors"
-            >
-              {t.navPrayerWall}
-            </a>
-            <a href="#schedules" onClick={() => setMobileMenuOpen(false)} className="hover:text-amber-500 transition-colors">{t.navSchedules}</a>
-            <a href="#sermons" onClick={() => setMobileMenuOpen(false)} className="hover:text-amber-500 transition-colors">{t.navSermons}</a>
-            <a href="#blog" onClick={() => setMobileMenuOpen(false)} className="hover:text-amber-500 transition-colors">{t.navBlog}</a>
-
-            {/* Mobile Ministries Accordion */}
-            <div>
-              <button 
-                onClick={() => setMobileMinistriesExpanded(!mobileMinistriesExpanded)}
-                className="w-full flex items-center justify-between hover:text-amber-500 transition-colors py-1 cursor-pointer"
-              >
-                <span>{t.navMinistries}</span>
-                <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${mobileMinistriesExpanded ? 'rotate-180' : ''}`} />
-              </button>
-              <div className={`pl-4 flex flex-col gap-3 overflow-hidden transition-all duration-300 ${mobileMinistriesExpanded ? 'max-h-56 mt-3 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'}`}>
-                <button onClick={() => { setActiveMinistryTab('women'); scrollToSection('ministries'); setMobileMenuOpen(false); }} className="text-left text-base font-semibold hover:text-amber-500 transition-colors cursor-pointer">{t.ministryWomen}</button>
-                <button onClick={() => { setActiveMinistryTab('men'); scrollToSection('ministries'); setMobileMenuOpen(false); }} className="text-left text-base font-semibold hover:text-amber-500 transition-colors cursor-pointer">{t.ministryMen}</button>
-                <button onClick={() => { setActiveMinistryTab('children'); scrollToSection('ministries'); setMobileMenuOpen(false); }} className="text-left text-base font-semibold hover:text-amber-500 transition-colors cursor-pointer">{t.ministryChildren}</button>
-                <button onClick={() => { setActiveMinistryTab('missions'); scrollToSection('ministries'); setMobileMenuOpen(false); }} className="text-left text-base font-semibold hover:text-amber-500 transition-colors cursor-pointer">{t.ministryMissions}</button>
-              </div>
-            </div>
-
-            <a href="#events" onClick={() => setMobileMenuOpen(false)} className="hover:text-amber-500 transition-colors">{t.navEvents}</a>
-            <a href="#giving" onClick={() => setMobileMenuOpen(false)} className="hover:text-amber-500 transition-colors">{t.navGiving}</a>
-
-            {/* Settings Link - Only visible to admins */}
-            {showAdminNav && (
-              <button
-                type="button"
-                onClick={() => { setMobileMenuOpen(false); openAdminPortal(); }}
-                className="hover:text-amber-500 transition-colors flex items-center gap-2 text-blue-500 text-left cursor-pointer"
-              >
-                <Settings className="w-4 h-4" />
-                <span>{t.navAdmin}</span>
-              </button>
-            )}
-          </nav>
-          <div className={`mt-8 pt-8 border-t ${borderMain} flex flex-col gap-4`}>
-            <a 
-              href="#contact" 
-              onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); scrollToSection('contact'); }} 
-              className="w-full text-center py-3 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold shadow-lg shadow-amber-500/20"
-            >
-              {t.contactTitle}
-            </a>
-          </div>
-        </div>
-      )}
-
+      {section === 'home' && (
+      <>
       {/* 2. HERO SECTION */}
       <section
         id="home"
@@ -1155,14 +905,14 @@ export default function PublicHome({
           {/* Hero CTAs */}
           <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
             <a 
-              href="#schedules" 
+              href="/schedules" 
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold shadow-lg shadow-blue-600/20 hover:shadow-blue-600/40 hover:scale-105 transition-all duration-300"
             >
               <span>{t.navSchedules}</span>
               <ArrowRight className="w-5 h-5" />
             </a>
             <a 
-              href="#giving" 
+              href="/giving" 
               className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl ${isLight ? 'bg-white border-slate-250 hover:bg-slate-150 text-slate-800' : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-200'} border font-bold hover:scale-105 transition-all duration-300`}
             >
               <span>{t.navGiving}</span>
@@ -1183,6 +933,11 @@ export default function PublicHome({
         </div>
       </section>
 
+      </>
+      )}
+
+      {section === 'schedules' && (
+      <>
       {/* 3. SERVICE SCHEDULES SECTION (LÈ SÈVIS) */}
       <section id="schedules" className={`py-24 ${isLight ? 'bg-slate-100/60' : 'bg-slate-950'} border-t ${borderMain} relative`}>
         <div className="absolute top-0 right-10 w-72 h-72 bg-blue-600/5 rounded-full blur-3xl pointer-events-none" />
@@ -1371,6 +1126,11 @@ export default function PublicHome({
         </div>
       </section>
 
+      </>
+      )}
+
+      {section === 'sermons' && (
+      <>
       {/* SERMONS & LIVE STREAM SECTION */}
       <section id="sermons" className={`py-24 ${isLight ? 'bg-white' : 'bg-slate-900/10'} border-t ${borderMain} relative`}>
         <div className="absolute top-1/4 right-0 w-80 h-80 bg-blue-600/5 rounded-full blur-3xl pointer-events-none" />
@@ -1633,7 +1393,7 @@ export default function PublicHome({
                       })()}
 
                       <a 
-                        href="#schedules"
+                        href="/schedules"
                         className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all duration-300 hover:scale-105"
                       >
                         <Calendar className="w-3.5 h-3.5" />
@@ -1773,6 +1533,11 @@ export default function PublicHome({
         </div>
       )}
 
+      </>
+      )}
+
+      {section === 'ministries' && (
+      <>
       {/* 4. MINISTRIES SHOWCASE SECTION (MINISTÈ YO) */}
       <section id="ministries" className={`py-24 ${isLight ? 'bg-slate-100/50 border-t border-slate-200' : 'bg-slate-900/30 border-t border-slate-900'} relative`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1798,9 +1563,9 @@ export default function PublicHome({
               const IconComp = tab.icon;
               const isSelected = activeMinistryTab === tab.id;
               return (
-                <button
+                <Link
                   key={tab.id}
-                  onClick={() => setActiveMinistryTab(tab.id as any)}
+                  href={ministryHref(tab.id)}
                   className={`flex items-center gap-2 px-5 py-3 rounded-xl border font-bold text-sm transition-all duration-300 cursor-pointer ${
                     isSelected
                       ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-lg shadow-amber-500/20 scale-105'
@@ -1809,7 +1574,7 @@ export default function PublicHome({
                 >
                   <IconComp className="w-4 h-4" />
                   <span>{tab.label}</span>
-                </button>
+                </Link>
               );
             })}
           </div>
@@ -1879,7 +1644,7 @@ export default function PublicHome({
                   </div>
                   <div className="mt-4 lg:mt-0">
                     <a 
-                      href="#giving" 
+                      href="/giving" 
                       className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-sm transition-all duration-300 shadow-md shadow-amber-500/10 cursor-pointer"
                     >
                       <span>{language === 'fr_ht' ? 'Soutenir les missions' : 'Give to Missions'}</span>
@@ -1958,6 +1723,11 @@ export default function PublicHome({
         </div>
       </section>
 
+      </>
+      )}
+
+      {section === 'about' && (
+      <>
       {/* 5. ABOUT US & BELIEFS SECTION (ABOUT) */}
       <section id="about" className={`py-24 ${isLight ? 'bg-white border-t border-slate-200' : 'bg-slate-950 border-t border-slate-900'} relative`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1982,9 +1752,9 @@ export default function PublicHome({
               { id: 'team', label: dTeamTitle },
               { id: 'expect', label: dExpectTitle }
             ].map(tab => (
-              <button
+              <Link
                 key={tab.id}
-                onClick={() => setActiveAboutTab(tab.id as any)}
+                href={aboutTabHref(tab.id as AboutTab)}
                 className={`px-5 py-3 rounded-xl border font-bold text-sm transition-all duration-300 cursor-pointer ${
                   activeAboutTab === tab.id
                     ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-lg shadow-amber-500/20'
@@ -1992,7 +1762,7 @@ export default function PublicHome({
                 }`}
               >
                 <span>{tab.label}</span>
-              </button>
+              </Link>
             ))}
           </div>
 
@@ -2179,6 +1949,11 @@ export default function PublicHome({
         </div>
       </section>
 
+      </>
+      )}
+
+      {section === 'events' && (
+      <>
       {/* 6. EVENTS CALENDAR & FRICTIONLESS SIGNUP */}
       <section id="events" className={`py-24 ${isLight ? 'bg-slate-100/50 border-t border-slate-200' : 'bg-slate-900/30 border-t border-slate-900'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -2416,6 +2191,11 @@ export default function PublicHome({
         />
       )}
 
+      </>
+      )}
+
+      {section === 'blog' && (
+      <>
       {/* 10. PASTOR'S BLOG SECTION */}
       <section id="blog" className={`py-24 ${isLight ? 'bg-slate-50' : 'bg-slate-950'} border-t ${borderMain} relative overflow-hidden`}>
         {/* Background glow */}
@@ -2553,6 +2333,11 @@ export default function PublicHome({
         )}
       </section>
 
+      </>
+      )}
+
+      {section === 'prayer-wall' && (
+      <>
       {/* 11. PUBLIC PRAYER WALL SECTION */}
       <section id="prayer-wall" className={`py-24 ${isLight ? 'bg-slate-100/50' : 'bg-slate-900/30'} border-t ${borderMain} relative overflow-hidden`}>
         {/* Background glow */}
@@ -2708,6 +2493,11 @@ export default function PublicHome({
         </div>
       </section>
 
+      </>
+      )}
+
+      {section === 'contact' && (
+      <>
       {/* 12. PREMIUM CONTACT US SECTION */}
       <section id="contact" className={`py-24 ${isLight ? 'bg-white' : 'bg-slate-950'} border-t ${borderMain} relative overflow-hidden`}>
         {/* Background glow */}
@@ -2867,6 +2657,11 @@ export default function PublicHome({
         </div>
       </section>
 
+      </>
+      )}
+
+      {section === 'giving' && (
+      <>
       {/* 7. TITHES & OFFERINGS MODULE (OFRANN EK DIM) */}
       <section id="giving" className={`py-24 ${isLight ? 'bg-white border-t border-slate-200' : 'bg-slate-950 border-t border-slate-900'} relative`}>
         <div className={`absolute bottom-0 right-1/4 w-80 h-80 ${isLight ? 'bg-amber-500/3' : 'bg-amber-500/5'} rounded-full blur-3xl pointer-events-none`} />
@@ -3721,6 +3516,11 @@ export default function PublicHome({
         </div>
       </section>
 
+      </>
+      )}
+
+      {section === 'home' && (
+      <>
       {/* 7.5 LEAD CAPTURE SECTION (FREE DEVOTIONAL) */}
       <section id="devotional-gift" className={`py-20 border-t ${borderMain} relative overflow-hidden`}>
         {/* Decorative ambient blobs */}
@@ -3881,71 +3681,8 @@ export default function PublicHome({
         </div>
       </section>
 
-      {/* 8. FOOTER & CONTACT SECTION */}
-      <footer className={`${bgFooter} border-t ${borderMain} pt-20 pb-8 relative`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          <div className="grid md:grid-cols-3 gap-12 mb-16">
-            
-            {/* Church column */}
-            <div>
-              <a 
-                href="#home" 
-                onClick={(e) => { e.preventDefault(); scrollToSection('home'); }}
-                className="flex items-center gap-2 mb-4 cursor-pointer group"
-              >
-                <div className={`w-8 h-8 rounded bg-white border ${isLight ? 'border-slate-200' : 'border-slate-800'} overflow-hidden flex items-center justify-center p-0.5 group-hover:scale-105 transition-transform duration-300`}>
-                  <img src={logoUrl} alt="Eglise Baptiste de la Parousie Logo" className="w-full h-full object-contain" />
-                </div>
-                <h5 className={`font-bold font-serif text-lg ${textTitle} group-hover:text-amber-500 transition-colors duration-300`}>{t.churchName}</h5>
-              </a>
-              <p className={`text-sm leading-relaxed mb-6 font-medium ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                {language === 'fr_ht' ? settings.pastor_message_kreyol : settings.pastor_message_english}
-              </p>
-            </div>
-
-            {/* Contacts column */}
-            <div>
-              <h5 className={`font-bold uppercase text-xs tracking-widest mb-4 ${textTitle}`}>{t.contactTitle}</h5>
-              
-              <ul className={`space-y-4 text-sm font-medium ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                <li className="flex gap-2.5 items-start">
-                  <Phone className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                  <span>{settings.church_phone || '+1 (954) 555-1234'}</span>
-                </li>
-                <li className="flex gap-2.5 items-start">
-                  <Mail className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                  <span>{settings.church_email || 'info@eglizparousie.org'}</span>
-                </li>
-                <li className="flex gap-2.5 items-start">
-                  <MapPin className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                  <span>{settings.church_address || '789 Community Blvd, Fort Lauderdale, FL 33311'}</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Portals Column */}
-            <div>
-              <h5 className={`font-bold uppercase text-xs tracking-widest mb-4 ${textTitle}`}>Portals & Links</h5>
-              <div className="flex flex-col gap-3 text-sm">
-                {!showAdminNav && (
-                  <a href="/admin?from=site" className={`inline-flex items-center gap-1.5 transition-colors font-semibold ${isLight ? 'text-slate-600 hover:text-amber-600' : 'text-slate-300 hover:text-amber-400'}`}>
-                    <Lock className="w-3.5 h-3.5 text-blue-500" />
-                    <span>{t.navAdmin}</span>
-                  </a>
-                )}
-              </div>
-            </div>
-
-          </div>
-
-          <div className={`pt-8 border-t ${borderDivider} flex flex-col sm:flex-row justify-between items-center text-xs font-semibold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-            <p>&copy; {new Date().getFullYear()} {t.churchName}. {t.rightsReserved}</p>
-            <p className="mt-2 sm:mt-0 text-slate-500">Français &amp; English</p>
-          </div>
-
-        </div>
-      </footer>
+      </>
+      )}
 
     </div>
   );

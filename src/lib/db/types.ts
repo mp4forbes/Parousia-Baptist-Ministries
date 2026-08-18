@@ -188,3 +188,27 @@ export interface AdminSectionConfig {
   contact_phone: string;
   notification_emails: string;
 }
+
+export interface AdministrativeCareCategory {
+  slug: string;
+  title_kreyol: string;
+  title_english: string;
+  description_kreyol: string;
+  description_english: string;
+  images_json?: string;
+  contact_name?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  notification_emails?: string;
+}
+
+export interface AdministrativeCareSubmission {
+  id: number;
+  category_slug: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  responses: string;
+  language: string;
+  created_at: string;
+}

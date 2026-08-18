@@ -203,3 +203,27 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS payment_instructions_english TEXT DE
 ALTER TABLE events ADD COLUMN IF NOT EXISTS payment_instructions_kreyol TEXT DEFAULT '';
 ALTER TABLE events ADD COLUMN IF NOT EXISTS end_date TEXT DEFAULT '';
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'not_paid';
+
+CREATE TABLE IF NOT EXISTS administrative_care_categories (
+  slug TEXT PRIMARY KEY,
+  title_english TEXT NOT NULL,
+  title_kreyol TEXT NOT NULL,
+  description_english TEXT NOT NULL,
+  description_kreyol TEXT NOT NULL,
+  images_json TEXT DEFAULT '[]',
+  contact_name TEXT DEFAULT '',
+  contact_email TEXT DEFAULT '',
+  contact_phone TEXT DEFAULT '',
+  notification_emails TEXT DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS administrative_care_submissions (
+  id SERIAL PRIMARY KEY,
+  category_slug TEXT NOT NULL,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT,
+  responses TEXT NOT NULL DEFAULT '{}',
+  language TEXT DEFAULT 'en',
+  created_at TEXT NOT NULL
+);

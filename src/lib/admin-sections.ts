@@ -5,6 +5,7 @@ export const ADMIN_SECTION_SLUGS = [
   'contact_submissions',
   'prayer_moderation',
   'ebook_subscribers',
+  'administrative_care',
 ] as const;
 
 export type AdminSectionSlug = (typeof ADMIN_SECTION_SLUGS)[number];
@@ -17,6 +18,7 @@ export const ADMIN_EXPORT_SLUGS = [
   'contact_submissions',
   'prayer_moderation',
   'ebook_subscribers',
+  'administrative_care_submissions',
 ] as const;
 
 export type AdminExportSlug = (typeof ADMIN_EXPORT_SLUGS)[number];
