@@ -2948,6 +2948,7 @@ export default function AdminDashboardClient({
   const [evDescEn, setEvDescEn] = useState('');
   const [evImages, setEvImages] = useState<string[]>([]);
   const [evImagesUploading, setEvImagesUploading] = useState(false);
+  const [isDraggingEventImages, setIsDraggingEventImages] = useState(false);
   const [evRegistrationType, setEvRegistrationType] = useState('general');
   const [evPaymentRequired, setEvPaymentRequired] = useState(false);
   const [evPaymentAmount, setEvPaymentAmount] = useState('');
@@ -2956,10 +2957,15 @@ export default function AdminDashboardClient({
   const [evPaymentInstructionsEn, setEvPaymentInstructionsEn] = useState('');
   const [evPaymentInstructionsHt, setEvPaymentInstructionsHt] = useState('');
 
-  const handleEventImageFiles = (files: FileList | null) => {
+  const handleEventImageFiles = (files: FileList | File[] | null) => {
     if (!files?.length) return;
+
+    const fileArray = Array.from(files).filter(
+      (file) => file.type.startsWith('image/') || /\.(jpe?g|png|gif|webp|bmp)$/i.test(file.name)
+    );
+    if (!fileArray.length) return;
+
     setEvImagesUploading(true);
-    const fileArray = Array.from(files);
     let loaded = 0;
 
     fileArray.forEach((file) => {
@@ -2975,6 +2981,31 @@ export default function AdminDashboardClient({
       };
       reader.readAsDataURL(file);
     });
+  };
+
+  const handlePasteEventImages = (e: React.ClipboardEvent) => {
+    const imageFiles: File[] = [];
+    for (let i = 0; i < e.clipboardData.items.length; i++) {
+      const item = e.clipboardData.items[i];
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) imageFiles.push(file);
+      }
+    }
+
+    if (imageFiles.length > 0) {
+      e.preventDefault();
+      handleEventImageFiles(imageFiles);
+    }
+  };
+
+  const handleDropEventImages = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingEventImages(false);
+    if (e.dataTransfer.files?.length) {
+      handleEventImageFiles(e.dataTransfer.files);
+    }
   };
 
   const handleSaveEvent = async (e: React.FormEvent) => {
@@ -6569,8 +6600,18 @@ export default function AdminDashboardClient({
                   </p>
 
                   <div
+                    tabIndex={0}
+                    role="button"
                     onClick={() => document.getElementById('event-images-input')?.click()}
-                    className="border-2 border-dashed border-slate-800 hover:border-amber-500/50 rounded-xl p-5 flex flex-col items-center justify-center gap-2 cursor-pointer bg-slate-950/40"
+                    onPaste={handlePasteEventImages}
+                    onDragOver={(e) => { e.preventDefault(); setIsDraggingEventImages(true); }}
+                    onDragLeave={() => setIsDraggingEventImages(false)}
+                    onDrop={handleDropEventImages}
+                    className={`border-2 border-dashed rounded-xl p-5 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all outline-none focus:border-amber-500/70 ${
+                      isDraggingEventImages
+                        ? 'border-amber-500 bg-amber-500/10 scale-[1.01]'
+                        : 'border-slate-800 hover:border-amber-500/50 bg-slate-950/40'
+                    }`}
                   >
                     <input
                       type="file"
@@ -6578,11 +6619,16 @@ export default function AdminDashboardClient({
                       accept="image/*"
                       multiple
                       className="hidden"
-                      onChange={(e) => handleEventImageFiles(e.target.files)}
+                      onChange={(e) => {
+                        handleEventImageFiles(e.target.files);
+                        e.target.value = '';
+                      }}
                     />
                     <UploadCloud className="w-7 h-7 text-slate-500" />
-                    <span className="text-xs font-bold text-slate-300">
-                      {language === 'fr_ht' ? 'Choisir ou glisser des photos' : 'Choose or drag event photos'}
+                    <span className="text-xs font-bold text-slate-300 text-center">
+                      {language === 'fr_ht'
+                        ? 'Choisir, glisser ou coller des photos'
+                        : 'Choose, drag, or paste event photos'}
                     </span>
                     {evImagesUploading && (
                       <span className="text-[10px] text-amber-400 font-semibold">
