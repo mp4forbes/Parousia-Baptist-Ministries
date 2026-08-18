@@ -31,8 +31,8 @@ export const translations = {
     sermonVideoPlayerTitle: "Lecteur vidéo",
     
     // Quick Actions / CTA
-    btnToggleLanguage: "Traduire en anglais",
-    btnToggleLanguageShort: "→ Anglais",
+    btnToggleLanguage: "Translate to English",
+    btnToggleLanguageShort: "→ English",
     btnRegister: "S'inscrire",
     btnGive: "Faire un don",
     btnSubmit: "Envoyer",
@@ -329,8 +329,8 @@ export const translations = {
     sermonVideoPlayerTitle: "Video Player",
     
     // Quick Actions / CTA
-    btnToggleLanguage: "Translate to French",
-    btnToggleLanguageShort: "→ French",
+    btnToggleLanguage: "Traduire en français",
+    btnToggleLanguageShort: "→ Français",
     btnRegister: "Register",
     btnGive: "Give Offering",
     btnSubmit: "Submit",
