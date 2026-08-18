@@ -3286,7 +3286,7 @@ export default function AdminDashboardClient({
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs font-semibold hover:border-amber-500 text-amber-400 cursor-pointer"
             >
               <Globe2 className="w-3.5 h-3.5" />
-              <span>{language === 'fr_ht' ? 'English' : 'Français'}</span>
+              <span>{t.btnToggleLanguage}</span>
             </button>
 
             {/* Logout */}

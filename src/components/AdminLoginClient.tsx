@@ -251,7 +251,7 @@ export default function AdminLoginClient({
           className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-sm font-semibold hover:border-amber-500 text-amber-400 cursor-pointer transition-all hover:scale-105"
         >
           <Globe2 className="w-4 h-4" />
-          <span>{language === 'fr_ht' ? 'English' : 'Français'}</span>
+          <span>{t.btnToggleLanguage}</span>
         </button>
       </div>
 

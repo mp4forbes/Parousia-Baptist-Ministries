@@ -908,7 +908,7 @@ export default function PublicHome({
               className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700' : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-amber-400'} border text-sm font-semibold transition-all duration-300 cursor-pointer hover:scale-105`}
             >
               <Globe2 className="w-4 h-4" />
-              <span>{language === 'fr_ht' ? 'English' : 'Français'}</span>
+              <span>{t.btnToggleLanguage}</span>
             </button>
             
             {/* Config Gear Icon - Only visible to admin logins */}
@@ -950,7 +950,7 @@ export default function PublicHome({
               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border ${isLight ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-slate-900 border-slate-800 text-amber-400'} text-xs font-semibold cursor-pointer`}
             >
               <Globe2 className="w-3.5 h-3.5" />
-              <span>{language === 'fr_ht' ? 'EN' : 'FR'}</span>
+              <span>{t.btnToggleLanguageShort}</span>
             </button>
             <button 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

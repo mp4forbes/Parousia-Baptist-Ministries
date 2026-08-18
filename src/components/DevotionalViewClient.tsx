@@ -108,7 +108,7 @@ export default function DevotionalViewClient({ devotional, settings }: Devotiona
           }`}
         >
           <Globe2 className="w-4 h-4" />
-          <span>{language === 'fr_ht' ? 'English' : 'Français'}</span>
+          <span>{t.btnToggleLanguage}</span>
         </button>
       </header>
 
