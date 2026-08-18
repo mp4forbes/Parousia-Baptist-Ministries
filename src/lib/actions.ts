@@ -348,12 +348,13 @@ export async function exportAdminSectionSpreadsheet(
       case 'events': {
         const events = await db.prepare('SELECT * FROM events ORDER BY date ASC').all() as EventRecord[];
         sheetTitle = 'Events';
-        headers = ['ID', 'Title (English)', 'Title (French)', 'Date', 'Time', 'Location (English)', 'Description (English)'];
+        headers = ['ID', 'Title (English)', 'Title (French)', 'Start Date', 'End Date', 'Time', 'Location (English)', 'Description (English)'];
         rows = events.map((event) => [
           String(event.id),
           event.title_english,
           event.title_kreyol,
           event.date,
+          event.end_date || '',
           event.time,
           event.location_english,
           event.description_english,
@@ -1154,7 +1155,7 @@ export async function saveEvent(id: number | null, data: Partial<EventRecord>): 
     if (id) {
       const update = db.prepare(`
         UPDATE events
-        SET title_kreyol = ?, title_english = ?, date = ?, time = ?, location_kreyol = ?, location_english = ?,
+        SET title_kreyol = ?, title_english = ?, date = ?, end_date = ?, time = ?, location_kreyol = ?, location_english = ?,
             description_kreyol = ?, description_english = ?, images_json = ?, registration_type = ?,
             payment_required = ?, payment_amount = ?, payment_zelle_name = ?, payment_zelle_phone = ?,
             payment_instructions_english = ?, payment_instructions_kreyol = ?
@@ -1164,6 +1165,7 @@ export async function saveEvent(id: number | null, data: Partial<EventRecord>): 
         data.title_kreyol,
         data.title_english,
         data.date,
+        data.end_date || '',
         data.time,
         data.location_kreyol,
         data.location_english,
@@ -1182,17 +1184,18 @@ export async function saveEvent(id: number | null, data: Partial<EventRecord>): 
     } else {
       const insert = db.prepare(`
         INSERT INTO events (
-          title_kreyol, title_english, date, time, location_kreyol, location_english,
+          title_kreyol, title_english, date, end_date, time, location_kreyol, location_english,
           description_kreyol, description_english, images_json, registration_type,
           payment_required, payment_amount, payment_zelle_name, payment_zelle_phone,
           payment_instructions_english, payment_instructions_kreyol
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       await insert.run(
         data.title_kreyol,
         data.title_english,
         data.date,
+        data.end_date || '',
         data.time,
         data.location_kreyol,
         data.location_english,

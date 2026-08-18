@@ -201,4 +201,5 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS payment_zelle_name TEXT DEFAULT '';
 ALTER TABLE events ADD COLUMN IF NOT EXISTS payment_zelle_phone TEXT DEFAULT '';
 ALTER TABLE events ADD COLUMN IF NOT EXISTS payment_instructions_english TEXT DEFAULT '';
 ALTER TABLE events ADD COLUMN IF NOT EXISTS payment_instructions_kreyol TEXT DEFAULT '';
+ALTER TABLE events ADD COLUMN IF NOT EXISTS end_date TEXT DEFAULT '';
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'not_paid';

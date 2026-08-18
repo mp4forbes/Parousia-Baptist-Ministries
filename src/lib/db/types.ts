@@ -85,6 +85,7 @@ export interface EventRecord {
   title_kreyol: string;
   title_english: string;
   date: string;
+  end_date?: string;
   time: string;
   location_kreyol: string;
   location_english: string;

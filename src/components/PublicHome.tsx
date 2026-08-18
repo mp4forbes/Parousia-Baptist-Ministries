@@ -20,6 +20,7 @@ import { MinistrySignupSlug } from '@/lib/ministry-signup-fields';
 import { parseTeamDepartments, type TeamDepartment, type TeamMember } from '@/lib/team-departments';
 import { downloadAssetFile } from '@/lib/client-download';
 import { getGiftDownloadUrls } from '@/lib/gift-download';
+import { formatEventDateLabel, getEventCalendarEndDay } from '@/lib/event-dates';
 import { parseEventImages } from '@/lib/event-images';
 import { googleMapsUrl } from '@/lib/rich-text';
 import FormattedText from '@/components/FormattedText';
@@ -2219,7 +2220,7 @@ export default function PublicHome({
                   <div className="flex justify-between items-center mb-6">
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md ${isLight ? 'bg-blue-50 border border-blue-100 text-blue-600' : 'bg-blue-500/10 border border-blue-500/20 text-blue-400'} text-xs font-bold`}>
                       <Calendar className="w-3.5 h-3.5" />
-                      <span>{event.date}</span>
+                      <span>{formatEventDateLabel(event, language)}</span>
                     </span>
                     <span className={`text-xs font-medium ${textMuted}`}>
                       {event.time}
@@ -2326,7 +2327,8 @@ export default function PublicHome({
                               const startParsed = parseTimeString(timeParts[0]);
                               const endParsed = parseTimeString(timeParts[1] || timeParts[0]);
                               startDate.setHours(startParsed.hours, startParsed.minutes, 0, 0);
-                              const endDate = new Date(parseInt(yr), parseInt(mo) - 1, parseInt(dy));
+                              const [eyr, emo, edy] = getEventCalendarEndDay(event).split('-');
+                              const endDate = new Date(parseInt(eyr), parseInt(emo) - 1, parseInt(edy));
                               endDate.setHours(endParsed.hours, endParsed.minutes, 0, 0);
 
                               handleAddToGoogleCalendar(
@@ -2350,7 +2352,8 @@ export default function PublicHome({
                               const startParsed = parseTimeString(timeParts[0]);
                               const endParsed = parseTimeString(timeParts[1] || timeParts[0]);
                               startDate.setHours(startParsed.hours, startParsed.minutes, 0, 0);
-                              const endDate = new Date(parseInt(yr), parseInt(mo) - 1, parseInt(dy));
+                              const [eyr, emo, edy] = getEventCalendarEndDay(event).split('-');
+                              const endDate = new Date(parseInt(eyr), parseInt(emo) - 1, parseInt(edy));
                               endDate.setHours(endParsed.hours, endParsed.minutes, 0, 0);
 
                               handleDownloadIcsFile(

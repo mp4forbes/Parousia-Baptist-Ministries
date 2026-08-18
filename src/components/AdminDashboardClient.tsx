@@ -74,6 +74,7 @@ import { useRouter } from 'next/navigation';
 import { clearAdminUiClient, setAdminUiClient } from '@/lib/admin-cookies';
 import { flattenTeamMembers, parseTeamDepartments, type TeamDepartment, type TeamMember } from '@/lib/team-departments';
 import { parseEventImages, serializeEventImages } from '@/lib/event-images';
+import { formatEventDateLabel, normalizeEventEndDate } from '@/lib/event-dates';
 import {
   EVENT_REGISTRATION_TYPE_LABELS,
   EVENT_REGISTRATION_TYPES,
@@ -2941,6 +2942,7 @@ export default function AdminDashboardClient({
   const [evTitleHt, setEvTitleHt] = useState('');
   const [evTitleEn, setEvTitleEn] = useState('');
   const [evDate, setEvDate] = useState('');
+  const [evEndDate, setEvEndDate] = useState('');
   const [evTime, setEvTime] = useState('');
   const [evLocHt, setEvLocHt] = useState('');
   const [evLocEn, setEvLocEn] = useState('');
@@ -3011,6 +3013,17 @@ export default function AdminDashboardClient({
   const handleSaveEvent = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const normalizedEndDate = normalizeEventEndDate(evDate, evEndDate);
+    if (evEndDate.trim() && !normalizedEndDate) {
+      triggerAlert(
+        language === 'fr_ht'
+          ? 'La date de fin doit être postérieure à la date de début.'
+          : 'End date must be after the start date.',
+        'error'
+      );
+      return;
+    }
+
     const finalImages: string[] = [];
     for (const image of evImages) {
       if (image.startsWith('data:')) {
@@ -3030,6 +3043,7 @@ export default function AdminDashboardClient({
       title_kreyol: evTitleHt,
       title_english: evTitleEn,
       date: evDate,
+      end_date: normalizedEndDate,
       time: evTime,
       location_kreyol: evLocHt,
       location_english: evLocEn,
@@ -3058,6 +3072,7 @@ export default function AdminDashboardClient({
     setEvTitleHt('');
     setEvTitleEn('');
     setEvDate('');
+    setEvEndDate('');
     setEvTime('');
     setEvLocHt('');
     setEvLocEn('');
@@ -3078,6 +3093,7 @@ export default function AdminDashboardClient({
     setEvTitleHt(ev.title_kreyol);
     setEvTitleEn(ev.title_english);
     setEvDate(ev.date);
+    setEvEndDate(ev.end_date || '');
     setEvTime(ev.time);
     setEvLocHt(ev.location_kreyol);
     setEvLocEn(ev.location_english);
@@ -6404,21 +6420,43 @@ export default function AdminDashboardClient({
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-4 gap-4">
+                <div className="grid md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Date</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                      {language === 'fr_ht' ? 'Date de début' : 'Start Date'}
+                    </label>
                     <input 
                       type="date" required value={evDate} onChange={e => setEvDate(e.target.value)}
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
                     />
                   </div>
                   <div>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                      {language === 'fr_ht' ? 'Date de fin (facultatif)' : 'End Date (optional)'}
+                    </label>
+                    <input 
+                      type="date"
+                      value={evEndDate}
+                      min={evDate || undefined}
+                      onChange={e => setEvEndDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
+                    />
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      {language === 'fr_ht'
+                        ? 'Pour les retraites ou événements sur plusieurs jours.'
+                        : 'For multi-day retreats and conferences.'}
+                    </p>
+                  </div>
+                  <div>
                     <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Time</label>
                     <input 
-                      type="text" required placeholder="e.g. 6:00 PM" value={evTime} onChange={e => setEvTime(e.target.value)}
+                      type="text" required placeholder="e.g. 6:00 PM - 9:00 PM" value={evTime} onChange={e => setEvTime(e.target.value)}
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
                     />
                   </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Location (Français)</label>
                     <input 
@@ -6674,7 +6712,9 @@ export default function AdminDashboardClient({
                   <div key={ev.id} className="p-4 rounded-xl border border-slate-800 bg-slate-950/20 flex justify-between items-center">
                     <div>
                       <h4 className="text-sm font-bold text-white">{ev.title_kreyol} <span className="text-slate-500">|</span> {ev.title_english}</h4>
-                      <p className="text-xs text-slate-400 mt-1">{ev.date} at {ev.time} | {ev.location_kreyol}</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        {formatEventDateLabel(ev, language)} · {ev.time} · {ev.location_kreyol}
+                      </p>
                       {isEventPaymentRequired(ev) && (
                         <p className="text-[10px] text-amber-400 font-semibold mt-1">
                           Zelle {ev.payment_amount ? `— ${ev.payment_amount}` : ''} → {ev.payment_zelle_phone || 'organizer'}
