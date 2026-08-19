@@ -18,6 +18,7 @@ import {
 import { ADMINISTRATIVE_CARE_SLUGS, type AdministrativeCareSlug } from '@/lib/site-nav';
 import { parseEventImages, serializeEventImages } from '@/lib/event-images';
 import AdminSectionContactExport from '@/components/AdminSectionContactExport';
+import { AdministrativeCareDefaultArt } from '@/components/AdministrativeCareIcon';
 
 interface AdminAdministrativeCareTabProps {
   language: 'en' | 'fr_ht';
@@ -252,18 +253,6 @@ export default function AdminAdministrativeCareTab({ language }: AdminAdministra
         <div className="grid md:grid-cols-2 gap-4">
           <div>
             <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-              {language === 'en' ? 'Title (English)' : 'Titre (anglais)'}
-            </label>
-            <input
-              type="text"
-              required
-              value={form.title_english}
-              onChange={(e) => setForm((prev) => ({ ...prev, title_english: e.target.value }))}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-semibold"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
               {language === 'en' ? 'Title (French)' : 'Titre (français)'}
             </label>
             <input
@@ -274,21 +263,21 @@ export default function AdminAdministrativeCareTab({ language }: AdminAdministra
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-semibold"
             />
           </div>
+          <div>
+            <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+              {language === 'en' ? 'Title (English)' : 'Titre (anglais)'}
+            </label>
+            <input
+              type="text"
+              required
+              value={form.title_english}
+              onChange={(e) => setForm((prev) => ({ ...prev, title_english: e.target.value }))}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-semibold"
+            />
+          </div>
         </div>
 
         <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-              {language === 'en' ? 'Description (English)' : 'Description (anglais)'}
-            </label>
-            <textarea
-              rows={7}
-              required
-              value={form.description_english}
-              onChange={(e) => setForm((prev) => ({ ...prev, description_english: e.target.value }))}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 leading-relaxed font-serif"
-            />
-          </div>
           <div>
             <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
               {language === 'en' ? 'Description (French)' : 'Description (français)'}
@@ -298,6 +287,18 @@ export default function AdminAdministrativeCareTab({ language }: AdminAdministra
               required
               value={form.description_kreyol}
               onChange={(e) => setForm((prev) => ({ ...prev, description_kreyol: e.target.value }))}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 leading-relaxed font-serif"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+              {language === 'en' ? 'Description (English)' : 'Description (anglais)'}
+            </label>
+            <textarea
+              rows={7}
+              required
+              value={form.description_english}
+              onChange={(e) => setForm((prev) => ({ ...prev, description_english: e.target.value }))}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 leading-relaxed font-serif"
             />
           </div>
@@ -357,7 +358,7 @@ export default function AdminAdministrativeCareTab({ language }: AdminAdministra
               </span>
             )}
           </div>
-          {images.length > 0 && (
+          {images.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
               {images.map((image, index) => (
                 <div key={`${image.slice(0, 24)}-${index}`} className="relative rounded-lg overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center min-h-28">
@@ -371,6 +372,20 @@ export default function AdminAdministrativeCareTab({ language }: AdminAdministra
                   </button>
                 </div>
               ))}
+            </div>
+          ) : (
+            <div className="mt-4 rounded-xl overflow-hidden border border-slate-800">
+              <AdministrativeCareDefaultArt
+                slug={selectedSlug}
+                isLight={false}
+                className="h-28"
+                iconClassName="w-12 h-12"
+              />
+              <p className="px-3 py-2 text-[10px] text-slate-400 bg-slate-950/60">
+                {language === 'en'
+                  ? 'Default icon shown until photos are uploaded.'
+                  : 'Icône par défaut affichée jusqu’au téléversement de photos.'}
+              </p>
             </div>
           )}
         </div>

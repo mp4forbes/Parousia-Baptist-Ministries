@@ -8,7 +8,8 @@ import type { AdministrativeCareCategory } from '@/lib/db';
 import { getSiteTheme } from '@/lib/site-theme';
 import { parseEventImages } from '@/lib/event-images';
 import AdministrativeCareForm from '@/components/AdministrativeCareForm';
-import type { AdministrativeCareSlug } from '@/lib/site-nav';
+import { AdministrativeCareDefaultArt } from '@/components/AdministrativeCareIcon';
+import { isAdministrativeCareSlug, type AdministrativeCareSlug } from '@/lib/site-nav';
 
 interface AdministrativeCareCategoryClientProps {
   category: AdministrativeCareCategory;
@@ -26,6 +27,7 @@ export default function AdministrativeCareCategoryClient({
   const description = language === 'fr_ht' ? category.description_kreyol : category.description_english;
   const images = parseEventImages(category.images_json);
   const [activeImage, setActiveImage] = useState(0);
+  const slug = isAdministrativeCareSlug(category.slug) ? category.slug : 'weddings';
 
   return (
     <section className={`py-16 sm:py-24 ${isLight ? 'bg-slate-50' : 'bg-slate-950'} relative`}>
@@ -47,7 +49,7 @@ export default function AdministrativeCareCategoryClient({
           <p className={`${textBody} text-base leading-relaxed whitespace-pre-wrap`}>{description}</p>
         </div>
 
-        {images.length > 0 && (
+        {images.length > 0 ? (
           <div className={`mb-12 rounded-3xl ${bgCard} overflow-hidden`}>
             <div className={`flex items-center justify-center ${isLight ? 'bg-slate-100' : 'bg-slate-950'}`}>
               <img
@@ -70,6 +72,15 @@ export default function AdministrativeCareCategoryClient({
                 ))}
               </div>
             )}
+          </div>
+        ) : (
+          <div className={`mb-12 rounded-3xl ${bgCard} overflow-hidden`}>
+            <AdministrativeCareDefaultArt
+              slug={slug}
+              isLight={isLight}
+              className="h-48"
+              iconClassName="w-20 h-20"
+            />
           </div>
         )}
 

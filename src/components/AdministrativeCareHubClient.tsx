@@ -5,8 +5,10 @@ import Link from 'next/link';
 import { ArrowRight, HeartHandshake } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import type { AdministrativeCareCategory } from '@/lib/db';
+import { isAdministrativeCareSlug } from '@/lib/site-nav';
 import { getSiteTheme } from '@/lib/site-theme';
 import { parseEventImages } from '@/lib/event-images';
+import { AdministrativeCareDefaultArt } from '@/components/AdministrativeCareIcon';
 
 interface AdministrativeCareHubClientProps {
   categories: AdministrativeCareCategory[];
@@ -39,6 +41,7 @@ export default function AdministrativeCareHubClient({
             const description = language === 'fr_ht' ? category.description_kreyol : category.description_english;
             const images = parseEventImages(category.images_json);
             const cover = images[0];
+            const slug = isAdministrativeCareSlug(category.slug) ? category.slug : 'weddings';
             return (
               <Link
                 key={category.slug}
@@ -54,9 +57,12 @@ export default function AdministrativeCareHubClient({
                     />
                   </div>
                 ) : (
-                  <div className={`h-28 ${isLight ? 'bg-amber-50' : 'bg-slate-950'} border-b ${borderMain} flex items-center justify-center`}>
-                    <HeartHandshake className="w-8 h-8 text-amber-500" />
-                  </div>
+                  <AdministrativeCareDefaultArt
+                    slug={slug}
+                    isLight={isLight}
+                    className={`h-40 border-b ${borderMain} group-hover:scale-[1.02] transition-transform duration-500`}
+                    iconClassName="w-20 h-20"
+                  />
                 )}
                 <div className="p-6">
                   <h2 className={`text-xl font-bold font-serif ${textTitle} mb-3`}>{title}</h2>
