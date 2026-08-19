@@ -25,10 +25,13 @@ import {
 } from './event-registration-fields';
 import { isEventPaymentRequired } from './event-payment';
 import { MINISTRY_SIGNUP_FIELDS, MINISTRY_SIGNUP_SLUGS, type MinistrySignupSlug } from './ministry-signup-fields';
-import type {
-  RegistrantColumn,
-  RegistrantRow,
-  RegistrantScope,
+import {
+  followUpColumns,
+  followUpValues,
+  normalizeFollowUpStatus,
+  type RegistrantColumn,
+  type RegistrantRow,
+  type RegistrantScope,
 } from './registrant-scope';
 import { isAdministrativeCareSlug, type AdministrativeCareSlug } from './site-nav';
 
@@ -144,10 +147,11 @@ export async function listRegistrants(
         for (const field of getEventRegistrationFields(event.registration_type)) {
           values[`r_${field.key}`] = responses[field.key] || (field.key === 'notes' ? item.notes || '' : '');
         }
+        Object.assign(values, followUpValues(item));
         return { id: item.id, values };
       });
       const title = language === 'fr_ht' ? event.title_kreyol : event.title_english;
-      return { success: true, title, columns, rows };
+      return { success: true, title, columns: [...columns, ...followUpColumns(language)], rows };
     }
 
     if (scope.kind === 'ministry') {
@@ -189,10 +193,11 @@ export async function listRegistrants(
         for (const field of fields) {
           values[`r_${field.key}`] = responses[field.key] || '';
         }
+        Object.assign(values, followUpValues(item));
         return { id: item.id, values };
       });
       const title = language === 'fr_ht' ? ministry?.title_kreyol : ministry?.title_english;
-      return { success: true, title: title || slug, columns, rows };
+      return { success: true, title: title || slug, columns: [...columns, ...followUpColumns(language)], rows };
     }
 
     if (scope.kind === 'care') {
@@ -237,10 +242,11 @@ export async function listRegistrants(
             ? (isCheckedResponse(raw) ? 'yes' : 'no')
             : raw;
         }
+        Object.assign(values, followUpValues(item));
         return { id: item.id, values };
       });
       const title = language === 'fr_ht' ? category?.title_kreyol : category?.title_english;
-      return { success: true, title: title || slug, columns, rows };
+      return { success: true, title: title || slug, columns: [...columns, ...followUpColumns(language)], rows };
     }
 
     if (scope.kind === 'contact') {
@@ -262,12 +268,13 @@ export async function listRegistrants(
           phone: item.phone || '',
           message: item.message || '',
           created_at: item.created_at || '',
+          ...followUpValues(item),
         },
       }));
       return {
         success: true,
         title: language === 'fr_ht' ? 'Messages de contact' : 'Contact messages',
-        columns,
+        columns: [...columns, ...followUpColumns(language)],
         rows,
       };
     }
@@ -287,12 +294,13 @@ export async function listRegistrants(
           email: item.email || '',
           phone: item.phone || '',
           created_at: item.created_at || '',
+          ...followUpValues(item),
         },
       }));
       return {
         success: true,
         title: language === 'fr_ht' ? 'Méditations gratuites' : 'Free Devotional subscribers',
-        columns,
+        columns: [...columns, ...followUpColumns(language)],
         rows,
       };
     }
@@ -316,12 +324,13 @@ export async function listRegistrants(
         request_text: item.request_text || '',
         is_anonymous: item.is_anonymous ? 'yes' : 'no',
         created_at: item.created_at || '',
+        ...followUpValues(item),
       },
     }));
     return {
       success: true,
       title: language === 'fr_ht' ? 'Demandes de prière' : 'Prayer requests',
-      columns,
+      columns: [...columns, ...followUpColumns(language)],
       rows,
     };
   } catch (error: any) {
@@ -351,6 +360,8 @@ export async function saveRegistrant(
   const name = (values.name || values.requester_name || '').trim();
   const email = (values.email || '').trim().toLowerCase();
   const phone = (values.phone || '').trim();
+  const followUpStatus = normalizeFollowUpStatus(values.follow_up_status);
+  const memo = (values.memo || '').trim();
 
   try {
     if (scope.kind === 'event') {
@@ -363,14 +374,14 @@ export async function saveRegistrant(
       const paymentStatus = values.payment_status === 'paid' ? 'paid' : 'not_paid';
       if (id) {
         await db.prepare(
-          'UPDATE registrations SET name = ?, email = ?, phone = ?, notes = ?, responses_json = ?, payment_status = ? WHERE id = ? AND event_id = ?'
-        ).run(name, email, phone, notes, JSON.stringify(responses), paymentStatus, id, scope.eventId);
+          'UPDATE registrations SET name = ?, email = ?, phone = ?, notes = ?, responses_json = ?, payment_status = ?, follow_up_status = ?, memo = ? WHERE id = ? AND event_id = ?'
+        ).run(name, email, phone, notes, JSON.stringify(responses), paymentStatus, followUpStatus, memo, id, scope.eventId);
         revalidatePublicLists();
         return { success: true, id };
       }
       await db.prepare(
-        'INSERT INTO registrations (event_id, name, email, phone, notes, responses_json, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?)'
-      ).run(scope.eventId, name, email, phone, notes, JSON.stringify(responses), paymentStatus);
+        'INSERT INTO registrations (event_id, name, email, phone, notes, responses_json, payment_status, follow_up_status, memo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      ).run(scope.eventId, name, email, phone, notes, JSON.stringify(responses), paymentStatus, followUpStatus, memo);
       const created = await db.prepare(
         'SELECT id FROM registrations WHERE event_id = ? AND email = ? ORDER BY id DESC LIMIT 1'
       ).get(scope.eventId, email) as { id: number } | undefined;
@@ -386,15 +397,15 @@ export async function saveRegistrant(
       const responses = collectResponseFields(values);
       if (id) {
         await db.prepare(
-          'UPDATE ministry_signups SET name = ?, email = ?, phone = ?, responses = ? WHERE id = ? AND ministry_slug = ?'
-        ).run(name, email, phone || null, JSON.stringify(responses), id, scope.slug);
+          'UPDATE ministry_signups SET name = ?, email = ?, phone = ?, responses = ?, follow_up_status = ?, memo = ? WHERE id = ? AND ministry_slug = ?'
+        ).run(name, email, phone || null, JSON.stringify(responses), followUpStatus, memo, id, scope.slug);
         revalidatePublicLists();
         return { success: true, id };
       }
       const createdAt = new Date().toISOString();
       await db.prepare(
-        'INSERT INTO ministry_signups (ministry_slug, name, email, phone, responses, created_at) VALUES (?, ?, ?, ?, ?, ?)'
-      ).run(scope.slug, name, email, phone || null, JSON.stringify(responses), createdAt);
+        'INSERT INTO ministry_signups (ministry_slug, name, email, phone, responses, created_at, follow_up_status, memo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+      ).run(scope.slug, name, email, phone || null, JSON.stringify(responses), createdAt, followUpStatus, memo);
       const created = await db.prepare(
         'SELECT id FROM ministry_signups WHERE ministry_slug = ? AND email = ? ORDER BY id DESC LIMIT 1'
       ).get(scope.slug, email) as { id: number } | undefined;
@@ -411,15 +422,15 @@ export async function saveRegistrant(
       responses.requester_phone = phone;
       if (id) {
         await db.prepare(
-          'UPDATE administrative_care_submissions SET name = ?, email = ?, phone = ?, responses = ? WHERE id = ? AND category_slug = ?'
-        ).run(name, email, phone || null, JSON.stringify(responses), id, scope.slug);
+          'UPDATE administrative_care_submissions SET name = ?, email = ?, phone = ?, responses = ?, follow_up_status = ?, memo = ? WHERE id = ? AND category_slug = ?'
+        ).run(name, email, phone || null, JSON.stringify(responses), followUpStatus, memo, id, scope.slug);
         revalidatePublicLists();
         return { success: true, id };
       }
       const createdAt = new Date().toISOString();
       await db.prepare(
-        'INSERT INTO administrative_care_submissions (category_slug, name, email, phone, responses, language, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
-      ).run(scope.slug, name, email, phone || null, JSON.stringify(responses), 'en', createdAt);
+        'INSERT INTO administrative_care_submissions (category_slug, name, email, phone, responses, language, created_at, follow_up_status, memo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      ).run(scope.slug, name, email, phone || null, JSON.stringify(responses), 'en', createdAt, followUpStatus, memo);
       const created = await db.prepare(
         'SELECT id FROM administrative_care_submissions WHERE category_slug = ? AND email = ? ORDER BY id DESC LIMIT 1'
       ).get(scope.slug, email) as { id: number } | undefined;
@@ -432,15 +443,15 @@ export async function saveRegistrant(
       if (!name || !email || !message) return { success: false, error: 'Name, email, and message are required.' };
       if (id) {
         await db.prepare(
-          'UPDATE contact_submissions SET name = ?, email = ?, phone = ?, message = ? WHERE id = ?'
-        ).run(name, email, phone || null, message, id);
+          'UPDATE contact_submissions SET name = ?, email = ?, phone = ?, message = ?, follow_up_status = ?, memo = ? WHERE id = ?'
+        ).run(name, email, phone || null, message, followUpStatus, memo, id);
         revalidatePublicLists();
         return { success: true, id };
       }
       const createdAt = new Date().toISOString();
       await db.prepare(
-        'INSERT INTO contact_submissions (name, email, phone, message, created_at) VALUES (?, ?, ?, ?, ?)'
-      ).run(name, email, phone || null, message, createdAt);
+        'INSERT INTO contact_submissions (name, email, phone, message, created_at, follow_up_status, memo) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      ).run(name, email, phone || null, message, createdAt, followUpStatus, memo);
       const created = await db.prepare(
         'SELECT id FROM contact_submissions WHERE email = ? ORDER BY id DESC LIMIT 1'
       ).get(email) as { id: number } | undefined;
@@ -452,15 +463,15 @@ export async function saveRegistrant(
       if (!name || !email || !phone) return { success: false, error: 'Name, email, and phone are required.' };
       if (id) {
         await db.prepare(
-          'UPDATE leads SET name = ?, email = ?, phone = ? WHERE id = ?'
-        ).run(name, email, phone, id);
+          'UPDATE leads SET name = ?, email = ?, phone = ?, follow_up_status = ?, memo = ? WHERE id = ?'
+        ).run(name, email, phone, followUpStatus, memo, id);
         revalidatePublicLists();
         return { success: true, id };
       }
       const createdAt = new Date().toISOString();
       await db.prepare(
-        'INSERT INTO leads (name, email, phone, created_at) VALUES (?, ?, ?, ?)'
-      ).run(name, email, phone, createdAt);
+        'INSERT INTO leads (name, email, phone, created_at, follow_up_status, memo) VALUES (?, ?, ?, ?, ?, ?)'
+      ).run(name, email, phone, createdAt, followUpStatus, memo);
       const created = await db.prepare(
         'SELECT id FROM leads WHERE email = ? ORDER BY id DESC LIMIT 1'
       ).get(email) as { id: number } | undefined;
@@ -474,15 +485,15 @@ export async function saveRegistrant(
     const requesterName = (values.requester_name || '').trim() || null;
     if (id) {
       await db.prepare(
-        'UPDATE prayer_requests SET requester_name = ?, request_text = ?, is_anonymous = ? WHERE id = ?'
-      ).run(requesterName, requestText, anonymous, id);
+        'UPDATE prayer_requests SET requester_name = ?, request_text = ?, is_anonymous = ?, follow_up_status = ?, memo = ? WHERE id = ?'
+      ).run(requesterName, requestText, anonymous, followUpStatus, memo, id);
       revalidatePublicLists();
       return { success: true, id };
     }
     const createdAt = new Date().toISOString();
     await db.prepare(
-      'INSERT INTO prayer_requests (requester_name, request_text, is_anonymous, created_at) VALUES (?, ?, ?, ?)'
-    ).run(requesterName, requestText, anonymous, createdAt);
+      'INSERT INTO prayer_requests (requester_name, request_text, is_anonymous, created_at, follow_up_status, memo) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(requesterName, requestText, anonymous, createdAt, followUpStatus, memo);
     const created = await db.prepare(
       'SELECT id FROM prayer_requests ORDER BY id DESC LIMIT 1'
     ).get() as { id: number } | undefined;

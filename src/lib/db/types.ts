@@ -24,6 +24,8 @@ export interface PrayerRequest {
   request_text: string;
   is_anonymous: number;
   created_at: string;
+  follow_up_status?: string;
+  memo?: string;
 }
 
 export interface ContactSubmission {
@@ -33,6 +35,8 @@ export interface ContactSubmission {
   phone: string | null;
   message: string;
   created_at: string;
+  follow_up_status?: string;
+  memo?: string;
 }
 
 export interface BlogPost {
@@ -114,6 +118,8 @@ export interface Registration {
   notes: string;
   responses_json?: string;
   payment_status?: string;
+  follow_up_status?: string;
+  memo?: string;
   event_payment_required?: number | boolean;
 }
 
@@ -123,6 +129,8 @@ export interface Lead {
   email: string;
   phone: string;
   created_at: string;
+  follow_up_status?: string;
+  memo?: string;
 }
 
 export interface DailyDevotional {
@@ -180,6 +188,8 @@ export interface MinistrySignup {
   phone: string | null;
   responses: string;
   created_at: string;
+  follow_up_status?: string;
+  memo?: string;
 }
 
 export interface AdminSectionConfig {
@@ -212,4 +222,6 @@ export interface AdministrativeCareSubmission {
   responses: string;
   language: string;
   created_at: string;
+  follow_up_status?: string;
+  memo?: string;
 }

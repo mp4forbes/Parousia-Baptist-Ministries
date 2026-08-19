@@ -26,7 +26,10 @@ interface RegistrantManagerButtonProps {
 function emptyRow(columns: RegistrantColumn[]): RegistrantRow {
   return {
     id: 0,
-    values: Object.fromEntries(columns.map((column) => [column.key, column.key === 'payment_status' ? 'not_paid' : ''])),
+    values: Object.fromEntries(columns.map((column) => [
+      column.key,
+      column.key === 'payment_status' ? 'not_paid' : column.key === 'follow_up_status' ? 'new' : '',
+    ])),
   };
 }
 

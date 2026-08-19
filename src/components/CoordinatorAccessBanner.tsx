@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { FileSpreadsheet } from 'lucide-react';
 import { useCoordinatorSession } from '@/lib/CoordinatorSessionContext';
 import { useLanguage } from '@/lib/LanguageContext';
-import { hasAnyRegistrantListAccess, registrantAccessLinks } from '@/lib/registrant-scope';
+import { hasAnyRegistrantListAccess, registrantAccessLinks, registrantAccessScope } from '@/lib/registrant-scope';
+import RegistrantManagerButton from '@/components/RegistrantManagerButton';
 import { getSiteTheme } from '@/lib/site-theme';
 
 const MINISTRY_LABELS: Record<string, { en: string; fr_ht: string }> = {
@@ -80,15 +81,29 @@ export default function CoordinatorAccessBanner({ settings }: { settings: Record
           </button>
         ) : hasLists ? (
           <div className="flex flex-wrap gap-2">
-            {links.map((link) => (
-              <Link
-                key={`${link.kind}-${link.slug || link.href}`}
-                href={link.href}
-                className="px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 text-xs font-bold hover:bg-amber-400"
-              >
-                {labelFor(link)}
-              </Link>
-            ))}
+            {links.map((link) => {
+              const label = labelFor(link);
+              const scope = registrantAccessScope(link);
+              if (scope) {
+                return (
+                  <RegistrantManagerButton
+                    key={`${link.kind}-${link.slug || link.href}`}
+                    scope={scope}
+                    isLight={theme.isLight}
+                    label={label}
+                  />
+                );
+              }
+              return (
+                <Link
+                  key={`${link.kind}-${link.slug || link.href}`}
+                  href={link.href}
+                  className="px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 text-xs font-bold hover:bg-amber-400"
+                >
+                  {label}
+                </Link>
+              );
+            })}
           </div>
         ) : null}
       </div>

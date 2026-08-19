@@ -204,6 +204,16 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS payment_instructions_kreyol TEXT DEF
 ALTER TABLE events ADD COLUMN IF NOT EXISTS end_date TEXT DEFAULT '';
 ALTER TABLE events ADD COLUMN IF NOT EXISTS notification_emails TEXT DEFAULT '';
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'not_paid';
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS follow_up_status TEXT DEFAULT 'new';
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS memo TEXT DEFAULT '';
+ALTER TABLE ministry_signups ADD COLUMN IF NOT EXISTS follow_up_status TEXT DEFAULT 'new';
+ALTER TABLE ministry_signups ADD COLUMN IF NOT EXISTS memo TEXT DEFAULT '';
+ALTER TABLE contact_submissions ADD COLUMN IF NOT EXISTS follow_up_status TEXT DEFAULT 'new';
+ALTER TABLE contact_submissions ADD COLUMN IF NOT EXISTS memo TEXT DEFAULT '';
+ALTER TABLE prayer_requests ADD COLUMN IF NOT EXISTS follow_up_status TEXT DEFAULT 'new';
+ALTER TABLE prayer_requests ADD COLUMN IF NOT EXISTS memo TEXT DEFAULT '';
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS follow_up_status TEXT DEFAULT 'new';
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS memo TEXT DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS administrative_care_categories (
   slug TEXT PRIMARY KEY,
@@ -234,3 +244,6 @@ CREATE TABLE IF NOT EXISTS administrative_care_submissions (
   language TEXT DEFAULT 'en',
   created_at TEXT NOT NULL
 );
+
+ALTER TABLE administrative_care_submissions ADD COLUMN IF NOT EXISTS follow_up_status TEXT DEFAULT 'new';
+ALTER TABLE administrative_care_submissions ADD COLUMN IF NOT EXISTS memo TEXT DEFAULT '';
