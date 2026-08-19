@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { db, ServiceSchedule, HaitiMission, LocalOutreach, EventRecord, Registration, Sermon, KnowledgeBaseItem, Lead, DailyDevotional, AdminRecord, AdminDevice, PrayerRequest, ContactSubmission, BlogPost, Ministry, MinistrySignup, AdminSectionConfig, AdministrativeCareCategory, AdministrativeCareSubmission } from './db';
 import { sendEmail, sendAdminOtpEmail } from './notify';
+import { encryptSession, decryptSession } from './session-crypto';
+import { parseNotificationEmails } from './notification-emails';
 import { buildChurchEmailHtml, getChurchFromEmail, textToHtmlParagraphs } from './email-templates';
 import { getChurchContact } from './church-contact';
 import {
@@ -94,14 +96,6 @@ export async function saveMinistry(
     console.error(`Error saving ministry ${slug}:`, error);
     return { success: false, error: error.message };
   }
-}
-
-function parseNotificationEmails(value?: string | null): string[] {
-  if (!value?.trim()) return [];
-  return value
-    .split(/[,;\n]+/)
-    .map((email) => email.trim().toLowerCase())
-    .filter((email) => email.includes('@'));
 }
 
 export async function submitMinistrySignup(
@@ -949,7 +943,7 @@ export async function registerForEvent(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const event = await db.prepare(`
-      SELECT title_english, registration_type, payment_required, payment_amount, payment_zelle_name, payment_zelle_phone
+      SELECT title_english, registration_type, payment_required, payment_amount, payment_zelle_name, payment_zelle_phone, notification_emails
       FROM events WHERE id = ?
     `).get(eventId) as
       | {
@@ -959,6 +953,7 @@ export async function registerForEvent(
           payment_amount?: string;
           payment_zelle_name?: string;
           payment_zelle_phone?: string;
+          notification_emails?: string;
         }
       | undefined;
     if (!event) {
@@ -1003,7 +998,10 @@ export async function registerForEvent(
       paymentRequired ? 'not_paid' : 'not_paid'
     );
 
-    const recipients = await getAdminSectionNotificationEmails('events_signups');
+    const recipients = [
+      ...await getAdminSectionNotificationEmails('events_signups'),
+      ...parseNotificationEmails(event.notification_emails),
+    ].filter((email, index, list) => list.indexOf(email) === index);
     if (recipients.length > 0) {
       const responseLines = formatEventRegistrationResponses(registrationType, normalizedResponses, 'en');
       const headcount = summarizeEventHeadcount(registrationType, normalizedResponses);
@@ -1086,36 +1084,6 @@ export async function verifyAdminPassword(password: string): Promise<{ success: 
   } catch (error) {
     console.error('Error verifying password:', error);
     return { success: false };
-  }
-}
-
-const getSessionSecret = () => {
-  return process.env.SESSION_SECRET || 'parousie_session_super_secret_key_2026_default_fallback_32';
-};
-
-function encryptSession(text: string): string {
-  const key = crypto.createHash('sha256').update(getSessionSecret()).digest(); // always 32 bytes
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
-  let encrypted = cipher.update(text, 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-  return iv.toString('hex') + ':' + encrypted;
-}
-
-function decryptSession(text: string): string | null {
-  try {
-    const parts = text.split(':');
-    if (parts.length !== 2) return null;
-    const iv = Buffer.from(parts[0], 'hex');
-    const encryptedText = parts[1]; // Keep as hex string to match crypto typings
-    const key = crypto.createHash('sha256').update(getSessionSecret()).digest();
-    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-    let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    return decrypted;
-  } catch (error) {
-    console.error('Session decryption failed:', error);
-    return null;
   }
 }
 
@@ -1530,7 +1498,7 @@ export async function saveEvent(id: number | null, data: Partial<EventRecord>): 
         SET title_kreyol = ?, title_english = ?, date = ?, end_date = ?, time = ?, location_kreyol = ?, location_english = ?,
             description_kreyol = ?, description_english = ?, images_json = ?, registration_type = ?,
             payment_required = ?, payment_amount = ?, payment_zelle_name = ?, payment_zelle_phone = ?,
-            payment_instructions_english = ?, payment_instructions_kreyol = ?
+            payment_instructions_english = ?, payment_instructions_kreyol = ?, notification_emails = ?
         WHERE id = ?
       `);
       await update.run(
@@ -1551,6 +1519,7 @@ export async function saveEvent(id: number | null, data: Partial<EventRecord>): 
         data.payment_zelle_phone || '',
         data.payment_instructions_english || '',
         data.payment_instructions_kreyol || '',
+        data.notification_emails || '',
         id
       );
     } else {
@@ -1559,9 +1528,9 @@ export async function saveEvent(id: number | null, data: Partial<EventRecord>): 
           title_kreyol, title_english, date, end_date, time, location_kreyol, location_english,
           description_kreyol, description_english, images_json, registration_type,
           payment_required, payment_amount, payment_zelle_name, payment_zelle_phone,
-          payment_instructions_english, payment_instructions_kreyol
+          payment_instructions_english, payment_instructions_kreyol, notification_emails
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       await insert.run(
         data.title_kreyol,
@@ -1580,7 +1549,8 @@ export async function saveEvent(id: number | null, data: Partial<EventRecord>): 
         data.payment_zelle_name || '',
         data.payment_zelle_phone || '',
         data.payment_instructions_english || '',
-        data.payment_instructions_kreyol || ''
+        data.payment_instructions_kreyol || '',
+        data.notification_emails || ''
       );
     }
     revalidatePath('/');

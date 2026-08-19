@@ -2960,6 +2960,7 @@ export default function AdminDashboardClient({
   const [evPaymentZellePhone, setEvPaymentZellePhone] = useState('');
   const [evPaymentInstructionsEn, setEvPaymentInstructionsEn] = useState('');
   const [evPaymentInstructionsHt, setEvPaymentInstructionsHt] = useState('');
+  const [evNotificationEmails, setEvNotificationEmails] = useState('');
 
   const handleEventImageFiles = (files: FileList | File[] | null) => {
     if (!files?.length) return;
@@ -3059,6 +3060,7 @@ export default function AdminDashboardClient({
       payment_zelle_phone: evPaymentZellePhone,
       payment_instructions_english: evPaymentInstructionsEn,
       payment_instructions_kreyol: evPaymentInstructionsHt,
+      notification_emails: evNotificationEmails,
     });
     if (res.success) {
       triggerAlert(t.adminSaveSuccess, 'success');
@@ -3088,6 +3090,7 @@ export default function AdminDashboardClient({
     setEvPaymentZellePhone('');
     setEvPaymentInstructionsEn('');
     setEvPaymentInstructionsHt('');
+    setEvNotificationEmails('');
   };
 
   const handleEditEventClick = (ev: EventRecord) => {
@@ -3109,6 +3112,7 @@ export default function AdminDashboardClient({
     setEvPaymentZellePhone(ev.payment_zelle_phone || '');
     setEvPaymentInstructionsEn(ev.payment_instructions_english || '');
     setEvPaymentInstructionsHt(ev.payment_instructions_kreyol || '');
+    setEvNotificationEmails(ev.notification_emails || '');
   };
 
   const handleUpdateRegistrationPayment = async (id: number, paymentStatus: 'paid' | 'not_paid') => {
@@ -6513,6 +6517,20 @@ export default function AdminDashboardClient({
                   </p>
                 </div>
 
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">
+                    {language === 'fr_ht' ? 'Coordinateurs de l’événement' : 'Event coordinators'}
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={evNotificationEmails}
+                    onChange={(e) => setEvNotificationEmails(e.target.value)}
+                    placeholder={language === 'en' ? 'coordinator@church.org' : 'coordinateur@eglise.org'}
+                    className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white font-mono"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">{t.coordinatorRecipientHint}</p>
+                </div>
+
                 <AdminSuperAdminGate
                   isSuperAdmin={isSuperAdmin}
                   language={language === 'fr_ht' ? 'fr_ht' : 'en'}
@@ -8259,9 +8277,7 @@ export default function AdminDashboardClient({
                         placeholder={language === 'en' ? 'leader@church.org, committee@church.org' : 'responsable@eglise.org, comite@eglise.org'}
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
                       />
-                      <p className="text-[10px] text-slate-500 mt-1">
-                        {language === 'en' ? 'Comma or line-separated emails notified on each new signup.' : 'Adresses courriel séparées par des virgules ou des sauts de ligne, avisées à chaque nouvelle inscription.'}
-                      </p>
+                      <p className="text-[10px] text-slate-500 mt-1">{t.coordinatorRecipientHint}</p>
                     </div>
                   </div>
                 </div>

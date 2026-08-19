@@ -62,6 +62,45 @@ export async function sendAdminOtpEmail(
   return { ...result, fromEmail };
 }
 
+export async function sendRecipientOtpEmail(
+  to: string,
+  code: string,
+  expiresAt: string
+): Promise<{ success: boolean; error?: string; fromEmail?: string }> {
+  const fromEmail = getAdminOtpFromEmail();
+  const expiresText = new Date(expiresAt).toLocaleString('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+
+  const result = await sendEmail({
+    to: [to],
+    fromEmail,
+    fromName: process.env.SENDGRID_FROM_NAME || 'Parousia Baptist Ministries',
+    subject: 'Your registration list verification code',
+    text: [
+      'Parousia Baptist Ministries — Registration list sign-in',
+      '',
+      `Your verification code is: ${code}`,
+      '',
+      `This code expires at ${expiresText}.`,
+      '',
+      'If you did not request this code, you can safely ignore this email.',
+    ].join('\n'),
+    html: `
+      <div style="font-family:Arial,sans-serif;line-height:1.6;color:#1e293b;max-width:520px;">
+        <h2 style="margin:0 0 12px;color:#1e3a5f;">Parousia Baptist Ministries</h2>
+        <p style="margin:0 0 16px;">Your verification code to manage registration lists is:</p>
+        <p style="margin:0 0 20px;font-size:28px;font-weight:bold;letter-spacing:6px;color:#1d4ed8;">${code}</p>
+        <p style="margin:0 0 8px;">This code expires at <strong>${expiresText}</strong>.</p>
+        <p style="margin:0;color:#64748b;font-size:14px;">If you did not request this code, you can safely ignore this email.</p>
+      </div>
+    `,
+  });
+
+  return { ...result, fromEmail };
+}
+
 export async function sendEmail(options: SendEmailOptions): Promise<{ success: boolean; error?: string }> {
   const apiKey = process.env.SENDGRID_API_KEY;
   if (!apiKey) {

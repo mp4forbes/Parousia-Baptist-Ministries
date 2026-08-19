@@ -9,6 +9,7 @@ import { isAdministrativeCareSlug } from '@/lib/site-nav';
 import { getSiteTheme } from '@/lib/site-theme';
 import { parseEventImages } from '@/lib/event-images';
 import { AdministrativeCareDefaultArt } from '@/components/AdministrativeCareIcon';
+import RegistrantManagerButton from '@/components/RegistrantManagerButton';
 
 interface AdministrativeCareHubClientProps {
   categories: AdministrativeCareCategory[];
@@ -43,36 +44,46 @@ export default function AdministrativeCareHubClient({
             const cover = images[0];
             const slug = isAdministrativeCareSlug(category.slug) ? category.slug : 'weddings';
             return (
-              <Link
+              <div
                 key={category.slug}
-                href={`/administrative-care/${category.slug}`}
                 className={`rounded-3xl ${bgCard} overflow-hidden group hover:border-amber-500/40 transition-all`}
               >
-                {cover ? (
-                  <div className={`flex items-center justify-center ${isLight ? 'bg-slate-100' : 'bg-slate-950'} min-h-52`}>
-                    <img
-                      src={cover}
-                      alt=""
-                      className="w-full max-h-[28rem] object-contain group-hover:scale-[1.02] transition-transform duration-500"
+                <Link href={`/administrative-care/${category.slug}`} className="block">
+                  {cover ? (
+                    <div className={`flex items-center justify-center ${isLight ? 'bg-slate-100' : 'bg-slate-950'} min-h-52`}>
+                      <img
+                        src={cover}
+                        alt=""
+                        className="w-full max-h-[28rem] object-contain group-hover:scale-[1.02] transition-transform duration-500"
+                      />
+                    </div>
+                  ) : (
+                    <AdministrativeCareDefaultArt
+                      slug={slug}
+                      isLight={isLight}
+                      className={`h-40 border-b ${borderMain} group-hover:scale-[1.02] transition-transform duration-500`}
+                      iconClassName="w-20 h-20"
                     />
+                  )}
+                  <div className="p-6 pb-0">
+                    <h2 className={`text-xl font-bold font-serif ${textTitle} mb-3`}>{title}</h2>
+                    <p className={`${textBody} text-sm leading-relaxed line-clamp-4 mb-5`}>{description}</p>
                   </div>
-                ) : (
-                  <AdministrativeCareDefaultArt
-                    slug={slug}
+                </Link>
+                <div className="px-6 pb-6 flex flex-wrap items-center gap-3">
+                  <RegistrantManagerButton
+                    scope={{ kind: 'care', slug: category.slug }}
                     isLight={isLight}
-                    className={`h-40 border-b ${borderMain} group-hover:scale-[1.02] transition-transform duration-500`}
-                    iconClassName="w-20 h-20"
                   />
-                )}
-                <div className="p-6">
-                  <h2 className={`text-xl font-bold font-serif ${textTitle} mb-3`}>{title}</h2>
-                  <p className={`${textBody} text-sm leading-relaxed line-clamp-4 mb-5`}>{description}</p>
-                  <span className="inline-flex items-center gap-2 text-sm font-bold text-amber-500">
+                  <Link
+                    href={`/administrative-care/${category.slug}`}
+                    className="inline-flex items-center gap-2 text-sm font-bold text-amber-500"
+                  >
                     {language === 'fr_ht' ? 'Voir la page' : 'View page'}
                     <ArrowRight className="w-4 h-4" />
-                  </span>
+                  </Link>
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>

@@ -3,7 +3,9 @@ import { Outfit, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/lib/LanguageContext";
 import { AdminUiProvider } from "@/lib/AdminUiContext";
+import { CoordinatorSessionProvider } from "@/lib/CoordinatorSessionContext";
 import { checkAdminAuth } from "@/lib/actions";
+import { getRegistrantAccess } from "@/lib/coordinator-session";
 import { cookies } from "next/headers";
 import { Language } from "@/lib/translations";
 import DevExtensionNoiseFilter from "@/components/DevExtensionNoiseFilter";
@@ -50,6 +52,7 @@ export default async function RootLayout({
   // Set the HTML language to English or French
   const htmlLang = defaultLanguage === 'en' ? 'en' : 'fr';
   const isAdmin = await checkAdminAuth();
+  const registrantAccess = await getRegistrantAccess();
 
   return (
     <html
@@ -60,7 +63,9 @@ export default async function RootLayout({
         <DevExtensionNoiseFilter />
         <LanguageProvider defaultLanguage={defaultLanguage}>
           <AdminUiProvider initialIsAdmin={isAdmin}>
-            {children}
+            <CoordinatorSessionProvider initialAccess={registrantAccess}>
+              {children}
+            </CoordinatorSessionProvider>
           </AdminUiProvider>
         </LanguageProvider>
       </body>

@@ -24,6 +24,7 @@ import { parseEventImages } from '@/lib/event-images';
 import { googleMapsUrl } from '@/lib/rich-text';
 import FormattedText from '@/components/FormattedText';
 import EventRegistrationModal from '@/components/EventRegistrationModal';
+import RegistrantManagerButton from '@/components/RegistrantManagerButton';
 import { isEventPaymentRequired } from '@/lib/event-payment';
 import { getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from '@/lib/youtube';
 import { 
@@ -1550,6 +1551,9 @@ export default function PublicHome({
                 ? "Découvrez nos différents ministères, où vous pourrez servir, grandir et soutenir l'œuvre du Seigneur."
                 : 'Explore our various ministries where you can serve, grow, and support the work of the Lord.'}
             </p>
+            <div className="mt-5 flex justify-center">
+              <RegistrantManagerButton scope={{ kind: 'ministry', slug: activeMinistryTab }} isLight={isLight} />
+            </div>
           </div>
 
           {/* Premium Tab Selector */}
@@ -1622,6 +1626,9 @@ export default function PublicHome({
                         cancelLabel={t.btnCancel}
                         submitLabel={t.btnSubmit}
                       />
+                      <div className="mt-4">
+                        <RegistrantManagerButton scope={{ kind: 'ministry', slug: activeMinistryTab }} isLight={isLight} />
+                      </div>
                     </div>
                     <div className="h-80 rounded-2xl overflow-hidden shadow-lg shadow-black/20">
                       <img 
@@ -1700,7 +1707,7 @@ export default function PublicHome({
                   })}
                 </div>
 
-                <div className="mt-8 flex justify-start">
+                <div className="mt-8 flex flex-wrap items-center gap-3 justify-start">
                   <MinistrySignupForm
                     slug="missions"
                     ministry={ministries.find((item) => item.slug === 'missions')}
@@ -1715,6 +1722,7 @@ export default function PublicHome({
                     cancelLabel={t.btnCancel}
                     submitLabel={t.btnSubmit}
                   />
+                  <RegistrantManagerButton scope={{ kind: 'ministry', slug: 'missions' }} isLight={isLight} />
                 </div>
               </div>
             )}
@@ -2149,12 +2157,19 @@ export default function PublicHome({
                     </div>
 
                     {/* Signup trigger button */}
-                    <button 
-                      onClick={() => setSelectedEvent(event)}
-                      className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all duration-300 hover:scale-105 cursor-pointer"
-                    >
-                      {t.btnRegister}
-                    </button>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <RegistrantManagerButton
+                        scope={{ kind: 'event', eventId: event.id }}
+                        isLight={isLight}
+                        label={t.coordinatorManageList}
+                      />
+                      <button 
+                        onClick={() => setSelectedEvent(event)}
+                        className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all duration-300 hover:scale-105 cursor-pointer"
+                      >
+                        {t.btnRegister}
+                      </button>
+                    </div>
                   </div>
                 </div>
                 </div>
@@ -2352,6 +2367,9 @@ export default function PublicHome({
             <h2 className={`text-3xl md:text-5xl font-extrabold font-serif ${textTitle} tracking-tight mb-4`}>
               {t.prayerTitle}
             </h2>
+            <div className="flex justify-center mb-4">
+              <RegistrantManagerButton scope={{ kind: 'prayer' }} isLight={isLight} />
+            </div>
             <p className={`${textMuted} text-base md:text-lg leading-relaxed`}>
               {t.prayerSubtitle}
             </p>
@@ -2562,6 +2580,9 @@ export default function PublicHome({
                 <h3 className={`text-xl font-bold font-serif ${textTitle} mb-6`}>
                   {t.contactFormTitle}
                 </h3>
+                <div className="mb-4">
+                  <RegistrantManagerButton scope={{ kind: 'contact' }} isLight={isLight} />
+                </div>
 
                 <form onSubmit={handleContactSubmit} className="space-y-5">
                   {contactSuccess && (
@@ -3576,6 +3597,12 @@ export default function PublicHome({
               
               {/* Right Column: Interaction Form */}
               <div className="md:col-span-3">
+                <div className="mb-4">
+                    <RegistrantManagerButton
+                      scope={{ kind: 'gift' }}
+                      isLight={isLight}
+                    />
+                </div>
                 {!leadSubmitted ? (
                   <form onSubmit={handleLeadSubmit} className="space-y-4">
                     {leadError && (

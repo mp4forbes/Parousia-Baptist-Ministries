@@ -99,6 +99,7 @@ export interface EventRecord {
   payment_zelle_phone?: string;
   payment_instructions_english?: string;
   payment_instructions_kreyol?: string;
+  notification_emails?: string;
 }
 
 export interface Registration {

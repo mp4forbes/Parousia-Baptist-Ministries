@@ -9,6 +9,7 @@ import { getSiteTheme } from '@/lib/site-theme';
 import { parseEventImages } from '@/lib/event-images';
 import AdministrativeCareForm from '@/components/AdministrativeCareForm';
 import { AdministrativeCareDefaultArt } from '@/components/AdministrativeCareIcon';
+import RegistrantManagerButton from '@/components/RegistrantManagerButton';
 import { isAdministrativeCareSlug, type AdministrativeCareSlug } from '@/lib/site-nav';
 
 interface AdministrativeCareCategoryClientProps {
@@ -85,6 +86,9 @@ export default function AdministrativeCareCategoryClient({
         )}
 
         <div className={`rounded-3xl ${bgCard} p-6 sm:p-10`}>
+          <div className="mb-6">
+            <RegistrantManagerButton scope={{ kind: 'care', slug }} isLight={isLight} />
+          </div>
           <AdministrativeCareForm
             slug={category.slug as AdministrativeCareSlug}
             categoryTitle={title}

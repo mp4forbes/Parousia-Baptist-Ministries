@@ -4,6 +4,8 @@ import React, { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
+import CoordinatorAccessBanner from '@/components/CoordinatorAccessBanner';
+import CoordinatorLoginModal from '@/components/CoordinatorLoginModal';
 import { HASH_REDIRECTS } from '@/lib/site-nav';
 import { getSiteTheme, siteThemeCssVars } from '@/lib/site-theme';
 
@@ -32,8 +34,10 @@ export default function SiteChrome({ settings, children }: SiteChromeProps) {
     <div className={`flex flex-col min-h-screen ${theme.bgMain} font-sans selection:bg-amber-500 selection:text-slate-950`}>
       <style dangerouslySetInnerHTML={{ __html: siteThemeCssVars(theme) }} />
       <SiteHeader settings={settings} />
+      <CoordinatorAccessBanner settings={settings} />
       <main className="flex-1">{children}</main>
       <SiteFooter settings={settings} />
+      <CoordinatorLoginModal isLight={theme.isLight} />
     </div>
   );
 }

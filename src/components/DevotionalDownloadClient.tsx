@@ -7,6 +7,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { submitLead } from '@/lib/actions';
 import { downloadAssetFile } from '@/lib/client-download';
 import { getGiftDownloadUrls } from '@/lib/gift-download';
+import RegistrantManagerButton from '@/components/RegistrantManagerButton';
 import { 
   BookOpen, 
   Sparkles, 
@@ -201,6 +202,12 @@ export default function DevotionalDownloadClient({ settings }: DevotionalDownloa
 
             {/* Right side: Interactive Form or Success View */}
             <div className="md:col-span-3">
+              <div className="mb-4">
+                <RegistrantManagerButton
+                  scope={{ kind: 'gift' }}
+                  isLight={isLight}
+                />
+              </div>
               {!submitted ? (
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="border-l-4 border-amber-500 pl-4 py-1 mb-2">

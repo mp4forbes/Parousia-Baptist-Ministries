@@ -442,8 +442,8 @@ export default function AdminAdministrativeCareTab({ language }: AdminAdministra
             />
             <p className="text-[10px] text-slate-500 mt-1">
               {language === 'en'
-                ? 'Suggested defaults: Secretary for weddings, baptisms, and dedications; pastoral care or Public Relations for funerals and hospice. Configure here rather than hard-coding.'
-                : 'Suggestion : secrétariat pour les mariages, baptêmes et présentations ; soins pastoraux ou relations publiques pour les funérailles et les visites. Configurable ici.'}
+                ? 'These people are notified of new requests and can sign in on the public site to manage this list, without admin-portal access.'
+                : 'Ces personnes reçoivent les avis et peuvent se connecter sur le site public pour gérer cette liste, sans accès au portail d’administration.'}
             </p>
           </div>
         </div>

@@ -3,9 +3,10 @@
 import React, { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, Globe2, HeartHandshake, Menu, Settings, X } from 'lucide-react';
+import { ChevronDown, Globe2, HeartHandshake, LogIn, LogOut, Menu, Settings, X } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useAdminUi } from '@/lib/AdminUiContext';
+import { useCoordinatorSession } from '@/lib/CoordinatorSessionContext';
 import { markAdminEntryFromSite } from '@/lib/actions';
 import { setAdminUiClient } from '@/lib/admin-cookies';
 import { frenchSetting } from '@/lib/french-content';
@@ -35,6 +36,7 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
   const { language, setLanguage, t } = useLanguage();
   const [isPending, startTransition] = useTransition();
   const showAdminNav = useAdminUi();
+  const { access, setLoginOpen, signOut } = useCoordinatorSession();
   const theme = getSiteTheme(settings);
   const { isLight, logoUrl, bgHeader, borderMain, textNav } = theme;
 
@@ -182,6 +184,26 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
               <span>{t.btnToggleLanguage}</span>
             </button>
 
+            {access.source === 'coordinator' ? (
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                title={t.coordinatorSignOut}
+                className={`flex items-center justify-center p-2 rounded-lg ${isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700' : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-white'} border transition-all duration-300 cursor-pointer hover:scale-105`}
+              >
+                <LogOut className="w-5 h-5 text-amber-500" />
+              </button>
+            ) : !access.email ? (
+              <button
+                type="button"
+                onClick={() => setLoginOpen(true)}
+                title={t.coordinatorSignIn}
+                className={`flex items-center justify-center p-2 rounded-lg ${isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700' : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-white'} border transition-all duration-300 cursor-pointer hover:scale-105`}
+              >
+                <LogIn className="w-5 h-5 text-amber-500" />
+              </button>
+            ) : null}
+
             {showAdminNav && (
               <button
                 type="button"
@@ -203,6 +225,25 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
           </div>
 
           <div className="flex xl:hidden items-center gap-2">
+            {access.source === 'coordinator' ? (
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                title={t.coordinatorSignOut}
+                className={`flex items-center justify-center p-2 rounded-lg border ${isLight ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200' : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'}`}
+              >
+                <LogOut className="w-5 h-5 text-amber-500" />
+              </button>
+            ) : !access.email ? (
+              <button
+                type="button"
+                onClick={() => setLoginOpen(true)}
+                title={t.coordinatorSignIn}
+                className={`flex items-center justify-center p-2 rounded-lg border ${isLight ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200' : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'}`}
+              >
+                <LogIn className="w-5 h-5 text-amber-500" />
+              </button>
+            ) : null}
             {showAdminNav && (
               <button
                 type="button"
@@ -306,6 +347,26 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
 
             <Link href="/events" className="hover:text-amber-500 transition-colors">{t.navEvents}</Link>
             <Link href="/giving" className="hover:text-amber-500 transition-colors">{t.navGiving}</Link>
+
+            {access.source === 'coordinator' ? (
+              <button
+                type="button"
+                onClick={() => { setMobileMenuOpen(false); void signOut(); }}
+                className="hover:text-amber-500 transition-colors flex items-center gap-2 text-left cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>{t.coordinatorSignOut}</span>
+              </button>
+            ) : !access.email ? (
+              <button
+                type="button"
+                onClick={() => { setMobileMenuOpen(false); setLoginOpen(true); }}
+                className="hover:text-amber-500 transition-colors flex items-center gap-2 text-left cursor-pointer"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>{t.coordinatorSignIn}</span>
+              </button>
+            ) : null}
 
             {showAdminNav && (
               <button

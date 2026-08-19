@@ -176,8 +176,8 @@ export default function AdminSectionContactExport({
                 />
                 <p className="text-[10px] text-slate-500 mt-1">
                   {language === 'en'
-                    ? 'Comma or line-separated emails notified on each new submission.'
-                    : 'Adresses courriel séparées par des virgules ou des sauts de ligne, avisées à chaque nouvelle soumission.'}
+                    ? 'These people are notified of new signups and can sign in on the public site to manage this list, without admin-portal access.'
+                    : 'Ces personnes reçoivent les avis et peuvent se connecter sur le site public pour gérer cette liste, sans accès au portail d’administration.'}
                 </p>
               </div>
 

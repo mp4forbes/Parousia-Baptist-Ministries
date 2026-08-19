@@ -202,6 +202,7 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS payment_zelle_phone TEXT DEFAULT '';
 ALTER TABLE events ADD COLUMN IF NOT EXISTS payment_instructions_english TEXT DEFAULT '';
 ALTER TABLE events ADD COLUMN IF NOT EXISTS payment_instructions_kreyol TEXT DEFAULT '';
 ALTER TABLE events ADD COLUMN IF NOT EXISTS end_date TEXT DEFAULT '';
+ALTER TABLE events ADD COLUMN IF NOT EXISTS notification_emails TEXT DEFAULT '';
 ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'not_paid';
 
 CREATE TABLE IF NOT EXISTS administrative_care_categories (
@@ -215,6 +216,12 @@ CREATE TABLE IF NOT EXISTS administrative_care_categories (
   contact_email TEXT DEFAULT '',
   contact_phone TEXT DEFAULT '',
   notification_emails TEXT DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS coordinators (
+  email TEXT PRIMARY KEY,
+  password_hash TEXT,
+  created_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS administrative_care_submissions (
