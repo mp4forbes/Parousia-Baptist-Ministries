@@ -8,6 +8,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { hasAnyRegistrantListAccess, registrantAccessLinks, registrantAccessScope } from '@/lib/registrant-scope';
 import RegistrantManagerButton from '@/components/RegistrantManagerButton';
 import { getSiteTheme } from '@/lib/site-theme';
+import { siteShellClass } from '@/lib/site-layout';
 
 const MINISTRY_LABELS: Record<string, { en: string; fr_ht: string }> = {
   women: { en: 'Women', fr_ht: 'Femmes' },
@@ -55,7 +56,7 @@ export default function CoordinatorAccessBanner({ settings }: { settings: Record
 
   return (
     <div className={`border-b ${panel}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col md:flex-row md:items-center gap-3">
+      <div className={`${siteShellClass} py-3 flex flex-col md:flex-row md:items-center gap-3`}>
         <div className="flex items-start gap-2 min-w-0">
           <FileSpreadsheet className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
           <div className="min-w-0">

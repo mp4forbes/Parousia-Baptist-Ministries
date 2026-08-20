@@ -22,6 +22,7 @@ import { getGiftDownloadUrls } from '@/lib/gift-download';
 import { formatEventDateLabel, getEventCalendarEndDay } from '@/lib/event-dates';
 import { parseEventImages } from '@/lib/event-images';
 import { googleMapsUrl } from '@/lib/rich-text';
+import { siteShellClass } from '@/lib/site-layout';
 import { churchLocationAddress, churchLocationLabel, churchLocationMapsQuery, parseChurchLocations } from '@/lib/church-locations';
 import FormattedText from '@/components/FormattedText';
 import EventRegistrationModal from '@/components/EventRegistrationModal';
@@ -944,7 +945,7 @@ export default function PublicHome({
       <section id="schedules" className={`py-24 ${isLight ? 'bg-slate-100/60' : 'bg-slate-950'} border-t ${borderMain} relative`}>
         <div className="absolute top-0 right-10 w-72 h-72 bg-blue-600/5 rounded-full blur-3xl pointer-events-none" />
         
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className={siteShellClass}>
           
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">{language === 'fr_ht' ? 'Horaires des cultes' : 'Service Times'}</h3>
@@ -1138,7 +1139,7 @@ export default function PublicHome({
         <div className="absolute top-1/4 right-0 w-80 h-80 bg-blue-600/5 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-1/4 left-0 w-80 h-80 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className={siteShellClass}>
           
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">{language === 'fr_ht' ? 'Diffusions en direct et archives' : 'Live Broadcasts & Archives'}</h3>
@@ -1542,7 +1543,7 @@ export default function PublicHome({
       <>
       {/* 4. MINISTRIES SHOWCASE SECTION (MINISTÈ YO) */}
       <section id="ministries" className={`py-24 ${isLight ? 'bg-slate-100/50 border-t border-slate-200' : 'bg-slate-900/30 border-t border-slate-900'} relative`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className={siteShellClass}>
           
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">{language === 'fr_ht' ? "L'œuvre de Dieu" : 'Our Work'}</h3>
@@ -1739,7 +1740,7 @@ export default function PublicHome({
       <>
       {/* 5. ABOUT US & BELIEFS SECTION (ABOUT) */}
       <section id="about" className={`py-24 ${isLight ? 'bg-white border-t border-slate-200' : 'bg-slate-950 border-t border-slate-900'} relative`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className={siteShellClass}>
           
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">{language === 'fr_ht' ? 'Découvrez-nous' : 'Discover Us'}</h3>
@@ -1965,7 +1966,7 @@ export default function PublicHome({
       <>
       {/* 6. EVENTS CALENDAR & FRICTIONLESS SIGNUP */}
       <section id="events" className={`py-24 ${isLight ? 'bg-slate-100/50 border-t border-slate-200' : 'bg-slate-900/30 border-t border-slate-900'}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className={siteShellClass}>
           
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">{language === 'fr_ht' ? 'Calendrier des activités' : 'Events Calendar'}</h3>
@@ -2217,7 +2218,7 @@ export default function PublicHome({
         {/* Background glow */}
         <div className={`absolute top-1/3 left-[10%] w-96 h-96 ${isLight ? 'bg-blue-500/3' : 'bg-blue-600/5'} rounded-full blur-3xl pointer-events-none`} />
         
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className={`${siteShellClass} relative z-10`}>
           <div className="text-center max-w-3xl mx-auto mb-16">
             <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full ${isLight ? 'bg-blue-100 text-blue-800' : 'bg-blue-500/10 text-blue-400'} text-xs font-bold uppercase tracking-wider mb-4`}>
               <FileText className="w-3.5 h-3.5" />
@@ -2359,7 +2360,7 @@ export default function PublicHome({
         {/* Background glow */}
         <div className={`absolute bottom-1/4 right-[10%] w-96 h-96 ${isLight ? 'bg-amber-500/2' : 'bg-amber-500/4'} rounded-full blur-3xl pointer-events-none`} />
         
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className={`${siteShellClass} relative z-10`}>
           <div className="text-center max-w-3xl mx-auto mb-16">
             <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full ${isLight ? 'bg-amber-100 text-amber-800' : 'bg-amber-500/10 text-amber-400'} text-xs font-bold uppercase tracking-wider mb-4`}>
               <Heart className="w-3.5 h-3.5 fill-current" />
@@ -2522,7 +2523,7 @@ export default function PublicHome({
         {/* Background glow */}
         <div className={`absolute top-1/4 left-1/4 w-96 h-96 ${isLight ? 'bg-blue-500/3' : 'bg-blue-600/5'} rounded-full blur-3xl pointer-events-none`} />
         
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className={`${siteShellClass} relative z-10`}>
           <div className="grid lg:grid-cols-5 gap-12 items-center">
             
             {/* Info details column */}
@@ -2704,7 +2705,7 @@ export default function PublicHome({
       <section id="giving" className={`py-24 ${isLight ? 'bg-white border-t border-slate-200' : 'bg-slate-950 border-t border-slate-900'} relative`}>
         <div className={`absolute bottom-0 right-1/4 w-80 h-80 ${isLight ? 'bg-amber-500/3' : 'bg-amber-500/5'} rounded-full blur-3xl pointer-events-none`} />
         
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className={siteShellClass}>
           
           <div className="grid lg:grid-cols-5 gap-12 items-center">
             

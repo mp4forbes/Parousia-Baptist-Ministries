@@ -7,6 +7,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { useAdminUi } from '@/lib/AdminUiContext';
 import { churchLocationAddress, churchLocationLabel, churchLocationMapsQuery, parseChurchLocations } from '@/lib/church-locations';
 import { googleMapsUrl } from '@/lib/rich-text';
+import { siteShellClass } from '@/lib/site-layout';
 import { getSiteTheme } from '@/lib/site-theme';
 
 interface SiteFooterProps {
@@ -23,7 +24,7 @@ export default function SiteFooter({ settings }: SiteFooterProps) {
 
   return (
     <footer className={`${bgFooter} border-t ${borderMain} pt-20 pb-8 relative`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className={siteShellClass}>
         <div className="grid md:grid-cols-3 gap-12 mb-16">
           <div>
             <Link href="/" className="flex items-center gap-2 mb-4 cursor-pointer group">

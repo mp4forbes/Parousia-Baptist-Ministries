@@ -7,6 +7,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import type { AdministrativeCareCategory } from '@/lib/db';
 import { isAdministrativeCareSlug } from '@/lib/site-nav';
 import { getSiteTheme } from '@/lib/site-theme';
+import { siteShellClass } from '@/lib/site-layout';
 import { parseEventImages } from '@/lib/event-images';
 import { AdministrativeCareDefaultArt } from '@/components/AdministrativeCareIcon';
 import RegistrantManagerButton from '@/components/RegistrantManagerButton';
@@ -26,7 +27,7 @@ export default function AdministrativeCareHubClient({
 
   return (
     <section className={`py-24 ${isLight ? 'bg-slate-50' : 'bg-slate-950'} relative`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className={siteShellClass}>
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${isLight ? 'bg-slate-200/80 text-amber-800' : 'bg-slate-900 text-amber-400'} text-xs font-semibold mb-6`}>
             <HeartHandshake className="w-3.5 h-3.5" />

@@ -17,6 +17,7 @@ import {
   isNavActive,
   ministryHref,
 } from '@/lib/site-nav';
+import { siteShellClass } from '@/lib/site-layout';
 import { getSiteTheme } from '@/lib/site-theme';
 
 interface SiteHeaderProps {
@@ -267,7 +268,7 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
   return (
     <>
       <header className={`sticky top-0 z-50 overflow-visible ${bgHeader} backdrop-blur-md border-b`}>
-        <div ref={headerRowRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center gap-3 min-w-0">
+        <div ref={headerRowRef} className={`${siteShellClass} h-20 flex items-center gap-3 min-w-0`}>
           <Link href="/" className="flex items-center gap-3 cursor-pointer group shrink-0">
             <div className={`relative flex items-center justify-center h-16 w-20 shrink-0 rounded-xl bg-white border ${isLight ? 'border-slate-200' : 'border-slate-800'} overflow-hidden shadow-lg shadow-blue-500/10 p-0.5 group-hover:scale-105 transition-transform duration-300`}>
               <img src={logoUrl} alt="Eglise Baptiste de la Parousie Logo" className="w-full h-full object-contain" />
