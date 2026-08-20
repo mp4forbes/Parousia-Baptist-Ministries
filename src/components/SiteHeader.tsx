@@ -90,7 +90,7 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
       <header className={`sticky top-0 z-50 ${bgHeader} backdrop-blur-md border-b`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 cursor-pointer group">
-            <div className={`relative flex items-center justify-center w-12 h-12 rounded-xl bg-white border ${isLight ? 'border-slate-200' : 'border-slate-800'} overflow-hidden shadow-lg shadow-blue-500/10 p-0.5 group-hover:scale-105 transition-transform duration-300`}>
+            <div className={`relative flex items-center justify-center h-16 w-20 shrink-0 rounded-xl bg-white border ${isLight ? 'border-slate-200' : 'border-slate-800'} overflow-hidden shadow-lg shadow-blue-500/10 p-0.5 group-hover:scale-105 transition-transform duration-300`}>
               <img src={logoUrl} alt="Eglise Baptiste de la Parousie Logo" className="w-full h-full object-contain" />
             </div>
             <div>
