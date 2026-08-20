@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronDown, Globe2, HeartHandshake, LogIn, LogOut, Menu, Settings, X } from 'lucide-react';
@@ -23,6 +23,8 @@ import { getSiteTheme } from '@/lib/site-theme';
 interface SiteHeaderProps {
   settings: Record<string, string>;
 }
+
+type NavLayoutMode = 'full' | 'scroll-and-menu' | 'menu-only';
 
 const CARE_TITLE_KEYS: Record<(typeof ADMINISTRATIVE_CARE_SLUGS)[number], 'careWeddings' | 'careFunerals' | 'careBaptisms' | 'careDedications' | 'careHospice'> = {
   weddings: 'careWeddings',
@@ -48,14 +50,19 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
   const [mobileHomeExpanded, setMobileHomeExpanded] = useState(false);
   const [mobileMinistriesExpanded, setMobileMinistriesExpanded] = useState(false);
   const [mobileCareExpanded, setMobileCareExpanded] = useState(false);
-  const [useDesktopScrollNav, setUseDesktopScrollNav] = useState(true);
+  const [navLayoutMode, setNavLayoutMode] = useState<NavLayoutMode>('menu-only');
   const navRef = useRef<HTMLElement>(null);
   const headerRowRef = useRef<HTMLDivElement>(null);
   const desktopActionsRef = useRef<HTMLDivElement>(null);
   const compactActionsRef = useRef<HTMLDivElement>(null);
   const navScrollWidthRef = useRef(0);
+  const desktopActionsWidthRef = useRef(0);
+  const compactActionsWidthRef = useRef(0);
 
   const NAV_MIN_CLIENT_WIDTH = 96;
+  const NAV_MODE_HYSTERESIS_PX = 40;
+  const FALLBACK_DESKTOP_ACTIONS_WIDTH = 280;
+  const FALLBACK_COMPACT_ACTIONS_WIDTH = 160;
 
   const isHt = language === 'fr_ht';
   const dAboutUsTitle = isHt
@@ -77,12 +84,35 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
     setDropdownAnchor(null);
   }, [pathname]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const finePointerQuery = window.matchMedia('(hover: hover) and (pointer: fine)');
+
+    const resolveNavLayoutMode = (
+      prev: NavLayoutMode,
+      availableWithDesktopActions: number,
+      availableWithCompactActions: number,
+      neededNavWidth: number,
+    ): NavLayoutMode => {
+      if (prev === 'full') {
+        if (availableWithDesktopActions >= neededNavWidth - NAV_MODE_HYSTERESIS_PX) return 'full';
+        if (availableWithCompactActions >= NAV_MIN_CLIENT_WIDTH - NAV_MODE_HYSTERESIS_PX) return 'scroll-and-menu';
+        return 'menu-only';
+      }
+
+      if (prev === 'scroll-and-menu') {
+        if (availableWithDesktopActions >= neededNavWidth + NAV_MODE_HYSTERESIS_PX) return 'full';
+        if (availableWithCompactActions >= NAV_MIN_CLIENT_WIDTH - NAV_MODE_HYSTERESIS_PX) return 'scroll-and-menu';
+        return 'menu-only';
+      }
+
+      if (availableWithDesktopActions >= neededNavWidth + NAV_MODE_HYSTERESIS_PX) return 'full';
+      if (availableWithCompactActions >= NAV_MIN_CLIENT_WIDTH + NAV_MODE_HYSTERESIS_PX) return 'scroll-and-menu';
+      return 'menu-only';
+    };
 
     const evaluateNavMode = () => {
       if (!finePointerQuery.matches) {
-        setUseDesktopScrollNav(false);
+        setNavLayoutMode('menu-only');
         return;
       }
 
@@ -90,48 +120,46 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
       const nav = navRef.current;
       if (!row) return;
 
+      const measuredDesktopActionsWidth = desktopActionsRef.current?.offsetWidth ?? 0;
+      if (measuredDesktopActionsWidth > 0) {
+        desktopActionsWidthRef.current = measuredDesktopActionsWidth;
+      }
+
+      const measuredCompactActionsWidth = compactActionsRef.current?.offsetWidth ?? 0;
+      if (measuredCompactActionsWidth > 0) {
+        compactActionsWidthRef.current = measuredCompactActionsWidth;
+      }
+
       if (nav) {
         const navWrap = nav.parentElement;
-        const navIsVisible = navWrap
-          && getComputedStyle(navWrap).display !== 'none'
-          && getComputedStyle(navWrap).visibility !== 'hidden';
-
+        const navIsVisible = navWrap && getComputedStyle(navWrap).visibility !== 'hidden';
         if (navIsVisible) {
-          navScrollWidthRef.current = nav.scrollWidth;
-          setUseDesktopScrollNav(nav.clientWidth >= NAV_MIN_CLIENT_WIDTH);
-          return;
+          navScrollWidthRef.current = Math.max(nav.scrollWidth, NAV_MIN_CLIENT_WIDTH);
         }
       }
 
       const rowGap = Number.parseFloat(getComputedStyle(row).columnGap || getComputedStyle(row).gap || '0') || 0;
       const children = Array.from(row.children) as HTMLElement[];
       const logoWidth = children[0]?.offsetWidth ?? 0;
-      const desktopActionsWidth = desktopActionsRef.current?.offsetWidth ?? 0;
-      const compactActionsWidth = compactActionsRef.current?.offsetWidth ?? 0;
-      const actionsWidth = Math.max(desktopActionsWidth, compactActionsWidth);
-      const availableForNav = row.clientWidth - logoWidth - actionsWidth - rowGap * 2;
+      const desktopActionsWidth =
+        desktopActionsWidthRef.current
+        || measuredDesktopActionsWidth
+        || FALLBACK_DESKTOP_ACTIONS_WIDTH;
+      const compactActionsWidth =
+        compactActionsWidthRef.current
+        || measuredCompactActionsWidth
+        || FALLBACK_COMPACT_ACTIONS_WIDTH;
+      const availableWithDesktopActions = row.clientWidth - logoWidth - desktopActionsWidth - rowGap * 2;
+      const availableWithCompactActions = row.clientWidth - logoWidth - compactActionsWidth - rowGap * 2;
+      const neededNavWidth = navScrollWidthRef.current || NAV_MIN_CLIENT_WIDTH;
 
-      setUseDesktopScrollNav(availableForNav >= NAV_MIN_CLIENT_WIDTH);
-    };
-
-    const closeMobileMenuIfDesktopScroll = () => {
-      if (!finePointerQuery.matches) return;
-      requestAnimationFrame(() => {
-        const nav = navRef.current;
-        const canUseScrollNav = nav ? nav.clientWidth >= NAV_MIN_CLIENT_WIDTH : false;
-        if (!canUseScrollNav) return;
-        setMobileMenuOpen(false);
-        setMobileHomeExpanded(false);
-        setMobileMinistriesExpanded(false);
-        setMobileCareExpanded(false);
-        setActiveDropdown(null);
-        setDropdownAnchor(null);
-      });
+      setNavLayoutMode((prev) =>
+        resolveNavLayoutMode(prev, availableWithDesktopActions, availableWithCompactActions, neededNavWidth),
+      );
     };
 
     const onLayoutChange = () => {
       evaluateNavMode();
-      closeMobileMenuIfDesktopScroll();
     };
 
     onLayoutChange();
@@ -140,9 +168,11 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
 
     const row = headerRowRef.current;
     const nav = navRef.current;
+    const compactActions = compactActionsRef.current;
     const observer = new ResizeObserver(onLayoutChange);
     if (row) observer.observe(row);
     if (nav) observer.observe(nav);
+    if (compactActions) observer.observe(compactActions);
 
     return () => {
       finePointerQuery.removeEventListener('change', onLayoutChange);
@@ -150,6 +180,16 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
       observer.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    if (navLayoutMode !== 'full') return;
+    setMobileMenuOpen(false);
+    setMobileHomeExpanded(false);
+    setMobileMinistriesExpanded(false);
+    setMobileCareExpanded(false);
+    setActiveDropdown(null);
+    setDropdownAnchor(null);
+  }, [navLayoutMode]);
 
   const openAdminPortal = () => {
     startTransition(async () => {
@@ -254,11 +294,15 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
     );
   };
 
-  const desktopNavWrapClass = useDesktopScrollNav
-    ? 'hidden pointer-fine:flex flex-1 min-w-0'
-    : 'hidden pointer-fine:flex pointer-fine:invisible pointer-fine:absolute pointer-fine:pointer-events-none flex-1 min-w-0';
+  const showScrollNav = navLayoutMode !== 'menu-only';
+  const showFullDesktopActions = navLayoutMode === 'full';
+  const hideCompactOnFinePointer = navLayoutMode === 'full';
 
-  const desktopActionsClass = useDesktopScrollNav
+  const desktopNavWrapClass = showScrollNav
+    ? 'hidden pointer-fine:flex flex-1 min-w-0'
+    : 'hidden';
+
+  const desktopActionsClass = showFullDesktopActions
     ? 'hidden pointer-fine:flex shrink-0 items-center gap-1.5'
     : 'hidden';
 
@@ -283,7 +327,7 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
             </div>
           </Link>
 
-          <div className={desktopNavWrapClass} aria-hidden={!useDesktopScrollNav}>
+          <div className={desktopNavWrapClass} aria-hidden={!showScrollNav}>
             <nav
               ref={navRef}
               aria-label="Main navigation"
@@ -376,7 +420,7 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
             </Link>
           </div>
 
-          <div ref={compactActionsRef} className={`ml-auto flex items-center gap-2 ${useDesktopScrollNav ? 'pointer-fine:hidden' : ''}`}>
+          <div ref={compactActionsRef} className={`ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2 ${hideCompactOnFinePointer ? 'pointer-fine:hidden' : ''}`}>
             {renderCoordinatorAuthButton(compactIconButtonClass)}
             {showAdminNav && (
               <button
@@ -391,15 +435,18 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
             <button
               type="button"
               onClick={toggleLanguage}
-              className={`flex items-start gap-1 px-2 py-1.5 rounded-lg border ${isLight ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-slate-900 border-slate-800 text-amber-400'} font-semibold cursor-pointer`}
+              title={t.btnToggleLanguage}
+              aria-label={t.btnToggleLanguage}
+              className={`flex items-center justify-center p-2 rounded-lg border sm:px-2 sm:py-1.5 sm:gap-1 ${isLight ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-slate-900 border-slate-800 text-amber-400'} font-semibold cursor-pointer shrink-0`}
             >
-              <Globe2 className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-              <span className={navLabelClass}>{t.btnToggleLanguage}</span>
+              <Globe2 className="w-3.5 h-3.5 shrink-0" />
+              <span className={`${navLabelClass} hidden sm:inline-block`}>{t.btnToggleLanguage}</span>
             </button>
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className={`p-2 rounded-lg border ${isLight ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200' : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'}`}
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              className={`shrink-0 p-2 rounded-lg border ${isLight ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200' : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'}`}
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
