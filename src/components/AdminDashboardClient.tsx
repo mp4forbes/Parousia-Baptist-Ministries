@@ -74,6 +74,7 @@ import { MINISTRY_SIGNUP_FIELDS, MinistrySignupSlug } from '@/lib/ministry-signu
 import { useRouter } from 'next/navigation';
 import { clearAdminUiClient, setAdminUiClient } from '@/lib/admin-cookies';
 import { flattenTeamMembers, parseTeamDepartments, type TeamDepartment, type TeamMember } from '@/lib/team-departments';
+import { blankChurchLocation, parseChurchLocations, type ChurchLocation } from '@/lib/church-locations';
 import { parseEventImages, serializeEventImages } from '@/lib/event-images';
 import { formatEventDateLabel, normalizeEventEndDate } from '@/lib/event-dates';
 import {
@@ -331,7 +332,7 @@ export default function AdminDashboardClient({
   const [pMsgEn, setPMsgEn] = useState(settings.pastor_message_english || '');
   const [chPhone, setChPhone] = useState(settings.church_phone || '');
   const [chEmail, setChEmail] = useState(settings.church_email || '');
-  const [chAddr, setChAddress] = useState(settings.church_address || '');
+  const [churchLocations, setChurchLocations] = useState<ChurchLocation[]>(() => parseChurchLocations(settings));
   const [adminPass, setAdminPass] = useState(settings.admin_password || '');
   const [bgUrl, setBgUrl] = useState(settings.home_background_url || '');
   const [liveActive, setLiveActive] = useState(settings.live_stream_active || 'false');
@@ -353,7 +354,7 @@ export default function AdminDashboardClient({
   const [checkPayableTo, setCheckPayableTo] = useState(settings.check_payable_to || '');
   const [checkMailingAddress, setCheckMailingAddress] = useState(
     settings.check_mailing_address === '789 Community Blvd, Fort Lauderdale, FL 33311'
-      ? (settings.church_address || '789 Community Blvd, Fort Lauderdale, FL 33311')
+      ? (settings.church_address || parseChurchLocations(settings)[0]?.addressEn || '789 Community Blvd, Fort Lauderdale, FL 33311')
       : (settings.check_mailing_address || settings.church_address || '')
   );
   const [isSyncing, setIsSyncing] = useState(false);
@@ -1257,6 +1258,45 @@ export default function AdminDashboardClient({
       copy[targetIndex] = temp;
       return copy;
     });
+  };
+
+  const handleUpdateChurchLocation = (
+    index: number,
+    field: keyof ChurchLocation,
+    value: string
+  ) => {
+    setChurchLocations((prev) =>
+      prev.map((location, locationIndex) =>
+        locationIndex === index ? { ...location, [field]: value } : location
+      )
+    );
+
+    if (index === 0 && field === 'addressEn') {
+      if (
+        !checkMailingAddress
+        || checkMailingAddress === '789 Community Blvd, Fort Lauderdale, FL 33311'
+        || checkMailingAddress === churchLocations[0]?.addressEn
+      ) {
+        setCheckMailingAddress(value);
+      }
+    }
+  };
+
+  const handleAddChurchLocation = () => {
+    setChurchLocations((prev) => [...prev, blankChurchLocation()]);
+  };
+
+  const handleRemoveChurchLocation = (index: number) => {
+    if (churchLocations.length <= 1) {
+      triggerAlert(
+        language === 'fr_ht'
+          ? 'Au moins un lieu de culte doit rester enregistré.'
+          : 'At least one church location must remain.',
+        'error'
+      );
+      return;
+    }
+    setChurchLocations((prev) => prev.filter((_, locationIndex) => locationIndex !== index));
   };
 
   const runBilingualTranslation = async (
@@ -2578,7 +2618,9 @@ export default function AdminDashboardClient({
       pastor_message_english: pMsgEn,
       church_phone: chPhone,
       church_email: chEmail,
-      church_address: chAddr,
+      church_address: churchLocations[0]?.addressEn || settings.church_address || '',
+      church_address_ht: churchLocations[0]?.addressFr || settings.church_address_ht || '',
+      church_locations_json: JSON.stringify(churchLocations),
       admin_password: adminPass,
       home_background_url: finalBgUrl,
       live_stream_active: liveActive,
@@ -3562,7 +3604,7 @@ export default function AdminDashboardClient({
                 isTranslating={isBilingualTranslating}
               />
 
-              <div className="grid md:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Church Phone</label>
                   <input 
@@ -3581,20 +3623,91 @@ export default function AdminDashboardClient({
                     className="w-full px-4 py-3 rounded-lg bg-slate-950 border border-slate-800 focus:border-amber-500 focus:outline-none text-sm text-slate-100 transition-all"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Church Address</label>
-                  <input 
-                    type="text" 
-                    value={chAddr}
-                    onChange={(e) => {
-                      const newVal = e.target.value;
-                      setChAddress(newVal);
-                      if (!checkMailingAddress || checkMailingAddress === '789 Community Blvd, Fort Lauderdale, FL 33311' || checkMailingAddress === chAddr) {
-                        setCheckMailingAddress(newVal);
-                      }
-                    }}
-                    className="w-full px-4 py-3 rounded-lg bg-slate-950 border border-slate-800 focus:border-amber-500 focus:outline-none text-sm text-slate-100 transition-all"
-                  />
+              </div>
+
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5 space-y-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      <span>{language === 'fr_ht' ? 'Lieux de culte' : 'Church Locations'}</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      {language === 'fr_ht'
+                        ? 'Ces adresses apparaissent dans la section Nous contacter. Le téléphone et le courriel ci-dessus s’appliquent à tous les lieux.'
+                        : 'These addresses appear in the Contact Us section. The phone and email above apply to every location.'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddChurchLocation}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold uppercase tracking-wider hover:bg-amber-500/20 transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>{language === 'fr_ht' ? 'Ajouter un lieu' : 'Add Location'}</span>
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {churchLocations.map((location, index) => (
+                    <div key={`church-location-${index}`} className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                          {language === 'fr_ht' ? `Lieu ${index + 1}` : `Location ${index + 1}`}
+                          {index === 0 ? (language === 'fr_ht' ? ' (principal)' : ' (primary)') : ''}
+                        </p>
+                        {churchLocations.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveChurchLocation(index)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-red-500/30 text-red-400 text-[11px] font-bold uppercase tracking-wider hover:bg-red-500/10 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>{language === 'fr_ht' ? 'Supprimer' : 'Remove'}</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1.5">Nom du lieu (Français)</label>
+                          <input
+                            type="text"
+                            value={location.nameFr}
+                            onChange={(e) => handleUpdateChurchLocation(index, 'nameFr', e.target.value)}
+                            className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 focus:border-amber-500 focus:outline-none text-sm text-slate-100"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1.5">Campus Name (English)</label>
+                          <input
+                            type="text"
+                            value={location.nameEn}
+                            onChange={(e) => handleUpdateChurchLocation(index, 'nameEn', e.target.value)}
+                            className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 focus:border-amber-500 focus:outline-none text-sm text-slate-100"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1.5">Adresse (Français)</label>
+                          <input
+                            type="text"
+                            value={location.addressFr}
+                            onChange={(e) => handleUpdateChurchLocation(index, 'addressFr', e.target.value)}
+                            className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 focus:border-amber-500 focus:outline-none text-sm text-slate-100"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold uppercase text-slate-500 mb-1.5">Address (English)</label>
+                          <input
+                            type="text"
+                            value={location.addressEn}
+                            onChange={(e) => handleUpdateChurchLocation(index, 'addressEn', e.target.value)}
+                            className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 focus:border-amber-500 focus:outline-none text-sm text-slate-100"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 

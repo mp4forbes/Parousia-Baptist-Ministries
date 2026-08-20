@@ -4,6 +4,7 @@ import { getSuperAdminEmails } from '../super-admin';
 import { HOME_FRENCH_DEFAULTS, MINISTRY_FRENCH_DEFAULTS, resolveFrenchContent } from '../french-content';
 import { FREE_GIFT_FILE_SETTING_KEYS, assetFileExists } from '../asset-storage';
 import { sanitizeTeamDepartmentsForFrench } from '../team-departments';
+import { DEFAULT_CHURCH_LOCATIONS } from '../church-locations';
 
 async function countRows(pool: Pool, table: string): Promise<number> {
   const result = await pool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM ${table}`);
@@ -170,6 +171,13 @@ export async function seedDatabase(pool: Pool): Promise<void> {
 
   for (const [key, value, replace] of defaultSettings) {
     await upsertSetting(pool, key, value, replace);
+  }
+
+  const churchLocationsRow = await pool.query<{ value: string }>(
+    "SELECT value FROM settings WHERE key = 'church_locations_json'"
+  );
+  if (!churchLocationsRow.rows[0]?.value) {
+    await upsertSetting(pool, 'church_locations_json', JSON.stringify(DEFAULT_CHURCH_LOCATIONS), true);
   }
 
   await pool.query(

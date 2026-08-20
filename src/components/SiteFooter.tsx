@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { Lock, Mail, MapPin, Phone } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useAdminUi } from '@/lib/AdminUiContext';
+import { churchLocationAddress, churchLocationLabel, churchLocationMapsQuery, parseChurchLocations } from '@/lib/church-locations';
+import { googleMapsUrl } from '@/lib/rich-text';
 import { getSiteTheme } from '@/lib/site-theme';
 
 interface SiteFooterProps {
@@ -16,6 +18,8 @@ export default function SiteFooter({ settings }: SiteFooterProps) {
   const showAdminNav = useAdminUi();
   const theme = getSiteTheme(settings);
   const { isLight, logoUrl, bgFooter, borderMain, borderDivider, textTitle } = theme;
+
+  const churchLocations = parseChurchLocations(settings);
 
   return (
     <footer className={`${bgFooter} border-t ${borderMain} pt-20 pb-8 relative`}>
@@ -44,10 +48,28 @@ export default function SiteFooter({ settings }: SiteFooterProps) {
                 <Mail className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
                 <span>{settings.church_email || 'info@eglizparousie.org'}</span>
               </li>
-              <li className="flex gap-2.5 items-start">
-                <MapPin className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                <span>{settings.church_address || '789 Community Blvd, Fort Lauderdale, FL 33311'}</span>
-              </li>
+              {churchLocations.map((location, index) => (
+                <li key={`${location.addressEn}-${index}`} className="flex gap-2.5 items-start">
+                  <a
+                    href={googleMapsUrl(churchLocationMapsQuery(location, language))}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 mt-0.5 rounded-md hover:scale-110 transition-transform"
+                    title={language === 'fr_ht' ? 'Ouvrir dans Maps' : 'Open in Maps'}
+                    aria-label={language === 'fr_ht' ? 'Ouvrir cette adresse dans Maps' : 'Open this address in Maps'}
+                  >
+                    <MapPin className="w-4 h-4 text-amber-500" />
+                  </a>
+                  <span>
+                    {churchLocationLabel(location, language) ? (
+                      <span className={`block font-semibold ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                        {churchLocationLabel(location, language)}
+                      </span>
+                    ) : null}
+                    {churchLocationAddress(location, language)}
+                  </span>
+                </li>
+              ))}
             </ul>
           </div>
 

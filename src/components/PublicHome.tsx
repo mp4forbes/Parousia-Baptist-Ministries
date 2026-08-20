@@ -22,6 +22,7 @@ import { getGiftDownloadUrls } from '@/lib/gift-download';
 import { formatEventDateLabel, getEventCalendarEndDay } from '@/lib/event-dates';
 import { parseEventImages } from '@/lib/event-images';
 import { googleMapsUrl } from '@/lib/rich-text';
+import { churchLocationAddress, churchLocationLabel, churchLocationMapsQuery, parseChurchLocations } from '@/lib/church-locations';
 import FormattedText from '@/components/FormattedText';
 import EventRegistrationModal from '@/components/EventRegistrationModal';
 import RegistrantManagerButton from '@/components/RegistrantManagerButton';
@@ -2560,15 +2561,31 @@ export default function PublicHome({
                   </div>
                 </div>
 
-                <div className={`flex items-center gap-4 p-4 rounded-2xl ${bgCardAlt} border border-slate-850/50`}>
-                  <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 shrink-0">
-                    <MapPin className="w-5 h-5" />
+                {parseChurchLocations(settings).map((location, index) => (
+                  <div key={`${location.addressEn}-${index}`} className={`flex items-start gap-4 p-4 rounded-2xl ${bgCardAlt} border border-slate-850/50`}>
+                    <a
+                      href={googleMapsUrl(churchLocationMapsQuery(location, language))}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 shrink-0 hover:bg-indigo-500/20 hover:scale-105 transition-all"
+                      title={language === 'fr_ht' ? 'Ouvrir dans Maps' : 'Open in Maps'}
+                      aria-label={language === 'fr_ht' ? 'Ouvrir cette adresse dans Maps' : 'Open this address in Maps'}
+                    >
+                      <MapPin className="w-5 h-5" />
+                    </a>
+                    <div>
+                      {index === 0 ? (
+                        <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t.contactAddress}</span>
+                      ) : null}
+                      {churchLocationLabel(location, language) ? (
+                        <span className={`block text-sm font-bold ${textTitle}`}>{churchLocationLabel(location, language)}</span>
+                      ) : null}
+                      <span className={`text-sm ${index === 0 && !churchLocationLabel(location, language) ? `font-bold ${textTitle}` : textBody}`}>
+                        {churchLocationAddress(location, language)}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t.contactAddress}</span>
-                    <span className={`text-sm font-bold ${textTitle}`}>{settings.church_address || '789 Community Blvd, Fort Lauderdale, FL 33311'}</span>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
 

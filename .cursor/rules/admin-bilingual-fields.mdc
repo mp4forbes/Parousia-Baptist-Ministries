@@ -1,0 +1,18 @@
+---
+description: Bilingual admin form layout — French left, English right
+globs: src/components/Admin*.tsx
+alwaysApply: false
+---
+
+# Admin bilingual configuration layout
+
+When adding or editing bilingual fields in the admin dashboard (`AdminDashboardClient.tsx` and related admin components), follow the existing site convention:
+
+- Use a two-column grid (`grid md:grid-cols-2 gap-3` or `gap-6`).
+- **Left column:** French / Kreyòl field (`*_ht`, `*_kreyol`, `nameFr`, `addressFr`, labels ending in `(Français)`).
+- **Right column:** English field (`*_en`, `*_english`, `nameEn`, `addressEn`, labels ending in `(English)`).
+- Keep paired rows aligned: French name above French address, English name above English address.
+
+Do not place English on the left and French on the right.
+
+Match label style used elsewhere (uppercase, small, slate-400/500).
