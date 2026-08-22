@@ -49,6 +49,7 @@ import {
   normalizeAdminEmail,
   validateAdminEmailForInvite,
 } from './admin-email';
+import { frenchField } from './french-content';
 import { getGeminiGenerateContentUrl } from './gemini';
 
 // HELPERS TO GET DATA (Server Components will call these directly)
@@ -2357,15 +2358,15 @@ export async function automateWebsiteContentFromPdf(
     const systemInstruction = `You are a helpful bilingual assistant for "Eglise Baptiste de la Parousie" church.
 Your job is to extract scheduling and church program information from the provided text (which is extracted from a weekly schedule or bulletin PDF) and format it as structured JSON matching the provided schema.
 
-Ensure high-quality French translations for legacy fields whose names end in "_kreyol", and English translations for English fields. The legacy database field names must not change.
+Ensure high-quality standard French (français standard) for legacy fields whose names end in "_kreyol", and English translations for English fields. Do not use Haitian Creole. The legacy database field names must not change.
 For service schedules, make sure to extract each individual time block as a separate schedule entry. Translate days:
-SUNDAY -> Dimanch
-SATURDAY -> Samdi
-MONDAY -> Lendi
-TUESDAY -> Madi
-WEDNESDAY -> Mèkredi
-THURSDAY -> Jedi
-FRIDAY -> Vandredi
+SUNDAY -> Dimanche
+SATURDAY -> Samedi
+MONDAY -> Lundi
+TUESDAY -> Mardi
+WEDNESDAY -> Mercredi
+THURSDAY -> Jeudi
+FRIDAY -> Vendredi
 
 Be extremely thorough and accurate. Only include fields that are explicitly found or can be accurately translated/inferred.`;
 
@@ -2926,9 +2927,9 @@ async function generateDailyDevotionalRecord(
       refEn: p.refEn,
       refHt: p.refHt,
       textEn: p.textEn,
-      textHt: p.textHt,
+      textHt: frenchField(p.textHt, p.textEn),
       lessonEn: p.lessonEn,
-      lessonHt: p.lessonHt
+      lessonHt: frenchField(p.lessonHt, p.lessonEn),
     };
   }
 
@@ -3660,6 +3661,7 @@ export async function translateBlogContentAction(
     const targetLangName = fromLang === 'en' ? 'French' : 'English';
 
     const prompt = `You are a professional Christian translator translating a pastor's blog post from ${sourceLangName} to ${targetLangName} for Parousia Baptist Ministries.
+When translating to French, use standard French (français standard), not Haitian Creole.
 Please translate the following blog post title and body content. Keep the markdown formatting of the content completely intact (e.g. headers, bold, list items, paragraphs, etc.).
 
 Source Title: "${title}"
@@ -3749,6 +3751,7 @@ export async function translateAdminTextsAction(
 
     const prompt = `You are a professional Christian translator for Parousia Baptist Ministries.
 Translate the following ${contextLabel} fields from ${sourceLangName} to ${targetLangName}.
+When translating to French, use standard French (français standard), not Haitian Creole.
 Preserve markdown formatting, line breaks, and bullet lists exactly where present.
 
 Input JSON:

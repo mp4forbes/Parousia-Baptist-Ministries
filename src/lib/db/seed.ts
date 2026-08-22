@@ -1,10 +1,38 @@
 import crypto from 'crypto';
 import type { Pool } from 'pg';
 import { getSuperAdminEmails } from '../super-admin';
-import { HOME_FRENCH_DEFAULTS, MINISTRY_FRENCH_DEFAULTS, resolveFrenchContent } from '../french-content';
+import { HOME_FRENCH_DEFAULTS, MINISTRY_FRENCH_DEFAULTS, PASTOR_MESSAGE_FRENCH, FREE_GIFT_FRENCH_DEFAULTS, CANONICAL_BLOG_FRENCH, CANONICAL_EVENT_FRENCH, CANONICAL_HAITI_MISSION_FRENCH, CANONICAL_LOCAL_OUTREACH_FRENCH, KNOWN_PRAYER_CREOLE_TO_FRENCH, KNOWN_HAITI_MISSION_CREOLE_TO_FRENCH, KNOWN_EVENT_LOCATION_CREOLE_TO_FRENCH, resolveFrenchContent, frenchField, sanitizeChurchLocation } from '../french-content';
 import { FREE_GIFT_FILE_SETTING_KEYS, assetFileExists } from '../asset-storage';
 import { sanitizeTeamDepartmentsForFrench } from '../team-departments';
 import { DEFAULT_CHURCH_LOCATIONS } from '../church-locations';
+
+async function migrateFrenchColumnPair(
+  pool: Pool,
+  table: string,
+  idColumn: string,
+  frenchColumn: string,
+  englishColumn: string
+): Promise<void> {
+  try {
+    const result = await pool.query<Record<string, string | number>>(
+      `SELECT ${idColumn}, ${frenchColumn}, ${englishColumn} FROM ${table}`
+    );
+
+    for (const row of result.rows) {
+      const current = String(row[frenchColumn] ?? '');
+      const english = String(row[englishColumn] ?? '');
+      const resolved = frenchField(current, english);
+      if (resolved && resolved !== current) {
+        await pool.query(
+          `UPDATE ${table} SET ${frenchColumn} = $1 WHERE ${idColumn} = $2`,
+          [resolved, row[idColumn]]
+        );
+      }
+    }
+  } catch (error) {
+    console.warn(`[DB MIGRATE] Skipped French cleanup for ${table}.${frenchColumn}:`, error);
+  }
+}
 
 async function countRows(pool: Pool, table: string): Promise<number> {
   const result = await pool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM ${table}`);
@@ -85,19 +113,213 @@ async function migrateLegacyFrenchContent(pool: Pool): Promise<void> {
     "SELECT value FROM settings WHERE key = 'team_departments_json'"
   );
   const teamJson = teamSetting.rows[0]?.value;
-  if (!teamJson) return;
+  if (teamJson) {
+    try {
+      const parsed = JSON.parse(teamJson);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const sanitized = sanitizeTeamDepartmentsForFrench(parsed);
+        const updated = JSON.stringify(sanitized);
+        if (updated !== teamJson) {
+          await upsertSetting(pool, 'team_departments_json', updated, true);
+        }
+      }
+    } catch {
+      // Ignore invalid team JSON during migration.
+    }
+  }
+
+  const pastorMessage = await pool.query<{ value: string }>(
+    "SELECT value FROM settings WHERE key = 'pastor_message_kreyol'"
+  );
+  const pastorEnglish = await pool.query<{ value: string }>(
+    "SELECT value FROM settings WHERE key = 'pastor_message_english'"
+  );
+  const resolvedPastor = resolveFrenchContent(
+    pastorMessage.rows[0]?.value,
+    PASTOR_MESSAGE_FRENCH,
+    pastorEnglish.rows[0]?.value
+  );
+  if (resolvedPastor && resolvedPastor !== pastorMessage.rows[0]?.value) {
+    await upsertSetting(pool, 'pastor_message_kreyol', resolvedPastor, true);
+  }
+
+  for (const [key, canonical, englishKey] of [
+    ['free_gift_title_kreyol', FREE_GIFT_FRENCH_DEFAULTS.title, 'free_gift_title_english'],
+    ['free_gift_desc_kreyol', FREE_GIFT_FRENCH_DEFAULTS.description, 'free_gift_desc_english'],
+  ] as const) {
+    const current = await pool.query<{ value: string }>('SELECT value FROM settings WHERE key = $1', [key]);
+    const english = await pool.query<{ value: string }>('SELECT value FROM settings WHERE key = $1', [englishKey]);
+    const resolved = resolveFrenchContent(current.rows[0]?.value, canonical, english.rows[0]?.value);
+    if (resolved && resolved !== current.rows[0]?.value) {
+      await upsertSetting(pool, key, resolved, true);
+    }
+  }
+
+  const locationsRow = await pool.query<{ value: string }>(
+    "SELECT value FROM settings WHERE key = 'church_locations_json'"
+  );
+  if (locationsRow.rows[0]?.value) {
+    try {
+      const parsed = JSON.parse(locationsRow.rows[0].value) as Array<Record<string, string>>;
+      if (Array.isArray(parsed)) {
+        const sanitized = parsed.map((location) =>
+          sanitizeChurchLocation({
+            nameEn: location.nameEn || '',
+            nameFr: location.nameFr || '',
+            addressEn: location.addressEn || '',
+            addressFr: location.addressFr || '',
+          })
+        );
+        const updated = JSON.stringify(sanitized);
+        if (updated !== locationsRow.rows[0].value) {
+          await upsertSetting(pool, 'church_locations_json', updated, true);
+        }
+      }
+    } catch {
+      // Ignore invalid church location JSON during migration.
+    }
+  }
+
+  await migrateFrenchColumnPair(pool, 'service_schedules', 'id', 'day_kreyol', 'day_english');
+  await migrateFrenchColumnPair(pool, 'service_schedules', 'id', 'title_kreyol', 'title_english');
+  await migrateFrenchColumnPair(pool, 'service_schedules', 'id', 'description_kreyol', 'description_english');
+  await migrateFrenchColumnPair(pool, 'blog_posts', 'id', 'title_kreyol', 'title_english');
+  await migrateFrenchColumnPair(pool, 'blog_posts', 'id', 'content_kreyol', 'content_english');
+  await migrateFrenchColumnPair(pool, 'sermons', 'id', 'title_kreyol', 'title_english');
+  await migrateFrenchColumnPair(pool, 'sermons', 'id', 'description_kreyol', 'description_english');
+  await migrateFrenchColumnPair(pool, 'haiti_missions', 'id', 'title_kreyol', 'title_english');
+  await migrateFrenchColumnPair(pool, 'haiti_missions', 'id', 'description_kreyol', 'description_english');
+  await migrateFrenchColumnPair(pool, 'local_outreach', 'id', 'title_kreyol', 'title_english');
+  await migrateFrenchColumnPair(pool, 'local_outreach', 'id', 'description_kreyol', 'description_english');
+  await migrateFrenchColumnPair(pool, 'local_outreach', 'id', 'schedule_kreyol', 'schedule_english');
+  await migrateFrenchColumnPair(pool, 'events', 'id', 'title_kreyol', 'title_english');
+  await migrateFrenchColumnPair(pool, 'events', 'id', 'description_kreyol', 'description_english');
+  await migrateFrenchColumnPair(pool, 'events', 'id', 'location_kreyol', 'location_english');
+  await migrateFrenchColumnPair(pool, 'administrative_care_categories', 'slug', 'title_kreyol', 'title_english');
+  await migrateFrenchColumnPair(pool, 'administrative_care_categories', 'slug', 'description_kreyol', 'description_english');
 
   try {
-    const parsed = JSON.parse(teamJson);
-    if (!Array.isArray(parsed) || parsed.length === 0) return;
-
-    const sanitized = sanitizeTeamDepartmentsForFrench(parsed);
-    const updated = JSON.stringify(sanitized);
-    if (updated !== teamJson) {
-      await upsertSetting(pool, 'team_departments_json', updated, true);
+    const prayerRows = await pool.query<{ id: number; request_text: string }>(
+      'SELECT id, request_text FROM prayer_requests'
+    );
+    for (const row of prayerRows.rows) {
+      const resolved = frenchField(row.request_text, '');
+      if (resolved && resolved !== row.request_text) {
+        await pool.query('UPDATE prayer_requests SET request_text = $1 WHERE id = $2', [resolved, row.id]);
+      }
     }
-  } catch {
-    // Ignore invalid team JSON during migration.
+  } catch (error) {
+    console.warn('[DB MIGRATE] Skipped French cleanup for prayer_requests:', error);
+  }
+
+  try {
+    const devotionalRows = await pool.query<{
+      id: number;
+      verse_text_kreyol: string;
+      lesson_kreyol: string;
+      verse_text_english: string;
+      lesson_english: string;
+    }>('SELECT id, verse_text_kreyol, lesson_kreyol, verse_text_english, lesson_english FROM daily_devotionals');
+
+    for (const row of devotionalRows.rows) {
+      const verse = frenchField(row.verse_text_kreyol, row.verse_text_english);
+      const lesson = frenchField(row.lesson_kreyol, row.lesson_english);
+      if (verse !== row.verse_text_kreyol || lesson !== row.lesson_kreyol) {
+        await pool.query(
+          'UPDATE daily_devotionals SET verse_text_kreyol = $1, lesson_kreyol = $2 WHERE id = $3',
+          [verse, lesson, row.id]
+        );
+      }
+    }
+  } catch (error) {
+    console.warn('[DB MIGRATE] Skipped French cleanup for daily_devotionals:', error);
+  }
+
+  await migrateKnownLegacyCreoleRecords(pool);
+}
+
+async function migrateKnownLegacyCreoleRecords(pool: Pool): Promise<void> {
+  try {
+    for (const [englishTitle, french] of Object.entries(CANONICAL_BLOG_FRENCH)) {
+      await pool.query(
+        `UPDATE blog_posts
+         SET title_kreyol = $1, content_kreyol = $2
+         WHERE title_english = $3`,
+        [french.title, french.content, englishTitle]
+      );
+    }
+
+    for (const [englishTitle, french] of Object.entries(CANONICAL_EVENT_FRENCH)) {
+      await pool.query(
+        `UPDATE events
+         SET title_kreyol = $1, description_kreyol = $2
+         WHERE title_english = $3`,
+        [french.title, french.description, englishTitle]
+      );
+    }
+
+    for (const [englishTitle, french] of Object.entries(CANONICAL_HAITI_MISSION_FRENCH)) {
+      await pool.query(
+        `UPDATE haiti_missions
+         SET title_kreyol = $1, description_kreyol = $2
+         WHERE title_english = $3`,
+        [french.title, french.description, englishTitle]
+      );
+    }
+
+    for (const [creole, french] of Object.entries(KNOWN_HAITI_MISSION_CREOLE_TO_FRENCH)) {
+      await pool.query('UPDATE haiti_missions SET description_kreyol = $1 WHERE description_kreyol = $2', [
+        french,
+        creole,
+      ]);
+    }
+
+    for (const [creole, french] of Object.entries(KNOWN_PRAYER_CREOLE_TO_FRENCH)) {
+      await pool.query('UPDATE prayer_requests SET request_text = $1 WHERE request_text = $2', [
+        french,
+        creole,
+      ]);
+    }
+
+    await pool.query(
+      `UPDATE service_schedules
+       SET title_kreyol = 'Conseil'
+       WHERE title_kreyol IN ('Konsèy', 'Konseye')`
+    );
+
+    await pool.query(
+      `UPDATE ministries
+       SET title_kreyol = $1
+       WHERE slug = 'missions'`,
+      [MINISTRY_FRENCH_DEFAULTS.missions.title]
+    );
+
+    for (const [englishTitle, french] of Object.entries(CANONICAL_LOCAL_OUTREACH_FRENCH)) {
+      await pool.query(
+        `UPDATE local_outreach
+         SET title_kreyol = $1
+         WHERE title_english = $2`,
+        [french.title, englishTitle]
+      );
+    }
+
+    await pool.query(
+      `UPDATE local_outreach
+       SET title_kreyol = 'École biblique BibliANASIUM'
+       WHERE title_kreyol ILIKE '%lekòl biblik%'`
+    );
+
+    for (const [creole, french] of Object.entries(KNOWN_EVENT_LOCATION_CREOLE_TO_FRENCH)) {
+      await pool.query('UPDATE events SET location_kreyol = $1 WHERE location_kreyol = $2', [french, creole]);
+    }
+
+    await pool.query(
+      `UPDATE events
+       SET location_kreyol = 'Sanctuaire de l’église'
+       WHERE location_kreyol ILIKE 'tanp %egliz%'`
+    );
+  } catch (error) {
+    console.warn('[DB MIGRATE] Skipped known legacy Creole record cleanup:', error);
   }
 }
 
@@ -271,12 +493,12 @@ export async function seedDatabase(pool: Pool): Promise<void> {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8), ($9, $10, $11, $12, $13, $14, $15, $16)`,
       [
         'Soutien à l’école Parousie des Cayes', 'Parousie School Support in Les Cayes', '2026-05-10',
-        'Nous soutenons la scolarisation et fournissons chaque jour des repas à plus de 150 enfants de la région des Cayes, en Haïti. Nous finançons également les fournitures scolaires et les salaires des enseignants.',
+        'Nous soutenons l’éducation et les repas quotidiens de plus de 150 écoliers dans la région des Cayes, en Haïti. Nous fournissons le matériel et les salaires des enseignants.',
         'Supporting education and daily hot meals for over 150 school children in Les Cayes, Haiti. We provide school supplies and teacher salaries.',
         'https://images.unsplash.com/photo-1547082299-de196ea013d6?q=80&w=600&auto=format&fit=crop',
         3500.0, 5000.0,
         'Clinique médicale mobile', 'Mobile Health Clinic', '2026-05-18',
-        'Achat de médicaments et financement d’équipements pour notre clinique mobile, qui offre des soins médicaux gratuits aux familles des régions rurales éloignées des hôpitaux.',
+        'Achat de médicaments et financement d’équipements pour notre clinique mobile qui apporte des soins médicaux gratuits aux familles des zones rurales éloignées des hôpitaux.',
         'Purchasing medicines and funding equipment for our mobile health clinic that brings free medical care to families in remote rural areas.',
         'https://images.unsplash.com/photo-1576091160550-2173dba999ef?q=80&w=600&auto=format&fit=crop',
         1200.0, 3000.0,

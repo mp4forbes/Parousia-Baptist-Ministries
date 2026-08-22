@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, HeartHandshake } from 'lucide-react';
+import { pickLocalizedField } from '@/lib/french-content';
 import { useLanguage } from '@/lib/LanguageContext';
 import type { AdministrativeCareCategory } from '@/lib/db';
 import { getSiteTheme } from '@/lib/site-theme';
@@ -24,8 +25,8 @@ export default function AdministrativeCareCategoryClient({
   const { language, t } = useLanguage();
   const theme = getSiteTheme(settings);
   const { isLight, textTitle, textBody, textMuted, bgCard, bgInput, borderMain } = theme;
-  const title = language === 'fr_ht' ? category.title_kreyol : category.title_english;
-  const description = language === 'fr_ht' ? category.description_kreyol : category.description_english;
+  const title = pickLocalizedField(language, category.title_kreyol, category.title_english);
+  const description = pickLocalizedField(language, category.description_kreyol, category.description_english);
   const images = parseEventImages(category.images_json);
   const [activeImage, setActiveImage] = useState(0);
   const slug = isAdministrativeCareSlug(category.slug) ? category.slug : 'weddings';

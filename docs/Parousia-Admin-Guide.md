@@ -308,7 +308,7 @@ To add an event:
 
 ## 12. Daily Devotional & Theme Settings
 
-**Menu:** Daily Devotional / *Devosyonèl Chak Jou*
+**Menu:** Daily Devotional / *Méditations quotidiennes*
 
 This section manages the daily Bible verse shown on the website.
 

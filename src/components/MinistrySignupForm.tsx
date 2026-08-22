@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { Ministry } from '@/lib/db';
 import { submitMinistrySignup } from '@/lib/actions';
 import { MINISTRY_SIGNUP_FIELDS, MinistrySignupSlug } from '@/lib/ministry-signup-fields';
+import { frenchMinistryField } from '@/lib/french-content';
 import { CheckCircle, Loader2, X } from 'lucide-react';
 
 interface MinistrySignupFormProps {
@@ -47,7 +48,7 @@ export default function MinistrySignupForm({
 
   const ministryTitle = useMemo(() => {
     if (!ministry) return slug;
-    return language === 'fr_ht' ? ministry.title_kreyol : ministry.title_english;
+    return language === 'fr_ht' ? frenchMinistryField(ministry, 'title') : ministry.title_english;
   }, [language, ministry, slug]);
 
   const resetForm = () => {

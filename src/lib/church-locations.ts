@@ -1,3 +1,5 @@
+import { sanitizeChurchLocation, sanitizeChurchLocations } from './french-content';
+
 export type ChurchLocation = {
   nameEn: string;
   nameFr: string;
@@ -20,15 +22,15 @@ export const DEFAULT_CHURCH_LOCATIONS: ChurchLocation[] = [
   },
   {
     nameEn: 'West, Haiti',
-    nameFr: 'Ouest, Ayiti',
+    nameFr: 'Ouest, Haïti',
     addressEn: '1 Parousie Lane, Morne à Cadillac 9, Bon-Repos, Haiti',
-    addressFr: '1, Impasse Parousie, Moleard 9, Bon-Repos',
+    addressFr: '1, Impasse Parousie, Morne à Cadillac 9, Bon-Repos',
   },
   {
     nameEn: 'Nippes, Haiti',
-    nameFr: 'Nippes, Ayiti',
+    nameFr: 'Nippes, Haïti',
     addressEn: 'Baradères, Gourdette, Village of the Parousie, Haiti',
-    addressFr: 'Baradères, nan Gourdette, Village de la Parousie',
+    addressFr: 'Baradères, à Gourdette, Village de la Parousie',
   },
 ];
 
@@ -52,7 +54,7 @@ export function parseChurchLocations(settings: Record<string, string>): ChurchLo
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed.map(normalizeLocation).filter((location) =>
           location.nameEn || location.nameFr || location.addressEn || location.addressFr
-        );
+        ).map(sanitizeChurchLocation);
       }
     }
   } catch (error) {
@@ -71,7 +73,7 @@ export function parseChurchLocations(settings: Record<string, string>): ChurchLo
     ];
   }
 
-  return DEFAULT_CHURCH_LOCATIONS.map((location) => ({ ...location }));
+  return DEFAULT_CHURCH_LOCATIONS.map((location) => sanitizeChurchLocation({ ...location }));
 }
 
 export function churchLocationLabel(location: ChurchLocation, language: 'en' | 'fr_ht'): string {

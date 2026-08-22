@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowRight, HeartHandshake } from 'lucide-react';
+import { pickLocalizedField } from '@/lib/french-content';
 import { useLanguage } from '@/lib/LanguageContext';
 import type { AdministrativeCareCategory } from '@/lib/db';
 import { isAdministrativeCareSlug } from '@/lib/site-nav';
@@ -39,8 +40,8 @@ export default function AdministrativeCareHubClient({
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {categories.map((category) => {
-            const title = language === 'fr_ht' ? category.title_kreyol : category.title_english;
-            const description = language === 'fr_ht' ? category.description_kreyol : category.description_english;
+            const title = pickLocalizedField(language, category.title_kreyol, category.title_english);
+            const description = pickLocalizedField(language, category.description_kreyol, category.description_english);
             const images = parseEventImages(category.images_json);
             const cover = images[0];
             const slug = isAdministrativeCareSlug(category.slug) ? category.slug : 'weddings';

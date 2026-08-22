@@ -12,7 +12,7 @@ import {
   submitPrayerRequest, 
   submitContactForm,
 } from '@/lib/actions';
-import { frenchSetting, frenchMinistryField } from '@/lib/french-content';
+import { frenchSetting, frenchMinistryField, frenchField, pickLocalizedField, frenchFreeGiftTitle, frenchFreeGiftDescription, frenchBlogFields, frenchEventFields, frenchHaitiMissionFields, frenchPrayerRequest } from '@/lib/french-content';
 import MinistrySignupForm from '@/components/MinistrySignupForm';
 import { MinistrySignupSlug } from '@/lib/ministry-signup-fields';
 import { aboutTabHref, ministryHref, type AboutTab, type MinistryNavSlug, type PublicSiteSection } from '@/lib/site-nav';
@@ -550,7 +550,7 @@ export default function PublicHome({
 
   const filteredSermons = sermons.filter(sermon => {
     const term = sermonSearch.toLowerCase();
-    const title = (language === 'fr_ht' ? sermon.title_kreyol : sermon.title_english).toLowerCase();
+    const title = (pickLocalizedField(language, sermon.title_kreyol, sermon.title_english)).toLowerCase();
     const speaker = sermon.speaker.toLowerCase();
     const desc = (language === 'fr_ht' ? (sermon.description_kreyol || '') : (sermon.description_english || '')).toLowerCase();
     return title.includes(term) || speaker.includes(term) || desc.includes(term);
@@ -927,7 +927,7 @@ export default function PublicHome({
               <Gift className="w-5 h-5 animate-bounce" />
               <span>
                 {language === 'fr_ht' 
-                  ? (settings.free_gift_title_kreyol || 'Méditations offertes')
+                  ? frenchFreeGiftTitle(settings)
                   : (settings.free_gift_title_english || 'Free Devotional')}
               </span>
             </a>
@@ -968,12 +968,12 @@ export default function PublicHome({
                     <div className="relative h-44 w-full rounded-xl overflow-hidden mb-6 border border-slate-800/40 shadow-md">
                       <img 
                         src={schedule.image_url} 
-                        alt={language === 'fr_ht' ? schedule.title_kreyol : schedule.title_english} 
+                        alt={pickLocalizedField(language, schedule.title_kreyol, schedule.title_english)} 
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 to-transparent pointer-events-none" />
                       <span className={`absolute top-3 right-3 px-2.5 py-0.5 rounded-full ${isLight ? 'bg-slate-100 border-slate-200 text-amber-800' : 'bg-slate-950 border-slate-800 text-amber-400'} text-[10px] font-bold shadow-md`}>
-                        {language === 'fr_ht' ? schedule.day_kreyol : schedule.day_english}
+                        {pickLocalizedField(language, schedule.day_kreyol, schedule.day_english)}
                       </span>
                     </div>
                   ) : (
@@ -982,17 +982,17 @@ export default function PublicHome({
                         <Clock className="w-5 h-5" />
                       </span>
                       <span className={`px-3 py-1 rounded-full ${isLight ? 'bg-slate-100 border-slate-200 text-amber-800' : 'bg-slate-950 border-slate-800 text-amber-400'} border text-xs font-bold`}>
-                        {language === 'fr_ht' ? schedule.day_kreyol : schedule.day_english}
+                        {pickLocalizedField(language, schedule.day_kreyol, schedule.day_english)}
                       </span>
                     </div>
                   )}
 
                   {/* Title & Description */}
                   <h5 className={`text-xl font-bold ${textTitle} mb-3 group-hover:text-amber-400 transition-colors`}>
-                    {language === 'fr_ht' ? schedule.title_kreyol : schedule.title_english}
+                    {pickLocalizedField(language, schedule.title_kreyol, schedule.title_english)}
                   </h5>
                   <p className={`${textBody} text-sm leading-relaxed mb-6`}>
-                    {language === 'fr_ht' ? schedule.description_kreyol : schedule.description_english}
+                    {pickLocalizedField(language, schedule.description_kreyol, schedule.description_english)}
                   </p>
                 </div>
 
@@ -1041,8 +1041,8 @@ export default function PublicHome({
                             const startDate = new Date(nextDate); startDate.setHours(startParsed.hours, startParsed.minutes, 0, 0);
                             const endDate = new Date(nextDate); endDate.setHours(endParsed.hours, endParsed.minutes, 0, 0);
                             handleAddToGoogleCalendar(
-                              language === 'fr_ht' ? schedule.title_kreyol : schedule.title_english,
-                              language === 'fr_ht' ? schedule.description_kreyol : schedule.description_english,
+                              pickLocalizedField(language, schedule.title_kreyol, schedule.title_english),
+                              pickLocalizedField(language, schedule.description_kreyol, schedule.description_english),
                               settings.church_address || 'Eglise Baptiste de la Parousie',
                               startDate,
                               endDate,
@@ -1063,8 +1063,8 @@ export default function PublicHome({
                             const startDate = new Date(nextDate); startDate.setHours(startParsed.hours, startParsed.minutes, 0, 0);
                             const endDate = new Date(nextDate); endDate.setHours(endParsed.hours, endParsed.minutes, 0, 0);
                             handleAddToGoogleCalendar(
-                              language === 'fr_ht' ? schedule.title_kreyol : schedule.title_english,
-                              language === 'fr_ht' ? schedule.description_kreyol : schedule.description_english,
+                              pickLocalizedField(language, schedule.title_kreyol, schedule.title_english),
+                              pickLocalizedField(language, schedule.description_kreyol, schedule.description_english),
                               settings.church_address || 'Eglise Baptiste de la Parousie',
                               startDate,
                               endDate,
@@ -1084,8 +1084,8 @@ export default function PublicHome({
                             const startDate = new Date(nextDate); startDate.setHours(startParsed.hours, startParsed.minutes, 0, 0);
                             const endDate = new Date(nextDate); endDate.setHours(endParsed.hours, endParsed.minutes, 0, 0);
                             handleDownloadIcsFile(
-                              language === 'fr_ht' ? schedule.title_kreyol : schedule.title_english,
-                              language === 'fr_ht' ? schedule.description_kreyol : schedule.description_english,
+                              pickLocalizedField(language, schedule.title_kreyol, schedule.title_english),
+                              pickLocalizedField(language, schedule.description_kreyol, schedule.description_english),
                               settings.church_address || 'Eglise Baptiste de la Parousie',
                               startDate,
                               endDate,
@@ -1106,8 +1106,8 @@ export default function PublicHome({
                             const startDate = new Date(nextDate); startDate.setHours(startParsed.hours, startParsed.minutes, 0, 0);
                             const endDate = new Date(nextDate); endDate.setHours(endParsed.hours, endParsed.minutes, 0, 0);
                             handleDownloadIcsFile(
-                              language === 'fr_ht' ? schedule.title_kreyol : schedule.title_english,
-                              language === 'fr_ht' ? schedule.description_kreyol : schedule.description_english,
+                              pickLocalizedField(language, schedule.title_kreyol, schedule.title_english),
+                              pickLocalizedField(language, schedule.description_kreyol, schedule.description_english),
                               settings.church_address || 'Eglise Baptiste de la Parousie',
                               startDate,
                               endDate,
@@ -1227,8 +1227,8 @@ export default function PublicHome({
                   const nextService = isDefaultStream ? getNextLiveStreamService() : getNextScheduledService();
 
                   const renderServiceCard = (service: any, isFallback: boolean = false) => {
-                    const title = language === 'fr_ht' ? service.title_kreyol : service.title_english;
-                    const description = language === 'fr_ht' ? service.description_kreyol : service.description_english;
+                    const title = pickLocalizedField(language, service.title_kreyol, service.title_english);
+                    const description = pickLocalizedField(language, service.description_kreyol, service.description_english);
                     const datetimeStr = language === 'fr_ht' 
                       ? `${service.day_kreyol} à ${service.time}`
                       : `${service.day_english} at ${service.time}`;
@@ -1450,7 +1450,7 @@ export default function PublicHome({
                         <div className={`relative w-24 h-16 rounded-lg ${isLight ? 'bg-slate-200 border-slate-300' : 'bg-slate-900 border-slate-800'} overflow-hidden flex-shrink-0 flex items-center justify-center group-hover:border-blue-500/30 transition-all`}>
                           <img 
                             src={getYouTubeThumbnailUrl(sermon.youtube_id)}
-                            alt={language === 'fr_ht' ? sermon.title_kreyol : sermon.title_english}
+                            alt={pickLocalizedField(language, sermon.title_kreyol, sermon.title_english)}
                             className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-all"
                             onError={(e) => {
                               (e.target as HTMLElement).style.display = 'none';
@@ -1462,7 +1462,7 @@ export default function PublicHome({
                         {/* Sermon metadata */}
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
                           <h6 className={`text-sm font-bold ${textTitle} group-hover:text-amber-400 transition-colors truncate`}>
-                            {language === 'fr_ht' ? sermon.title_kreyol : sermon.title_english}
+                            {pickLocalizedField(language, sermon.title_kreyol, sermon.title_english)}
                           </h6>
                           <p className={`text-[11px] ${textMuted} font-medium mt-1 truncate`}>
                             {t.sermonSpeaker}: <span className={textBody}>{sermon.speaker}</span>
@@ -1512,14 +1512,14 @@ export default function PublicHome({
               </div>
 
               <h5 className={`text-xl md:text-2xl font-extrabold font-serif ${textTitle} mb-4 leading-tight`}>
-                {language === 'fr_ht' ? selectedSermonVideo.title_kreyol : selectedSermonVideo.title_english}
+                {pickLocalizedField(language, selectedSermonVideo.title_kreyol, selectedSermonVideo.title_english)}
               </h5>
 
               {/* Responsive Video Container */}
               <div className="w-full aspect-video rounded-2xl overflow-hidden bg-black border border-slate-850 shadow-2xl relative mb-6">
                 <iframe 
                   src={getYouTubeEmbedUrl(selectedSermonVideo.youtube_id, true)}
-                  title={language === 'fr_ht' ? selectedSermonVideo.title_kreyol : selectedSermonVideo.title_english}
+                  title={pickLocalizedField(language, selectedSermonVideo.title_kreyol, selectedSermonVideo.title_english)}
                   frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
@@ -1528,7 +1528,7 @@ export default function PublicHome({
               </div>
 
               <p className={`${textBody} text-sm leading-relaxed max-h-[100px] overflow-y-auto pr-1`}>
-                {language === 'fr_ht' ? selectedSermonVideo.description_kreyol : selectedSermonVideo.description_english}
+                {pickLocalizedField(language, selectedSermonVideo.description_kreyol, selectedSermonVideo.description_english)}
               </p>
             </div>
 
@@ -1665,6 +1665,9 @@ export default function PublicHome({
                 <div className="grid md:grid-cols-2 gap-8">
                   {missions.map((mission, index) => {
                     const pct = Math.min(100, Math.round((mission.funds_raised / mission.funds_goal) * 100)) || 0;
+                    const missionFrench = frenchHaitiMissionFields(mission);
+                    const missionTitle = language === 'fr_ht' ? missionFrench.title : mission.title_english;
+                    const missionDescription = language === 'fr_ht' ? missionFrench.description : mission.description_english;
                     return (
                       <div 
                         key={mission.id || index} 
@@ -1683,10 +1686,10 @@ export default function PublicHome({
                           </div>
                           <div className="p-5">
                             <h6 className={`text-lg font-bold ${textTitle} mb-2 font-serif`}>
-                              {language === 'fr_ht' ? mission.title_kreyol : mission.title_english}
+                              {missionTitle}
                             </h6>
                             <p className={`${textBody} text-xs leading-relaxed`}>
-                              {language === 'fr_ht' ? mission.description_kreyol : mission.description_english}
+                              {missionDescription}
                             </p>
                           </div>
                         </div>
@@ -1886,7 +1889,7 @@ export default function PublicHome({
                                 <h6 className={`text-lg font-bold ${textTitle} font-serif`}>{member.name || `Team Member ${idx + 1}`}</h6>
                                 {(member.role_en || member.role_ht) && (
                                   <p className="text-xs font-bold text-amber-400 uppercase mb-2">
-                                    {isHt ? member.role_ht : member.role_en}
+                                    {isHt ? frenchField(member.role_ht, member.role_en) : member.role_en}
                                   </p>
                                 )}
                                 {(member.bio_en || member.bio_ht) && (
@@ -1978,7 +1981,9 @@ export default function PublicHome({
             {events.map((event, index) => {
               const eventImages = parseEventImages(event.images_json);
               const eventLocation = language === 'fr_ht' ? event.location_kreyol : event.location_english;
-              const eventDescription = language === 'fr_ht' ? event.description_kreyol : event.description_english;
+              const eventFrench = frenchEventFields(event);
+              const eventTitle = language === 'fr_ht' ? eventFrench.title : event.title_english;
+              const eventDescription = language === 'fr_ht' ? eventFrench.description : event.description_english;
               const mapsUrl = googleMapsUrl(eventLocation);
 
               return (
@@ -2013,7 +2018,7 @@ export default function PublicHome({
                   </div>
 
                   <h5 className={`text-xl font-bold ${textTitle} mb-3 font-serif`}>
-                    {language === 'fr_ht' ? event.title_kreyol : event.title_english}
+                    {eventTitle}
                   </h5>
                   
                   <FormattedText
@@ -2117,8 +2122,8 @@ export default function PublicHome({
                               endDate.setHours(endParsed.hours, endParsed.minutes, 0, 0);
 
                               handleAddToGoogleCalendar(
-                                language === 'fr_ht' ? event.title_kreyol : event.title_english,
-                                language === 'fr_ht' ? event.description_kreyol : event.description_english,
+                                eventTitle,
+                                eventDescription,
                                 language === 'fr_ht' ? event.location_kreyol : event.location_english,
                                 startDate,
                                 endDate,
@@ -2142,8 +2147,8 @@ export default function PublicHome({
                               endDate.setHours(endParsed.hours, endParsed.minutes, 0, 0);
 
                               handleDownloadIcsFile(
-                                language === 'fr_ht' ? event.title_kreyol : event.title_english,
-                                language === 'fr_ht' ? event.description_kreyol : event.description_english,
+                                eventTitle,
+                                eventDescription,
                                 language === 'fr_ht' ? event.location_kreyol : event.location_english,
                                 startDate,
                                 endDate,
@@ -2242,8 +2247,9 @@ export default function PublicHome({
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {blogPosts.map((post) => {
-                const title = language === 'fr_ht' ? post.title_kreyol : post.title_english;
-                const content = language === 'fr_ht' ? post.content_kreyol : post.content_english;
+                const blogFrench = frenchBlogFields(post);
+                const title = language === 'fr_ht' ? blogFrench.title : post.title_english;
+                const content = language === 'fr_ht' ? blogFrench.content : post.content_english;
                 // Excerpt helper
                 const excerpt = content.length > 150 ? content.slice(0, 150) + '...' : content;
                 
@@ -2293,7 +2299,11 @@ export default function PublicHome({
         </div>
 
         {/* Selected Blog Post Modal */}
-        {selectedBlogPost && (
+        {selectedBlogPost && (() => {
+          const selectedBlogFrench = frenchBlogFields(selectedBlogPost);
+          const selectedBlogTitle = language === 'fr_ht' ? selectedBlogFrench.title : selectedBlogPost.title_english;
+          const selectedBlogContent = language === 'fr_ht' ? selectedBlogFrench.content : selectedBlogPost.content_english;
+          return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-10">
             {/* Backdrop */}
             <div 
@@ -2318,7 +2328,7 @@ export default function PublicHome({
                     </span>
                   </div>
                   <h3 className={`text-2xl md:text-3xl font-bold font-serif ${textTitle}`}>
-                    {language === 'fr_ht' ? selectedBlogPost.title_kreyol : selectedBlogPost.title_english}
+                    {selectedBlogTitle}
                   </h3>
                 </div>
                 <button 
@@ -2332,7 +2342,7 @@ export default function PublicHome({
               {/* Scrollable Content */}
               <div className="p-6 md:p-8 overflow-y-auto flex-1 leading-relaxed text-sm md:text-base space-y-6">
                 <div className="whitespace-pre-wrap font-sans font-medium text-slate-350">
-                  {language === 'fr_ht' ? selectedBlogPost.content_kreyol : selectedBlogPost.content_english}
+                  {selectedBlogContent}
                 </div>
               </div>
 
@@ -2347,7 +2357,8 @@ export default function PublicHome({
               </div>
             </div>
           </div>
-        )}
+        );
+        })()}
       </section>
 
       </>
@@ -2493,7 +2504,9 @@ export default function PublicHome({
                         <div className="flex items-center gap-2 mb-2.5">
                           <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                           <span className={`text-sm font-extrabold ${textTitle}`}>
-                            {req.is_anonymous === 1 || !req.requester_name ? t.prayerCardAnonymous : req.requester_name}
+                            {req.is_anonymous === 1 || !req.requester_name
+                              ? t.prayerCardAnonymous
+                              : (language === 'fr_ht' ? frenchField(req.requester_name, '') : req.requester_name)}
                           </span>
                           <span className="text-[10px] font-mono font-bold text-slate-500 ml-auto">
                             {req.created_at ? req.created_at.split('T')[0] : ''}
@@ -2501,7 +2514,7 @@ export default function PublicHome({
                         </div>
                         
                         <p className={`${textBody} text-sm leading-relaxed whitespace-pre-wrap italic font-medium`}>
-                          "{req.request_text}"
+                          "{language === 'fr_ht' ? frenchPrayerRequest(req.request_text) : req.request_text}"
                         </p>
                       </div>
                     ))}
@@ -3593,7 +3606,7 @@ export default function PublicHome({
                   <div className="pl-2 my-auto">
                     <BookOpen className="w-12 h-12 text-blue-500 mb-3" />
                     <h5 className={`font-serif font-extrabold text-base leading-tight ${textTitle}`}>
-                      {language === 'fr_ht' ? (settings.free_gift_title_kreyol || 'Méditations Parousie 2026') : (settings.free_gift_title_english || 'Parousie Devotional 2026')}
+                      {language === 'fr_ht' ? frenchFreeGiftTitle(settings) : (settings.free_gift_title_english || 'Parousie Devotional 2026')}
                     </h5>
                     <p className={`text-[10px] mt-1 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                       {language === 'fr_ht' ? 'Méditations et versets' : 'Meditations & Verses'}
@@ -3606,10 +3619,10 @@ export default function PublicHome({
                 </div>
                 
                 <h4 className={`text-2xl font-extrabold font-serif ${textTitle} mt-6 mb-3`}>
-                  {language === 'fr_ht' ? (settings.free_gift_title_kreyol || 'Méditations Parousie 2026') : (settings.free_gift_title_english || t.leadSectionTitle)}
+                  {language === 'fr_ht' ? frenchFreeGiftTitle(settings) : (settings.free_gift_title_english || t.leadSectionTitle)}
                 </h4>
                 <p className={`text-sm ${textBody} leading-relaxed max-w-sm`}>
-                  {language === 'fr_ht' ? (settings.free_gift_desc_kreyol || 'Recevez gratuitement ce recueil de méditations et de versets pour nourrir votre foi au quotidien.') : (settings.free_gift_desc_english || t.leadSectionSubtitle)}
+                  {language === 'fr_ht' ? frenchFreeGiftDescription(settings) : (settings.free_gift_desc_english || t.leadSectionSubtitle)}
                 </p>
               </div>
               

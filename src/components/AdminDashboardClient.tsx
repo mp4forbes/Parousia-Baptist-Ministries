@@ -4114,10 +4114,10 @@ export default function AdminDashboardClient({
                             className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs text-slate-100 transition-all font-semibold"
                           >
                             <option value="none">No Thumbnail / Aucune miniature</option>
-                            <option value="wedding">💍 Wedding / Maryaj (Preset)</option>
-                            <option value="funeral">🕊️ Funeral & Memorial / Fineral (Preset)</option>
+                            <option value="wedding">💍 Wedding / Mariage (Preset)</option>
+                            <option value="funeral">🕊️ Funeral & Memorial / Funérailles et commémoration (Preset)</option>
                             <option value="seminar">📚 Seminar & Conference / Séminaire (Preset)</option>
-                            <option value="worship">🎸 Special Worship & Concert / Adorasyon (Preset)</option>
+                            <option value="worship">🎸 Special Worship & Concert / Adoration et concert (Preset)</option>
                             <option value="custom">🖼️ Custom Upload / Téléverser votre image</option>
                           </select>
                         </div>
@@ -4221,7 +4221,7 @@ export default function AdminDashboardClient({
                 <div className="grid md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-900/60">
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-[10px] font-bold uppercase text-slate-400">CashApp ID / KasApp</label>
+                      <label className="block text-[10px] font-bold uppercase text-slate-400">CashApp ID / Identifiant CashApp</label>
                       <label className="flex items-center gap-1.5 cursor-pointer text-[10px] text-slate-500 hover:text-slate-300 font-semibold select-none">
                         <input 
                           type="checkbox"
@@ -5059,7 +5059,7 @@ export default function AdminDashboardClient({
 
                     {/* Drag-Drop-Paste Image Zone */}
                     <div className="space-y-2">
-                      <label className="block text-[10px] font-bold uppercase text-slate-400">Background Image / Imaj background</label>
+                      <label className="block text-[10px] font-bold uppercase text-slate-400">Background Image / Image d&apos;arrière-plan</label>
                       <div
                         onClick={() => document.getElementById('about-us-file-input')?.click()}
                         onPaste={handlePasteAboutUs}
@@ -5155,7 +5155,7 @@ export default function AdminDashboardClient({
 
                     {/* Belief 1 */}
                     <div className="p-4 rounded-lg bg-slate-900/30 border border-slate-850 space-y-4">
-                      <h5 className="text-xs font-bold text-amber-400/80 uppercase">Kwayans 1 / Belief 1</h5>
+                      <h5 className="text-xs font-bold text-amber-400/80 uppercase">Croyance 1 / Belief 1</h5>
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Français)</label>
@@ -5202,7 +5202,7 @@ export default function AdminDashboardClient({
 
                     {/* Belief 2 */}
                     <div className="p-4 rounded-lg bg-slate-900/30 border border-slate-850 space-y-4">
-                      <h5 className="text-xs font-bold text-amber-400/80 uppercase">Kwayans 2 / Belief 2</h5>
+                      <h5 className="text-xs font-bold text-amber-400/80 uppercase">Croyance 2 / Belief 2</h5>
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Français)</label>
@@ -5249,7 +5249,7 @@ export default function AdminDashboardClient({
 
                     {/* Belief 3 */}
                     <div className="p-4 rounded-lg bg-slate-900/30 border border-slate-850 space-y-4">
-                      <h5 className="text-xs font-bold text-amber-400/80 uppercase">Kwayans 3 / Belief 3</h5>
+                      <h5 className="text-xs font-bold text-amber-400/80 uppercase">Croyance 3 / Belief 3</h5>
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Français)</label>
@@ -5296,7 +5296,7 @@ export default function AdminDashboardClient({
 
                     {/* Belief 4 */}
                     <div className="p-4 rounded-lg bg-slate-900/30 border border-slate-850 space-y-4">
-                      <h5 className="text-xs font-bold text-amber-400/80 uppercase">Kwayans 4 / Belief 4</h5>
+                      <h5 className="text-xs font-bold text-amber-400/80 uppercase">Croyance 4 / Belief 4</h5>
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Title (Français)</label>
@@ -5532,7 +5532,7 @@ export default function AdminDashboardClient({
                                     <div className="md:col-span-2 space-y-4">
                                       <div className="grid md:grid-cols-2 gap-4">
                                         <div>
-                                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Name / Non</label>
+                                          <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Name / Nom</label>
                                           <input
                                             type="text"
                                             required
@@ -5595,7 +5595,7 @@ export default function AdminDashboardClient({
                                     </div>
 
                                     <div>
-                                      <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Photo / Foto (400x400)</label>
+                                      <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Photo (400x400)</label>
                                       <div
                                         onClick={() => document.getElementById(`team-member-file-input-${memberKey}`)?.click()}
                                         onPaste={(e) => handlePasteTeamMember(deptIndex, memberIndex, e)}
@@ -5824,7 +5824,7 @@ export default function AdminDashboardClient({
 
                     {/* Drag-Drop-Paste Image Zone */}
                     <div className="space-y-2">
-                      <label className="block text-[10px] font-bold uppercase text-slate-400">Section Image / Imaj Seksyon</label>
+                      <label className="block text-[10px] font-bold uppercase text-slate-400">Section Image / Image de section</label>
                       <div
                         onClick={() => document.getElementById('expect-file-input')?.click()}
                         onPaste={handlePasteExpect}
@@ -5924,12 +5924,12 @@ export default function AdminDashboardClient({
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Jour (français)</label>
                     <input 
-                      type="text" required placeholder="e.g. Dimanch" value={schedDayHt} onChange={e => setSchedDayHt(e.target.value)}
+                      type="text" required placeholder="e.g. Dimanche" value={schedDayHt} onChange={e => setSchedDayHt(e.target.value)}
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Day / Jou (English)</label>
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Day (English)</label>
                     <input 
                       type="text" required placeholder="e.g. Sunday" value={schedDayEn} onChange={e => setSchedDayEn(e.target.value)}
                       className="w-full px-3 py-2 rounded bg-slate-900 border border-slate-800 focus:border-amber-500 text-xs text-white"
@@ -7017,7 +7017,7 @@ export default function AdminDashboardClient({
                 <div>
                   <h4 className="text-sm font-bold text-white flex items-center gap-2">
                     <Video className="w-4 h-4 text-amber-500" />
-                    <span>YouTube Channel Auto-Synchronization / Otomatik Senkronizasyon</span>
+                    <span>YouTube Channel Auto-Synchronization / Synchronisation automatique</span>
                   </h4>
                   <p className="text-xs text-slate-400 mt-1 leading-relaxed">
                     Indiquez l’URL de votre chaîne pour importer automatiquement toutes les diffusions en direct dans la bibliothèque du site, sans devoir les ajouter une à une.
@@ -7187,7 +7187,7 @@ export default function AdminDashboardClient({
             </div>
           )}
 
-          {/* Subscribers Tab (Framed as Subscribers / Moun ki Abòne yo) */}
+          {/* Subscribers Tab */}
           {activeTab === 'subscribers' && (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-slate-950/40 border border-slate-850">

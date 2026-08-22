@@ -7,6 +7,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { submitLead } from '@/lib/actions';
 import { downloadAssetFile } from '@/lib/client-download';
 import { getGiftDownloadUrls } from '@/lib/gift-download';
+import { frenchFreeGiftTitle, frenchFreeGiftDescription } from '@/lib/french-content';
 import RegistrantManagerButton from '@/components/RegistrantManagerButton';
 import { 
   BookOpen, 
@@ -52,11 +53,11 @@ export default function DevotionalDownloadClient({ settings }: DevotionalDownloa
   const borderMain = isLight ? 'border-slate-200' : 'border-slate-900';
 
   const giftTitle = language === 'fr_ht' 
-    ? (settings.free_gift_title_kreyol || 'Méditations Parousie 2026')
+    ? frenchFreeGiftTitle(settings)
     : (settings.free_gift_title_english || 'Parousie Devotional 2026');
 
   const giftDesc = language === 'fr_ht'
-    ? (settings.free_gift_desc_kreyol || 'Recevez gratuitement ce recueil de méditations et de versets pour nourrir votre foi au quotidien.')
+    ? frenchFreeGiftDescription(settings)
     : (settings.free_gift_desc_english || t.leadSectionSubtitle);
 
   const { primary: fileUrl, fallback: fallbackFileUrl } = getGiftDownloadUrls(settings, language);

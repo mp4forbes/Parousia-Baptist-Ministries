@@ -190,6 +190,8 @@ export const translations = {
     contactEmail: "Courriel",
     contactAddress: "Adresse",
     rightsReserved: "Tous droits réservés.",
+    footerPortalsTitle: "Portails et liens",
+    footerLanguages: "Français et anglais",
 
     // Prayer Wall
     prayerTitle: "Mur de prière public",
@@ -556,6 +558,8 @@ export const translations = {
     contactEmail: "Email",
     contactAddress: "Address",
     rightsReserved: "All rights reserved.",
+    footerPortalsTitle: "Portals & Links",
+    footerLanguages: "French & English",
 
     // Prayer Wall
     prayerTitle: "Public Prayer Wall",
