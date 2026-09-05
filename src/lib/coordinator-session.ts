@@ -7,7 +7,7 @@ import { db } from './db';
 import { checkAdminAuth, getLoggedInAdminEmail } from './actions';
 import { getAdminEmailFormatError, isValidAdminEmailFormat, normalizeAdminEmail } from './admin-email';
 import { COORDINATOR_UI_COOKIE, coordinatorUiCookieOptions } from './coordinator-cookies';
-import { emailsFromContactFields, emailMatchesContactFields } from './notification-emails';
+import { emailsFromContactFields, emailMatchesContactFields, emailMatchesEditorFields, emailsFromLoginFields } from './notification-emails';
 import { sendRecipientOtpEmail } from './notify';
 import {
   EMPTY_REGISTRANT_ACCESS,
@@ -38,6 +38,7 @@ type CoordinatorRecord = {
 type RecipientRow = {
   notification_emails?: string | null;
   contact_email?: string | null;
+  editor_emails?: string | null;
 };
 
 export type CoordinatorLoginResult = {
@@ -123,7 +124,7 @@ export async function logoutCoordinator(): Promise<void> {
 function collectEmails(rows: RecipientRow[]): string[] {
   const emails = new Set<string>();
   for (const row of rows) {
-    for (const email of emailsFromContactFields(row)) {
+    for (const email of emailsFromLoginFields(row)) {
       emails.add(email);
     }
   }
@@ -191,7 +192,7 @@ async function loadAllRecipientLists(): Promise<string[]> {
     const [ministries, categories, sections, events] = await Promise.all([
       db.prepare('SELECT notification_emails, contact_email FROM ministries').all() as Promise<RecipientRow[]>,
       db.prepare('SELECT notification_emails, contact_email FROM administrative_care_categories').all() as Promise<RecipientRow[]>,
-      db.prepare('SELECT notification_emails, contact_email FROM admin_section_configs').all() as Promise<RecipientRow[]>,
+      db.prepare('SELECT notification_emails, contact_email, editor_emails FROM admin_section_configs').all() as Promise<RecipientRow[]>,
       db.prepare('SELECT notification_emails FROM events').all().catch(() => []) as Promise<RecipientRow[]>,
     ]);
     for (const email of collectEmails([...ministries, ...categories, ...sections, ...events])) {
@@ -205,7 +206,7 @@ async function loadAllRecipientLists(): Promise<string[]> {
 
 async function loadSection(slug: string): Promise<RecipientRow | undefined> {
   return db.prepare(
-    'SELECT notification_emails, contact_email FROM admin_section_configs WHERE section_slug = ?'
+    'SELECT notification_emails, contact_email, editor_emails FROM admin_section_configs WHERE section_slug = ?'
   ).get(slug) as Promise<RecipientRow | undefined>;
 }
 
@@ -247,6 +248,30 @@ export async function getRecipientsForScope(scope: RegistrantScope): Promise<str
 
 export async function canManageRegistrants(scope: RegistrantScope): Promise<boolean> {
   return scopeIsAllowed(scope, await getRegistrantAccess());
+}
+
+export async function canManagePastorsBlog(): Promise<boolean> {
+  if (await checkAdminAuth()) return true;
+  const access = await getRegistrantAccess();
+  return access.source === 'coordinator' && access.blog && !access.needsPasswordSetup;
+}
+
+export async function canManageDailyDevotional(): Promise<boolean> {
+  if (await checkAdminAuth()) return true;
+  const access = await getRegistrantAccess();
+  return access.source === 'coordinator' && access.devotional && !access.needsPasswordSetup;
+}
+
+export async function canManageEventsContent(): Promise<boolean> {
+  if (await checkAdminAuth()) return true;
+  const access = await getRegistrantAccess();
+  return access.source === 'coordinator' && access.events && !access.needsPasswordSetup;
+}
+
+export async function canManageServiceSchedules(): Promise<boolean> {
+  if (await checkAdminAuth()) return true;
+  const access = await getRegistrantAccess();
+  return access.source === 'coordinator' && access.schedules && !access.needsPasswordSetup;
 }
 
 export async function getRegistrantAccess(): Promise<RegistrantAccess> {
@@ -310,6 +335,10 @@ export async function getRegistrantAccess(): Promise<RegistrantAccess> {
     access.contact = emailMatchesContactFields(normalized, await loadSection('contact_submissions'));
     access.prayer = emailMatchesContactFields(normalized, await loadSection('prayer_moderation'));
     access.gift = emailMatchesContactFields(normalized, await loadSection('ebook_subscribers'));
+    access.blog = emailMatchesEditorFields(normalized, await loadSection('pastors_blog'), { legacyNotificationFallback: true });
+    access.devotional = emailMatchesEditorFields(normalized, await loadSection('daily_devotional'), { legacyNotificationFallback: true });
+    access.events = emailMatchesEditorFields(normalized, await loadSection('events_signups'));
+    access.schedules = emailMatchesEditorFields(normalized, await loadSection('service_schedules'));
   } catch (error) {
     console.error('Error building registrant access:', error);
   }

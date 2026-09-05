@@ -43,3 +43,33 @@ export function emailMatchesContactFields(
   const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return new RegExp(`(^|[<\\s,;:])${escaped}([>\\s,;]|$)`).test(blob);
 }
+
+export function emailsFromEditorFields(row?: { editor_emails?: string | null } | null): string[] {
+  return parseNotificationEmails(row?.editor_emails);
+}
+
+export function emailMatchesEditorFields(
+  email: string | null | undefined,
+  row?: { editor_emails?: string | null; notification_emails?: string | null } | null,
+  options?: { legacyNotificationFallback?: boolean }
+): boolean {
+  if (!email) return false;
+  const normalized = email.toLowerCase().trim();
+  if (emailsFromEditorFields(row).includes(normalized)) return true;
+  if (options?.legacyNotificationFallback && emailMatchesContactFields(normalized, row)) return true;
+  const blob = (row?.editor_emails || '').toLowerCase();
+  if (!blob.includes(normalized)) return false;
+  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(^|[<\\s,;:])${escaped}([>\\s,;]|$)`).test(blob);
+}
+
+export function emailsFromLoginFields(row?: {
+  notification_emails?: string | null;
+  contact_email?: string | null;
+  editor_emails?: string | null;
+} | null): string[] {
+  const emails = new Set<string>();
+  for (const email of emailsFromContactFields(row)) emails.add(email);
+  for (const email of emailsFromEditorFields(row)) emails.add(email);
+  return [...emails];
+}

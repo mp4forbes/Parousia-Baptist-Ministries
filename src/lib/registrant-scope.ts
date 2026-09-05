@@ -21,6 +21,8 @@ export interface RegistrantRow {
   values: Record<string, string>;
 }
 
+export type ContentCoordinatorKind = 'blog' | 'devotional' | 'events' | 'schedules';
+
 export interface RegistrantAccess {
   email: string | null;
   source: 'coordinator' | 'admin' | null;
@@ -32,6 +34,10 @@ export interface RegistrantAccess {
   contact: boolean;
   prayer: boolean;
   gift: boolean;
+  blog: boolean;
+  devotional: boolean;
+  events: boolean;
+  schedules: boolean;
 }
 
 export const EMPTY_REGISTRANT_ACCESS: RegistrantAccess = {
@@ -45,6 +51,10 @@ export const EMPTY_REGISTRANT_ACCESS: RegistrantAccess = {
   prayer: false,
   contact: false,
   gift: false,
+  blog: false,
+  devotional: false,
+  events: false,
+  schedules: false,
 };
 
 export function scopeIsAllowed(scope: RegistrantScope, access: RegistrantAccess | null): boolean {
@@ -76,9 +86,35 @@ export function hasAnyRegistrantListAccess(access: RegistrantAccess | null): boo
     || access.gift;
 }
 
+export function contentCoordinatorIsAllowed(
+  kind: ContentCoordinatorKind,
+  access: RegistrantAccess | null
+): boolean {
+  if (!access?.email || access.needsPasswordSetup || access.source !== 'coordinator') return false;
+  switch (kind) {
+    case 'blog':
+      return access.blog;
+    case 'devotional':
+      return access.devotional;
+    case 'events':
+      return access.events;
+    case 'schedules':
+      return access.schedules;
+  }
+}
+
+export function hasAnyContentCoordinatorAccess(access: RegistrantAccess | null): boolean {
+  if (!access?.email || access.needsPasswordSetup) return false;
+  return access.blog || access.devotional || access.events || access.schedules;
+}
+
+export function hasAnyCoordinatorWorkbenchAccess(access: RegistrantAccess | null): boolean {
+  return hasAnyRegistrantListAccess(access) || hasAnyContentCoordinatorAccess(access);
+}
+
 export type RegistrantAccessLink = {
   href: string;
-  kind: 'events' | 'ministry' | 'care' | 'contact' | 'prayer' | 'gift';
+  kind: 'events' | 'ministry' | 'care' | 'contact' | 'prayer' | 'gift' | 'blog' | 'devotional' | 'schedules';
   slug?: string;
 };
 
@@ -95,6 +131,9 @@ export function registrantAccessScope(link: RegistrantAccessLink): RegistrantSco
     case 'ministry':
       return link.slug ? { kind: 'ministry', slug: link.slug } : null;
     case 'events':
+    case 'blog':
+    case 'devotional':
+    case 'schedules':
       return null;
   }
 }

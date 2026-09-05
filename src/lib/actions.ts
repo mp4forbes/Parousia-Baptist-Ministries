@@ -28,6 +28,7 @@ import {
 } from './event-registration-fields';
 import { formatRegistrationPaymentStatus, isEventPaymentRequired } from './event-payment';
 import { mergeSettingsPreservingRestricted } from './admin-permissions';
+import { canManageDailyDevotional, canManageEventsContent, canManagePastorsBlog, canManageServiceSchedules } from './coordinator-session';
 import { cookies } from 'next/headers';
 import fs from 'fs';
 import path from 'path';
@@ -51,6 +52,8 @@ import {
 } from './admin-email';
 import { frenchField } from './french-content';
 import { getGeminiGenerateContentUrl } from './gemini';
+import { buildDevotionalGeminiPrompt, DEVOTIONAL_PRESETS, findDevotionalPresetByRef, isGroupChatDevotionalFormat } from './devotional-presets';
+import { composeDevotionalBody, lessonStartsWithVerse } from './devotional-format';
 
 // HELPERS TO GET DATA (Server Components will call these directly)
 
@@ -586,6 +589,7 @@ const DEFAULT_ADMIN_SECTION_CONFIG: Omit<AdminSectionConfig, 'section_slug'> = {
   contact_email: '',
   contact_phone: '',
   notification_emails: '',
+  editor_emails: '',
 };
 
 export async function getAdminSectionConfig(sectionSlug: string): Promise<AdminSectionConfig> {
@@ -618,19 +622,21 @@ export async function saveAdminSectionConfig(
 
   try {
     await db.prepare(`
-      INSERT INTO admin_section_configs (section_slug, contact_name, contact_email, contact_phone, notification_emails)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO admin_section_configs (section_slug, contact_name, contact_email, contact_phone, notification_emails, editor_emails)
+      VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT (section_slug) DO UPDATE SET
         contact_name = EXCLUDED.contact_name,
         contact_email = EXCLUDED.contact_email,
         contact_phone = EXCLUDED.contact_phone,
-        notification_emails = EXCLUDED.notification_emails
+        notification_emails = EXCLUDED.notification_emails,
+        editor_emails = EXCLUDED.editor_emails
     `).run(
       sectionSlug,
       data.contact_name || '',
       data.contact_email || '',
       data.contact_phone || '',
-      data.notification_emails || ''
+      data.notification_emails || '',
+      data.editor_emails || ''
     );
 
     revalidatePath('/admin/dashboard');
@@ -1331,7 +1337,7 @@ export async function updateGlobalSettings(settingsMap: Record<string, string>):
 
 // Service schedules mutations
 export async function saveServiceSchedule(id: number | null, data: Partial<ServiceSchedule>): Promise<{ success: boolean; error?: string }> {
-  const isAuthed = await checkAdminAuth();
+  const isAuthed = await canManageServiceSchedules();
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
@@ -1359,7 +1365,7 @@ export async function saveServiceSchedule(id: number | null, data: Partial<Servi
 }
 
 export async function deleteServiceSchedule(id: number): Promise<{ success: boolean; error?: string }> {
-  const isAuthed = await checkAdminAuth();
+  const isAuthed = await canManageServiceSchedules();
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
@@ -1455,12 +1461,13 @@ export async function deleteLocalOutreach(id: number): Promise<{ success: boolea
 
 // Events mutations
 export async function saveEvent(id: number | null, data: Partial<EventRecord>): Promise<{ success: boolean; error?: string }> {
-  const isAuthed = await checkAdminAuth();
-  if (!isAuthed) return { success: false, error: 'Unauthorized' };
+  const isAdmin = await checkAdminAuth();
+  const isCoordinator = await canManageEventsContent();
+  if (!isAdmin && !isCoordinator) return { success: false, error: 'Unauthorized' };
 
   try {
-    const loggedInEmail = await getLoggedInAdminEmail();
-    const superAdmin = await isSuperAdminUser(loggedInEmail);
+    const loggedInEmail = isAdmin ? await getLoggedInAdminEmail() : null;
+    const superAdmin = isAdmin && await isSuperAdminUser(loggedInEmail);
 
     if (!superAdmin) {
       if (id) {
@@ -1564,7 +1571,7 @@ export async function saveEvent(id: number | null, data: Partial<EventRecord>): 
 }
 
 export async function deleteEvent(id: number): Promise<{ success: boolean; error?: string }> {
-  const isAuthed = await checkAdminAuth();
+  const isAuthed = (await checkAdminAuth()) || (await canManageEventsContent());
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
@@ -2586,105 +2593,76 @@ Be extremely thorough and accurate. Only include fields that are explicitly foun
 
 // DAILY DEVOTIONALS ACTIONS
 
-const DEVOTIONAL_PRESETS = [
-  {
-    theme: "strength",
-    refEn: "Galatians 6:9",
-    refHt: "Galat 6:9",
-    textEn: "And let us not grow weary of doing good, for in due season we will reap, if we do not give up.",
-    textHt: "Annou pa janm bouke fè sa ki byen. Paske, si nou pa dekouraje, n'a rekòlte lè lè a va rive.",
-    lessonEn: "Dear family, serving others and doing good can sometimes feel exhausting, especially when we are far from home. But the Apostle Paul reminds us that our labor in the Lord is never in vain and a bountiful harvest of blessings is coming. Let us stand united today, strengthening one another's hands to keep shining Christ's light in our community.",
-    lessonHt: "Frè m ak sè m yo, fè sa ki byen kapab fatigan pafwa, sitou lè nou lwen peyi nou. Men, Apòt Pòl fè nou chonje ke travay nou pou Seyè a pa janm anven e yon bèl rekòt benediksyon ap vini. Annou rete ini jodi a, pou nou ankouraje yonn lòt pou n kontinye klere limyè Kris la nan mitan kominote nou an."
-  },
-  {
-    theme: "strength",
-    refEn: "Joshua 1:9",
-    refHt: "Jozye 1:9",
-    textEn: "Have I not commanded you? Be strong and courageous. Do not be frightened, and do not be dismayed, for the Lord your God is with you wherever you go.",
-    textHt: "Chonje lòd mwen te ba ou! Se pou ou gaya, se pou ou gen kouraj! Pa tranble, pa pè, paske Seyè a, Bondye ou la, kanpe la avèk ou kote ou pase.",
-    lessonEn: "Taking bold steps of faith in a new land requires immense courage, but we never walk this journey alone. Our Heavenly Father goes before us, breaking barriers and opening doors that no man can shut. Be strong and lift up your head today, knowing that His protective presence is your constant shield.",
-    lessonHt: "Fè gwo pa lafwa nan yon nouvo peyi mande anpil kouraj, men nou pa janm mache pou kont nou nan vwayaj sa a. Papa nou ki nan Syèl la mache devan nou, l ap kraze baryè ak louvri pòt okenn moun pa kapab fèmen. Se pou nou gaya epi leve tèt nou jodi a, paske prezans pwoteksyon li se plak pwotèj nou tout tan."
-  },
-  {
-    theme: "strength",
-    refEn: "Philippians 4:13",
-    refHt: "Filipyen 4:13",
-    textEn: "I can do all things through him who strengthens me.",
-    textHt: "Mwen kapab fè tout bagay gras ak Kris la ki ban mwen fòs la.",
-    lessonEn: "No challenge is too great and no mountain is too high when our lives are anchored in Christ's infinite power. When your own strength feels depleted, lift your eyes and surrender your worries to the One who renews our energy. Today, step forward with confidence, for His divine grace is more than sufficient to carry you through.",
-    lessonHt: "Pa gen okenn defi ki twò gwo e pa gen okenn mòn ki twò wo lè lavi nou ankre nan pouvwa enfini Kris la. Lè pwòp fòs pa ou santi l fini, leve je ou epi remèt tout tèt chaje ou yo bay Sa a ki renouvle enèji nou an. Jodi a, mache devan ak konfyans, paske gras divin li an plis pase ase pou l pote ou."
-  },
-  {
-    theme: "love",
-    refEn: "Romans 8:28",
-    refHt: "Women 8:28",
-    textEn: "And we know that for those who love God all things work together for good, for those who are called according to his purpose.",
-    textHt: "Epitou, nou konnen tout bagay travay ansanm pou byen moun ki renmen Bondye, moun li rele selon plan li a.",
-    lessonEn: "Even in the midst of trials and unforeseen transitions, God is masterfully weaving every detail of your life for a beautiful purpose. Your current struggles are not dead ends, but rather stepping stones leading to His glorious destiny for you. Trust His perfect timing and remain steadfast, knowing that His love surrounds you in every season.",
-    lessonHt: "Menm nan mitan eprèv ak chanjman nou pa t atann yo, Bondye ap travay chak detay nan lavi nou pou yon bèl objektif. Pwoblèm ou yo jodi a se pa yon bout chemen yo ye, men se pito machpye k ap mennen ou nan destinasyon glorye li prepare pou ou a. Mete konfyans ou nan lè ki pafè pou li a epi rete fèm, paske renmen l lan antoure ou nan tout sezon."
-  },
-  {
-    theme: "hope",
-    refEn: "Isaiah 40:31",
-    refHt: "Ezayi 40:31",
-    textEn: "But they who wait for the Lord shall renew their strength; they shall mount up with wings like eagles; they shall run and not be weary; they shall walk and not faint.",
-    textHt: "Men, moun ki mete konfyans yo nan Seyè a va jwenn nouvo fòs. Y'ap vole byen wo nan syèl la tankou belye. Y'ap kouri san yo pa janm bouke. Y'ap mache san yo pa janm febli.",
-    lessonEn: "Waiting on God is never wasted time, but a holy season of preparation and renewal. He is building in you a spiritual stamina that will allow you to rise above the storms of life with grace and power. Rest in His promise today, and prepare to soar to new heights as He breathes fresh life into your spirit.",
-    lessonHt: "Tann Seyè a se pa janm tan gaspiye, se yon sezon sen pou preparasyon ak renouvèlman. L ap bati nan ou yon lafòs espirityèl k ap pèmèt ou monte pi wo pase tanpèt lavi yo avèk gras ak pouvwa. Repoze nan pwomès li jodi a, epi pare pou vole nan nouvo wotè pandan l ap soufle yon nouvo lavi nan nanm ou."
-  },
-  {
-    theme: "faith",
-    refEn: "Hebrews 11:1",
-    refHt: "Ebre 11:1",
-    textEn: "Now faith is the assurance of things hoped for, the conviction of things not seen.",
-    textHt: "Lafwa se yon jan pou nou sèten sa nou espere a gen pou rive. Se yon jan pou nou rekonèt sa nou pa ka wè ak je nou.",
-    lessonEn: "Faith is the bridge between our current reality and God's supernatural promises. It enables us to stand firm when the world is shaking and to believe in the path He has laid out for us. Let us nurture a resilient faith that acts as a beacon of light for our families and our church community.",
-    lessonHt: "Lafwa se pon ki konekte reyalite n ap viv la ak pwomès sipènati Bondye yo. Li pèmèt nou kanpe fèm lè mond lan ap tranble e pou n kwè nan chemen li trase pou nou an. Ann nou devlope yon lafwa solid k ap sèvi kòm limyè pou fanmi nou yo ak kominote legliz la."
-  },
-  {
-    theme: "peace",
-    refEn: "John 14:27",
-    refHt: "Jan 14:27",
-    textEn: "Peace I leave with you; my peace I give to you. Not as the world gives do I give to you. Let not your hearts be troubled, neither let them be afraid.",
-    textHt: "Mwen kite kè poze pou nou. Me bay nou pwòp kè poze pa m. Se pa menm jan ak kè poze lèmonn bay m ap ban nou li. Pa kite kè nou boulvèse, pa kite l pè.",
-    lessonEn: "In a world filled with chaos and uncertainty, Jesus offers us a peace that transcends human understanding. This peace is not the absence of trouble, but the comforting presence of our Savior in the midst of it. Rest your heart in His sovereign hands today, letting go of all fear.",
-    lessonHt: "Nan yon mond ranpli ak dezòd ak ensètitid, Jezi ofri nou yon kè poze ki depase konpreyansyon lèzòm. Kè poze sa a se pa paske pwoblèm yo pa la, men se prezans rekonfòtan Sovè nou an nan mitan yo. Repoze kè ou nan men souveren li yo jodi a, epi chase tout laperèz."
-  },
-  {
-    theme: "grace",
-    refEn: "Ephesians 2:8",
-    refHt: "Efezyen 2:8",
-    textEn: "For by grace you have been saved through faith. And this is not your own doing; it is the gift of God.",
-    textHt: "Paske se gras Bondye nou sove, daprè konfyans nou gen nan li. Sa pa soti nan nou menm, se yon kado Bondye ban nou.",
-    lessonEn: "God's grace is an undeserved, beautiful gift that covers our past, sustains our present, and guarantees our future. We do not have to earn His love or strive to be worthy; we simply receive it with a humble heart. Let this marvelous grace inspire us to show kindness and mercy to everyone we meet today.",
-    lessonHt: "Gras Bondye a se yon bèl kado nou pa t merite, ki kouvri tan pase nou, ki soutni nou nan prezan, e ki garanti demen nou. Nou pa bezwen peye pou nou jwenn renmen li a, nou sèlman resevwa li ak yon kè enb. Se pou bèl gras sa a enspire nou pou nou montre jantiyès ak mizèrikòd bay tout moun n ap rankontre jodi a."
-  },
-  {
-    theme: "love",
-    refEn: "1 Corinthians 13:4-5",
-    refHt: "1 Korentyen 13:4-5",
-    textEn: "Love is patient and kind; love does not envy or boast; it is not arrogant or rude. It does not insist on its own way; it is not irritable or resentful.",
-    textHt: "Moun ki gen renmen nan kè li gen pasyans, li gen bon kè. Li pa gen jalouzi, li pa bofre, li pa gen lògèy. Li pa fè anyen ki pou fè moun wont, li pa chache avantaj pa li, li pa fè kòlè, li pa kenbe moun nan kè.",
-    lessonEn: "Spiritual love is active, selfless, and durable. It is the core bond that binds our church together as Parousia Baptist Ministries. Today, let us make a conscious effort to love one another with a pure and patient heart, reflecting the unconditional love that Christ has poured out upon us.",
-    lessonHt: "Renmen espirityèl la se yon bagay ki aktif, san enterè pèsonèl, epi ki dirab. Se lyen solid ki mare legliz nou an ansanm antanke Parousia Baptist Ministries. Jodi a, ann fè yon efò konsyan pou nou renmen yonn lòt ak yon kè pi e pasyan, pou n reflete renmen san kondisyon Kris la vide sou nou an."
-  },
-  {
-    theme: "hope",
-    refEn: "Jeremiah 29:11",
-    refHt: "Jeremi 29:11",
-    textEn: "For I know the plans I have for you, declares the Lord, plans for welfare and not for evil, to give you a future and a hope.",
-    textHt: "Paske mwen konnen sa m gen nan tèt mwen pou nou. Se Seyè a menm k ap pale. Se byen nou mwen vle, se pa malè nou. Mwen vle ban nou yon demen ak yon espwa.",
-    lessonEn: "No matter how dark or uncertain the road ahead may seem, God has a sovereign, beautiful blueprint for your life. He is not surprised by your challenges; He has already prepared a future of peace, restoration, and vibrant hope for you. Step forward in expectation of His goodness today.",
-    lessonHt: "Kèlkeswa jan chemen ki devan an ta sanble fènwa oswa ensèten, Bondye gen yon bèl plan ki pafè pou lavi ou. Li pa etone devan defi w ap jwenn yo; li te deja prepare yon demen ki gen kè poze, restorasyon, ak yon bèl espwa pou ou. Mache devan ak gwo atant pou wè bonte li jodi a."
+async function hydrateShortDevotional(row: DailyDevotional): Promise<DailyDevotional> {
+  const englishReady = isGroupChatDevotionalFormat(row.lesson_english);
+  const frenchReady = isGroupChatDevotionalFormat(row.lesson_kreyol);
+  const englishVerseFirst = lessonStartsWithVerse(
+    row.verse_ref_english,
+    row.verse_text_english,
+    row.lesson_english
+  );
+  const frenchVerseFirst = lessonStartsWithVerse(
+    row.verse_ref_kreyol,
+    row.verse_text_kreyol,
+    row.lesson_kreyol
+  );
+
+  if (englishReady && frenchReady && englishVerseFirst && frenchVerseFirst) return row;
+
+  const preset =
+    findDevotionalPresetByRef(row.verse_ref_english) ||
+    findDevotionalPresetByRef(row.verse_ref_kreyol);
+
+  const refEn = row.verse_ref_english || preset?.refEn || '';
+  const refHt = row.verse_ref_kreyol || preset?.refHt || '';
+  const textEn = row.verse_text_english || preset?.textEn || '';
+  const textHt = row.verse_text_kreyol || preset?.textHt || '';
+  const sourceLessonEn = englishReady ? row.lesson_english : (preset?.lessonEn || row.lesson_english);
+  const sourceLessonHt = frenchReady ? row.lesson_kreyol : (preset?.lessonHt || row.lesson_kreyol);
+
+  const next: DailyDevotional = {
+    ...row,
+    verse_ref_english: refEn,
+    verse_ref_kreyol: refHt,
+    verse_text_english: textEn,
+    verse_text_kreyol: textHt,
+    lesson_english: composeDevotionalBody(refEn, textEn, sourceLessonEn, 'en'),
+    lesson_kreyol: composeDevotionalBody(refHt, textHt, sourceLessonHt, 'fr'),
+  };
+
+  try {
+    await db.prepare(`
+      UPDATE daily_devotionals
+      SET verse_ref_english = ?,
+          verse_ref_kreyol = ?,
+          verse_text_english = ?,
+          verse_text_kreyol = ?,
+          lesson_english = ?,
+          lesson_kreyol = ?
+      WHERE id = ?
+    `).run(
+      next.verse_ref_english,
+      next.verse_ref_kreyol,
+      next.verse_text_english,
+      next.verse_text_kreyol,
+      next.lesson_english,
+      next.lesson_kreyol,
+      row.id
+    );
+  } catch (error) {
+    console.warn('Could not persist expanded morning devotional:', error);
   }
-];
+
+  return next;
+}
 
 export async function getDailyDevotional(dateStr: string): Promise<DailyDevotional | null> {
   try {
     const row = await db.prepare('SELECT * FROM daily_devotionals WHERE date = ?').get(dateStr) as DailyDevotional | undefined;
-    if (row) return row;
+    if (row) {
+      return await hydrateShortDevotional(row);
+    }
 
-    // Auto-generate if missing for that date (no revalidatePath — called during render)
     return await generateDailyDevotionalRecord(dateStr);
   } catch (error) {
     console.error('Error fetching daily devotional:', error);
@@ -2711,7 +2689,7 @@ export async function saveDailyDevotional(
   lessonHt: string,
   status: 'pending' | 'approved'
 ): Promise<{ success: boolean; error?: string }> {
-  const isAuthed = await checkAdminAuth();
+  const isAuthed = await canManageDailyDevotional();
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
@@ -2728,6 +2706,7 @@ export async function saveDailyDevotional(
     `).run(refEn, refHt, textEn, textHt, lessonEn, lessonHt, status, id);
 
     revalidatePath('/');
+    revalidatePath('/devotional');
     revalidatePath('/admin/dashboard');
     return { success: true };
   } catch (error: any) {
@@ -2737,12 +2716,13 @@ export async function saveDailyDevotional(
 }
 
 export async function approveDailyDevotional(id: number): Promise<{ success: boolean; error?: string }> {
-  const isAuthed = await checkAdminAuth();
+  const isAuthed = await canManageDailyDevotional();
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
     await db.prepare("UPDATE daily_devotionals SET status = 'approved' WHERE id = ?").run(id);
     revalidatePath('/');
+    revalidatePath('/devotional');
     revalidatePath('/admin/dashboard');
     return { success: true };
   } catch (error: any) {
@@ -2752,12 +2732,13 @@ export async function approveDailyDevotional(id: number): Promise<{ success: boo
 }
 
 export async function deleteDailyDevotional(id: number): Promise<{ success: boolean; error?: string }> {
-  const isAuthed = await checkAdminAuth();
+  const isAuthed = await canManageDailyDevotional();
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
     await db.prepare("DELETE FROM daily_devotionals WHERE id = ?").run(id);
     revalidatePath('/');
+    revalidatePath('/devotional');
     revalidatePath('/admin/dashboard');
     return { success: true };
   } catch (error: any) {
@@ -2784,23 +2765,7 @@ async function fetchDevotionalFromGemini(theme: string): Promise<GeminiResponse 
 
   try {
     const url = getGeminiGenerateContentUrl(apiKey);
-    
-    const prompt = `You are a pastor preparing a bilingual daily devotional (in English and French) for Parousia Baptist Ministries.
-Generate a spiritual daily devotional centered on the theme: "${theme}".
-
-Choose a real, well-known Bible verse and reference that clearly relates to this theme (for example, forgiveness might use Ephesians 4:32 or Matthew 6:14; Easter might use 1 Corinthians 15:20; Christmas might use Luke 2:11).
-The scripture must be authentic and appropriate for the theme.
-Provide the content in both English and natural, polished French. Keep the legacy JSON property names ending in "_kreyol" exactly as specified, but put French text in those properties.
-
-Return a JSON object conforming to this exact structure:
-{
-  "verse_ref_english": "The scripture reference in English, e.g. John 3:16",
-  "verse_ref_kreyol": "The scripture reference in French, e.g. Jean 3:16 (legacy property name)",
-  "verse_text_english": "The exact bible verse text in English",
-  "verse_text_kreyol": "The exact Bible verse text in French (legacy property name)",
-  "lesson_english": "A short, rich pastoral reflection and spiritual lesson in English (2-4 sentences) tied to the theme",
-  "lesson_kreyol": "An equivalent short, rich pastoral reflection and spiritual lesson in French (2-4 sentences) tied to the theme; legacy property name"
-}`;
+    const prompt = buildDevotionalGeminiPrompt(theme);
 
     const response = await fetch(url, {
       method: 'POST',
@@ -2818,6 +2783,7 @@ Return a JSON object conforming to this exact structure:
           }
         ],
         generationConfig: {
+          maxOutputTokens: 8192,
           responseMimeType: 'application/json',
           responseSchema: {
             type: 'OBJECT',
@@ -2894,26 +2860,34 @@ async function generateDailyDevotionalRecord(
   }
 
   const currentTheme = useTheme && themePrompt ? themePrompt : 'none';
+  const themeForPrompt =
+    currentTheme === 'none'
+      ? 'a timely morning encouragement from Scripture'
+      : currentTheme;
 
   let preset: any = null;
 
-  // Try AI generation first when a theme is active and we have an API key
-  if (currentTheme !== 'none' && process.env.GEMINI_API_KEY) {
-    console.log(`Generating devotional for theme "${currentTheme}" using Gemini...`);
-    const aiDevotional = await fetchDevotionalFromGemini(currentTheme);
+  if (process.env.GEMINI_API_KEY) {
+    console.log(`Generating morning devotional for theme "${themeForPrompt}" using Gemini...`);
+    const aiDevotional = await fetchDevotionalFromGemini(themeForPrompt);
     if (aiDevotional) {
+      const refEn = aiDevotional.verse_ref_english;
+      const refHt = frenchField(aiDevotional.verse_ref_kreyol, aiDevotional.verse_ref_english);
+      const textEn = aiDevotional.verse_text_english;
+      const textHt = frenchField(aiDevotional.verse_text_kreyol, aiDevotional.verse_text_english);
+      const lessonHt = frenchField(aiDevotional.lesson_kreyol, aiDevotional.lesson_english);
       preset = {
-        refEn: aiDevotional.verse_ref_english,
-        refHt: aiDevotional.verse_ref_kreyol,
-        textEn: aiDevotional.verse_text_english,
-        textHt: aiDevotional.verse_text_kreyol,
-        lessonEn: aiDevotional.lesson_english,
-        lessonHt: aiDevotional.lesson_kreyol
+        refEn,
+        refHt,
+        textEn,
+        textHt,
+        lessonEn: composeDevotionalBody(refEn, textEn, aiDevotional.lesson_english, 'en'),
+        lessonHt: composeDevotionalBody(refHt, textHt, lessonHt, 'fr'),
       };
     }
   }
 
-  // Fallback to local presets if no theme, or if Gemini fails / is missing
+  // Fallback to local French/English presets if Gemini fails or the API key is missing
   if (!preset) {
     let pool = DEVOTIONAL_PRESETS;
     if (currentTheme !== 'none') {
@@ -2928,8 +2902,8 @@ async function generateDailyDevotionalRecord(
       refHt: p.refHt,
       textEn: p.textEn,
       textHt: frenchField(p.textHt, p.textEn),
-      lessonEn: p.lessonEn,
-      lessonHt: frenchField(p.lessonHt, p.lessonEn),
+      lessonEn: composeDevotionalBody(p.refEn, p.textEn, p.lessonEn, 'en'),
+      lessonHt: composeDevotionalBody(p.refHt, frenchField(p.textHt, p.textEn), p.lessonHt, 'fr'),
     };
   }
 
@@ -2962,6 +2936,9 @@ export async function generateDevotionalAction(
   dateStr: string,
   options?: { useTheme?: boolean; themePrompt?: string }
 ): Promise<{ success: boolean; devotional?: DailyDevotional; error?: string }> {
+  const isAuthed = await canManageDailyDevotional();
+  if (!isAuthed) return { success: false, error: 'Unauthorized' };
+
   try {
     if (options?.useTheme && !options.themePrompt?.trim()) {
       return { success: false, error: 'Please enter a theme prompt before generating a themed devotional.' };
@@ -2973,6 +2950,7 @@ export async function generateDevotionalAction(
     }
 
     revalidatePath('/');
+    revalidatePath('/devotional');
     revalidatePath('/admin/dashboard');
     return { success: true, devotional: created };
   } catch (error: any) {
@@ -2981,21 +2959,44 @@ export async function generateDevotionalAction(
   }
 }
 
+export async function updateDevotionalCoordinatorSettings(settingsMap: {
+  devotional_auto_publish?: string;
+  devotional_theme_enabled?: string;
+  devotional_theme?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const isAuthed = await canManageDailyDevotional();
+  if (!isAuthed) return { success: false, error: 'Unauthorized' };
+
+  try {
+    const allowedKeys = ['devotional_auto_publish', 'devotional_theme_enabled', 'devotional_theme'] as const;
+    const update = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
+    for (const key of allowedKeys) {
+      if (key in settingsMap && settingsMap[key] !== undefined) {
+        await update.run(key, settingsMap[key]!);
+      }
+    }
+    revalidatePath('/admin/dashboard');
+    revalidatePath('/devotional');
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating devotional coordinator settings:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function getActiveDevotional(dateStr: string): Promise<DailyDevotional | null> {
   try {
-    // 1. Try to get today's devotional
     const row = await db.prepare('SELECT * FROM daily_devotionals WHERE date = ?').get(dateStr) as DailyDevotional | undefined;
     if (row && row.status === 'approved') {
-      return row;
+      return await hydrateShortDevotional(row);
     }
-    
-    // 2. If not approved or not found, find the most recent approved devotional
+
     const latestApproved = await db.prepare("SELECT * FROM daily_devotionals WHERE status = 'approved' AND date <= ? ORDER BY date DESC LIMIT 1").get(dateStr) as DailyDevotional | undefined;
     if (latestApproved) {
-      return latestApproved;
+      return await hydrateShortDevotional(latestApproved);
     }
-    
-    return null;
+
+    return await generateDailyDevotionalRecord(dateStr);
   } catch (error) {
     console.error('Error fetching active devotional:', error);
     return null;
@@ -3590,7 +3591,7 @@ export async function saveBlogPost(
   contentEnglish: string,
   date: string
 ): Promise<{ success: boolean; error?: string }> {
-  const isAuthed = await checkAdminAuth();
+  const isAuthed = await canManagePastorsBlog();
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
@@ -3627,7 +3628,7 @@ export async function saveBlogPost(
 }
 
 export async function deleteBlogPost(id: number): Promise<{ success: boolean; error?: string }> {
-  const isAuthed = await checkAdminAuth();
+  const isAuthed = await canManagePastorsBlog();
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
@@ -3646,7 +3647,7 @@ export async function translateBlogContentAction(
   content: string,
   fromLang: 'en' | 'fr_ht'
 ): Promise<{ success: boolean; translatedTitle?: string; translatedContent?: string; error?: string }> {
-  const isAuthed = await checkAdminAuth();
+  const isAuthed = await canManagePastorsBlog();
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -3729,9 +3730,19 @@ Return a JSON object conforming to this exact structure:
 export async function translateAdminTextsAction(
   items: Array<{ id: string; text: string }>,
   fromLang: 'en' | 'fr_ht',
-  contextLabel = 'church website content'
+  contextLabel = 'church website content',
+  requiredAccess?: 'blog' | 'devotional' | 'events' | 'schedules'
 ): Promise<{ success: boolean; translations?: Record<string, string>; error?: string }> {
-  const isAuthed = await checkAdminAuth();
+  let isAuthed = await checkAdminAuth();
+  if (!isAuthed && requiredAccess === 'blog') {
+    isAuthed = await canManagePastorsBlog();
+  } else if (!isAuthed && requiredAccess === 'devotional') {
+    isAuthed = await canManageDailyDevotional();
+  } else if (!isAuthed && requiredAccess === 'events') {
+    isAuthed = await canManageEventsContent();
+  } else if (!isAuthed && requiredAccess === 'schedules') {
+    isAuthed = await canManageServiceSchedules();
+  }
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   const apiKey = process.env.GEMINI_API_KEY;

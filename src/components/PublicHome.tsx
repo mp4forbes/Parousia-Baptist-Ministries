@@ -27,6 +27,7 @@ import { churchLocationAddress, churchLocationLabel, churchLocationMapsQuery, pa
 import FormattedText from '@/components/FormattedText';
 import EventRegistrationModal from '@/components/EventRegistrationModal';
 import RegistrantManagerButton from '@/components/RegistrantManagerButton';
+import CoordinatorContentManagerButton from '@/components/CoordinatorContentManagerButton';
 import { isEventPaymentRequired } from '@/lib/event-payment';
 import { getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from '@/lib/youtube';
 import { 
@@ -946,6 +947,9 @@ export default function PublicHome({
         <div className="absolute top-0 right-10 w-72 h-72 bg-blue-600/5 rounded-full blur-3xl pointer-events-none" />
         
         <div className={siteShellClass}>
+          <div className="flex justify-end mb-4">
+            <CoordinatorContentManagerButton kind="schedules" isLight={isLight} />
+          </div>
           
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">{language === 'fr_ht' ? 'Horaires des cultes' : 'Service Times'}</h3>
@@ -1970,7 +1974,10 @@ export default function PublicHome({
       {/* 6. EVENTS CALENDAR & FRICTIONLESS SIGNUP */}
       <section id="events" className={`py-24 ${isLight ? 'bg-slate-100/50 border-t border-slate-200' : 'bg-slate-900/30 border-t border-slate-900'}`}>
         <div className={siteShellClass}>
-          
+          <div className="flex justify-end mb-4">
+            <CoordinatorContentManagerButton kind="events" isLight={isLight} />
+          </div>
+
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">{language === 'fr_ht' ? 'Calendrier des activités' : 'Events Calendar'}</h3>
             <h4 className={`text-3xl sm:text-4xl font-extrabold font-serif ${textTitle} mb-4`}>{t.eventsTitle}</h4>
@@ -2224,6 +2231,9 @@ export default function PublicHome({
         <div className={`absolute top-1/3 left-[10%] w-96 h-96 ${isLight ? 'bg-blue-500/3' : 'bg-blue-600/5'} rounded-full blur-3xl pointer-events-none`} />
         
         <div className={`${siteShellClass} relative z-10`}>
+          <div className="flex justify-end mb-4">
+            <CoordinatorContentManagerButton kind="blog" isLight={isLight} />
+          </div>
           <div className="text-center max-w-3xl mx-auto mb-16">
             <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full ${isLight ? 'bg-blue-100 text-blue-800' : 'bg-blue-500/10 text-blue-400'} text-xs font-bold uppercase tracking-wider mb-4`}>
               <FileText className="w-3.5 h-3.5" />

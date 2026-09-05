@@ -8,13 +8,18 @@ import { FileSpreadsheet, RefreshCw, Save } from 'lucide-react';
 
 interface AdminSectionContactExportProps {
   section: AdminSectionSlug;
-  exportSlug: AdminExportSlug;
+  exportSlug?: AdminExportSlug;
   language: 'en' | 'fr_ht';
-  listTitle: string;
-  listDescription: string;
-  recordCount: number;
-  emptyMessage: string;
+  listTitle?: string;
+  listDescription?: string;
+  recordCount?: number;
+  emptyMessage?: string;
   showContactConfig?: boolean;
+  showExport?: boolean;
+  showEditors?: boolean;
+  showNotificationRecipients?: boolean;
+  recipientHint?: string;
+  editorHint?: string;
   onSaved?: () => void;
 }
 
@@ -23,6 +28,7 @@ const emptyConfig = {
   contact_email: '',
   contact_phone: '',
   notification_emails: '',
+  editor_emails: '',
 };
 
 export default function AdminSectionContactExport({
@@ -31,9 +37,14 @@ export default function AdminSectionContactExport({
   language,
   listTitle,
   listDescription,
-  recordCount,
-  emptyMessage,
+  recordCount = 0,
+  emptyMessage = '',
   showContactConfig = true,
+  showExport = true,
+  showEditors = false,
+  showNotificationRecipients = true,
+  recipientHint,
+  editorHint,
   onSaved,
 }: AdminSectionContactExportProps) {
   const [config, setConfig] = useState<AdminSectionConfig>({ section_slug: section, ...emptyConfig });
@@ -80,6 +91,7 @@ export default function AdminSectionContactExport({
   };
 
   const handleExport = async () => {
+    if (!exportSlug) return;
     setExporting(true);
     setMessage(null);
     try {
@@ -163,23 +175,45 @@ export default function AdminSectionContactExport({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                  {language === 'en' ? 'Notification Recipients' : 'Destinataires des notifications'}
-                </label>
-                <textarea
-                  rows={3}
-                  value={config.notification_emails || ''}
-                  onChange={(e) => setConfig((prev) => ({ ...prev, notification_emails: e.target.value }))}
-                  placeholder={language === 'en' ? 'leader@church.org, committee@church.org' : 'responsable@eglise.org, comite@eglise.org'}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
-                />
-                <p className="text-[10px] text-slate-500 mt-1">
-                  {language === 'en'
-                    ? 'These people are notified of new signups and can sign in on the public site to manage this list, without admin-portal access.'
-                    : 'Ces personnes reçoivent les avis et peuvent se connecter sur le site public pour gérer cette liste, sans accès au portail d’administration.'}
-                </p>
-              </div>
+              {showNotificationRecipients && (
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+                    {language === 'en' ? 'Notification Recipients' : 'Destinataires des notifications'}
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={config.notification_emails || ''}
+                    onChange={(e) => setConfig((prev) => ({ ...prev, notification_emails: e.target.value }))}
+                    placeholder={language === 'en' ? 'leader@church.org, committee@church.org' : 'responsable@eglise.org, comite@eglise.org'}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    {recipientHint || (language === 'en'
+                      ? 'These people receive signup notifications and can sign in on the public site to manage registrant lists only, without admin-portal access.'
+                      : 'Ces personnes reçoivent les avis d’inscription et peuvent se connecter sur le site public pour gérer les listes d’inscrits seulement, sans accès au portail d’administration.')}
+                  </p>
+                </div>
+              )}
+
+              {showEditors && (
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+                    {language === 'en' ? 'Section Content Editors' : 'Éditeurs du contenu de la section'}
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={config.editor_emails || ''}
+                    onChange={(e) => setConfig((prev) => ({ ...prev, editor_emails: e.target.value }))}
+                    placeholder={language === 'en' ? 'editor@church.org, volunteer@church.org' : 'editeur@eglise.org, benevole@eglise.org'}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    {editorHint || (language === 'en'
+                      ? 'These people can sign in on the public site to add, edit, and publish this section’s content, without admin-portal access.'
+                      : 'Ces personnes peuvent se connecter sur le site public pour ajouter, modifier et publier le contenu de cette section, sans accès au portail d’administration.')}
+                  </p>
+                </div>
+              )}
 
               <div className="flex justify-end">
                 <button
@@ -197,6 +231,7 @@ export default function AdminSectionContactExport({
         </div>
       )}
 
+      {showExport && (
       <div className="p-5 rounded-2xl bg-slate-950/30 border border-slate-850 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
@@ -243,6 +278,7 @@ export default function AdminSectionContactExport({
           </p>
         )}
       </div>
+      )}
     </div>
   );
 }

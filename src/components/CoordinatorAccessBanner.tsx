@@ -5,8 +5,15 @@ import Link from 'next/link';
 import { FileSpreadsheet } from 'lucide-react';
 import { useCoordinatorSession } from '@/lib/CoordinatorSessionContext';
 import { useLanguage } from '@/lib/LanguageContext';
-import { hasAnyRegistrantListAccess, registrantAccessLinks, registrantAccessScope } from '@/lib/registrant-scope';
+import {
+  hasAnyContentCoordinatorAccess,
+  hasAnyCoordinatorWorkbenchAccess,
+  hasAnyRegistrantListAccess,
+  registrantAccessLinks,
+  registrantAccessScope,
+} from '@/lib/registrant-scope';
 import RegistrantManagerButton from '@/components/RegistrantManagerButton';
+import CoordinatorContentManagerButton from '@/components/CoordinatorContentManagerButton';
 import { getSiteTheme } from '@/lib/site-theme';
 import { siteShellClass } from '@/lib/site-layout';
 
@@ -32,8 +39,10 @@ export default function CoordinatorAccessBanner({ settings }: { settings: Record
 
   if (access.source !== 'coordinator' || !access.email) return null;
 
-  const links = registrantAccessLinks(access);
+  const links = registrantAccessLinks(access).filter((link) => link.kind !== 'blog' && link.kind !== 'devotional');
   const hasLists = hasAnyRegistrantListAccess(access);
+  const hasContent = hasAnyContentCoordinatorAccess(access);
+  const hasWorkbench = hasAnyCoordinatorWorkbenchAccess(access);
   const isHt = language === 'fr_ht';
 
   const labelFor = (link: (typeof links)[number]) => {
@@ -65,8 +74,14 @@ export default function CoordinatorAccessBanner({ settings }: { settings: Record
             </p>
             {access.needsPasswordSetup ? (
               <p className="text-xs mt-1 opacity-80">{t.coordinatorFinishPassword}</p>
-            ) : hasLists ? (
-              <p className="text-xs mt-1 opacity-80">{t.coordinatorManageTheseLists}</p>
+            ) : hasWorkbench ? (
+              <p className="text-xs mt-1 opacity-80">
+                {hasLists && hasContent
+                  ? t.coordinatorManageListsAndContent
+                  : hasContent
+                    ? t.coordinatorManageTheseSections
+                    : t.coordinatorManageTheseLists}
+              </p>
             ) : (
               <p className="text-xs mt-1 opacity-80">{t.coordinatorNoListsAssigned}</p>
             )}
@@ -80,8 +95,20 @@ export default function CoordinatorAccessBanner({ settings }: { settings: Record
           >
             {t.coordinatorCreatePasswordTitle}
           </button>
-        ) : hasLists ? (
+        ) : hasWorkbench ? (
           <div className="flex flex-wrap gap-2">
+            {access.blog && (
+              <CoordinatorContentManagerButton kind="blog" isLight={theme.isLight} />
+            )}
+            {access.devotional && (
+              <CoordinatorContentManagerButton kind="devotional" isLight={theme.isLight} />
+            )}
+            {access.events && (
+              <CoordinatorContentManagerButton kind="events" isLight={theme.isLight} />
+            )}
+            {access.schedules && (
+              <CoordinatorContentManagerButton kind="schedules" isLight={theme.isLight} />
+            )}
             {links.map((link) => {
               const label = labelFor(link);
               const scope = registrantAccessScope(link);

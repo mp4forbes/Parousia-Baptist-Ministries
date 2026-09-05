@@ -15,6 +15,6 @@ When adding or editing bilingual fields in the admin dashboard (`AdminDashboardC
 
 Do not place English on the left and French on the right.
 
-The French side of bilingual labels must be **standard French**, not Haitian Creole (no `Imaj`, `Jou`, `Kwayans`, `Misyon`, etc.).
+Never convert or generate Haitian Creole. The French side of bilingual labels and fields must be **standard French** (no `Imaj`, `Jou`, `Kwayans`, `Misyon`, etc.). `*_kreyol` / `*_ht` are legacy names for French values.
 
 Match label style used elsewhere (uppercase, small, slate-400/500).

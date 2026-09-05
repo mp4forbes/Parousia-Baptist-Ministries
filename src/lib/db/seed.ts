@@ -1,10 +1,12 @@
 import crypto from 'crypto';
 import type { Pool } from 'pg';
 import { getSuperAdminEmails } from '../super-admin';
-import { HOME_FRENCH_DEFAULTS, MINISTRY_FRENCH_DEFAULTS, PASTOR_MESSAGE_FRENCH, FREE_GIFT_FRENCH_DEFAULTS, CANONICAL_BLOG_FRENCH, CANONICAL_EVENT_FRENCH, CANONICAL_HAITI_MISSION_FRENCH, CANONICAL_LOCAL_OUTREACH_FRENCH, KNOWN_PRAYER_CREOLE_TO_FRENCH, KNOWN_HAITI_MISSION_CREOLE_TO_FRENCH, KNOWN_EVENT_LOCATION_CREOLE_TO_FRENCH, resolveFrenchContent, frenchField, sanitizeChurchLocation } from '../french-content';
+import { HOME_FRENCH_DEFAULTS, MINISTRY_FRENCH_DEFAULTS, PASTOR_MESSAGE_FRENCH, FREE_GIFT_FRENCH_DEFAULTS, CANONICAL_BLOG_FRENCH, CANONICAL_EVENT_FRENCH, CANONICAL_HAITI_MISSION_FRENCH, CANONICAL_LOCAL_OUTREACH_FRENCH, KNOWN_PRAYER_CREOLE_TO_FRENCH, KNOWN_HAITI_MISSION_CREOLE_TO_FRENCH, KNOWN_EVENT_LOCATION_CREOLE_TO_FRENCH, resolveFrenchContent, frenchField, looksLikeHaitianCreole, sanitizeChurchLocation } from '../french-content';
 import { FREE_GIFT_FILE_SETTING_KEYS, assetFileExists } from '../asset-storage';
 import { sanitizeTeamDepartmentsForFrench } from '../team-departments';
 import { DEFAULT_CHURCH_LOCATIONS } from '../church-locations';
+import { DEVOTIONAL_PRESETS, findDevotionalPresetByRef, isGroupChatDevotionalFormat } from '../devotional-presets';
+import { composeDevotionalBody, lessonStartsWithVerse } from '../devotional-format';
 
 async function migrateFrenchColumnPair(
   pool: Pool,
@@ -215,19 +217,96 @@ async function migrateLegacyFrenchContent(pool: Pool): Promise<void> {
   try {
     const devotionalRows = await pool.query<{
       id: number;
+      verse_ref_english: string;
+      verse_ref_kreyol: string;
       verse_text_kreyol: string;
       lesson_kreyol: string;
       verse_text_english: string;
       lesson_english: string;
-    }>('SELECT id, verse_text_kreyol, lesson_kreyol, verse_text_english, lesson_english FROM daily_devotionals');
+    }>(
+      'SELECT id, verse_ref_english, verse_ref_kreyol, verse_text_kreyol, lesson_kreyol, verse_text_english, lesson_english FROM daily_devotionals'
+    );
 
     for (const row of devotionalRows.rows) {
-      const verse = frenchField(row.verse_text_kreyol, row.verse_text_english);
-      const lesson = frenchField(row.lesson_kreyol, row.lesson_english);
-      if (verse !== row.verse_text_kreyol || lesson !== row.lesson_kreyol) {
+      const preset =
+        findDevotionalPresetByRef(row.verse_ref_english) ||
+        findDevotionalPresetByRef(row.verse_ref_kreyol);
+      const frenchBlob = `${row.verse_ref_kreyol}\n${row.verse_text_kreyol}\n${row.lesson_kreyol}`;
+      const needsFullFormat =
+        !!preset &&
+        (!isGroupChatDevotionalFormat(row.lesson_english) ||
+          !isGroupChatDevotionalFormat(row.lesson_kreyol) ||
+          !lessonStartsWithVerse(row.verse_ref_english, row.verse_text_english, row.lesson_english) ||
+          !lessonStartsWithVerse(row.verse_ref_kreyol, row.verse_text_kreyol, row.lesson_kreyol) ||
+          looksLikeHaitianCreole(frenchBlob));
+
+      if (needsFullFormat && preset) {
+        const refEn = row.verse_ref_english || preset.refEn;
+        const refHt = row.verse_ref_kreyol || preset.refHt;
+        const textEn = row.verse_text_english || preset.textEn;
+        const textHt = row.verse_text_kreyol || preset.textHt;
+        const sourceLessonEn = isGroupChatDevotionalFormat(row.lesson_english)
+          ? row.lesson_english
+          : preset.lessonEn;
+        const sourceLessonHt =
+          isGroupChatDevotionalFormat(row.lesson_kreyol) && !looksLikeHaitianCreole(row.lesson_kreyol)
+            ? row.lesson_kreyol
+            : preset.lessonHt;
+
         await pool.query(
-          'UPDATE daily_devotionals SET verse_text_kreyol = $1, lesson_kreyol = $2 WHERE id = $3',
-          [verse, lesson, row.id]
+          `UPDATE daily_devotionals
+           SET verse_ref_english = $1,
+               verse_ref_kreyol = $2,
+               verse_text_english = $3,
+               verse_text_kreyol = $4,
+               lesson_english = $5,
+               lesson_kreyol = $6
+           WHERE id = $7`,
+          [
+            refEn,
+            refHt,
+            textEn,
+            textHt,
+            composeDevotionalBody(refEn, textEn, sourceLessonEn, 'en'),
+            composeDevotionalBody(refHt, textHt, sourceLessonHt, 'fr'),
+            row.id,
+          ]
+        );
+        continue;
+      }
+
+      if (
+        row.verse_text_english &&
+        row.verse_text_kreyol &&
+        isGroupChatDevotionalFormat(row.lesson_english) &&
+        isGroupChatDevotionalFormat(row.lesson_kreyol) &&
+        (!lessonStartsWithVerse(row.verse_ref_english, row.verse_text_english, row.lesson_english) ||
+          !lessonStartsWithVerse(row.verse_ref_kreyol, row.verse_text_kreyol, row.lesson_kreyol))
+      ) {
+        await pool.query(
+          `UPDATE daily_devotionals
+           SET lesson_english = $1, lesson_kreyol = $2
+           WHERE id = $3`,
+          [
+            composeDevotionalBody(row.verse_ref_english, row.verse_text_english, row.lesson_english, 'en'),
+            composeDevotionalBody(row.verse_ref_kreyol, row.verse_text_kreyol, row.lesson_kreyol, 'fr'),
+            row.id,
+          ]
+        );
+        continue;
+      }
+
+      const verse = frenchField(row.verse_text_kreyol, row.verse_text_english, preset?.textHt || '');
+      const lesson = frenchField(row.lesson_kreyol, row.lesson_english, preset?.lessonHt || '');
+      const refFr = frenchField(row.verse_ref_kreyol, row.verse_ref_english, preset?.refHt || '');
+      if (
+        verse !== row.verse_text_kreyol ||
+        lesson !== row.lesson_kreyol ||
+        refFr !== row.verse_ref_kreyol
+      ) {
+        await pool.query(
+          'UPDATE daily_devotionals SET verse_ref_kreyol = $1, verse_text_kreyol = $2, lesson_kreyol = $3 WHERE id = $4',
+          [refFr, verse, lesson, row.id]
         );
       }
     }
@@ -543,18 +622,19 @@ export async function seedDatabase(pool: Pool): Promise<void> {
   }
 
   if ((await countRows(pool, 'daily_devotionals')) === 0) {
+    const preset = DEVOTIONAL_PRESETS[0];
     await pool.query(
       `INSERT INTO daily_devotionals
        (date, verse_ref_english, verse_ref_kreyol, verse_text_english, verse_text_kreyol, lesson_english, lesson_kreyol, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         '2026-05-25',
-        'Galatians 6:9',
-        'Galates 6.9',
-        'And let us not grow weary of doing good, for in due season we will reap, if we do not give up.',
-        'Ne nous lassons pas de faire le bien, car nous récolterons au moment voulu, si nous ne nous relâchons pas.',
-        "Dear family, serving others and doing good can sometimes feel exhausting, especially when we are far from home. But the Apostle Paul reminds us that our labor in the Lord is never in vain and a bountiful harvest of blessings is coming. Let us stand united today, strengthening one another's hands to keep shining Christ's light in our community.",
-        'Chers frères et sœurs, servir les autres et faire le bien peut parfois être éprouvant, surtout lorsque nous sommes loin de notre pays. Mais l’apôtre Paul nous rappelle que notre travail dans le Seigneur n’est jamais vain et qu’une abondante moisson de bénédictions nous attend. Restons unis aujourd’hui et encourageons-nous mutuellement à continuer de faire rayonner la lumière du Christ dans notre communauté.',
+        preset.refEn,
+        preset.refHt,
+        preset.textEn,
+        preset.textHt,
+        preset.lessonEn,
+        preset.lessonHt,
         'approved',
       ]
     );

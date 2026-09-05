@@ -1,18 +1,20 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { DailyDevotional } from '@/lib/db';
+import { FALLBACK_DEVOTIONAL } from '@/lib/devotional-presets';
+import { composeDevotionalBody, devotionalInterpretation } from '@/lib/devotional-format';
 import { 
-  BookOpen, 
   Sparkles, 
   ArrowLeft, 
   Globe2,
   Calendar,
-  HeartHandshake
+  HeartHandshake,
+  Copy,
+  Check
 } from 'lucide-react';
+import CoordinatorContentManagerButton from '@/components/CoordinatorContentManagerButton';
 
 interface DevotionalViewClientProps {
   devotional: DailyDevotional | null;
@@ -20,7 +22,6 @@ interface DevotionalViewClientProps {
 }
 
 export default function DevotionalViewClient({ devotional, settings }: DevotionalViewClientProps) {
-  const router = useRouter();
   const { language, setLanguage, t } = useLanguage();
 
   const themePrimary = settings.theme_primary || '#f59e0b';
@@ -31,6 +32,8 @@ export default function DevotionalViewClient({ devotional, settings }: Devotiona
 
   // State to track presentation language of the devotional itself (French, English, or bilingual side-by-side)
   const [devotionalLang, setDevotionalLang] = useState<'kreyol' | 'english' | 'bilingual'>('bilingual');
+
+  const [copied, setCopied] = useState(false);
 
   // Sync state initially or on language toggle
   React.useEffect(() => {
@@ -47,12 +50,12 @@ export default function DevotionalViewClient({ devotional, settings }: Devotiona
   // Fallback / Cornerstone values (1 Thessalonians 4:16-17)
   const fallbackDevotional: Omit<DailyDevotional, 'id' | 'status'> = {
     date: new Date().toLocaleDateString('sv'),
-    verse_ref_english: "1 Thessalonians 4:16-17",
-    verse_ref_kreyol: "1 Thessaloniciens 4:16-17",
-    verse_text_english: "For the Lord himself will descend from heaven with a cry of command, with the voice of an archangel, and with the sound of the trumpet of God. And the dead in Christ will rise first. Then we who are alive, who are left, will be caught up together with them in the clouds to meet the Lord in the air, and so we will always be with the Lord.",
-    verse_text_kreyol: "Car le Seigneur lui-même, à un signal donné, à la voix d'un archange et au son de la trompette de Dieu, descendra du ciel. Les morts en Christ ressusciteront d'abord. Ensuite, nous les vivants qui serons restés, nous serons tous ensemble enlevés avec eux sur des nuées, à la rencontre du Seigneur dans les airs, et ainsi nous serons toujours avec le Seigneur.",
-    lesson_english: "This powerful passage reminds us of our ultimate hope and the glorious reunion that awaits all believers. Even in times of temporary parting or earthly struggles, we are comforted by the promise of Christ's return and eternal fellowship. Let this assurance fill your heart with peace, strengthen your faith, and encourage you to serve the Lord with joyful anticipation today.",
-    lesson_kreyol: "Ce passage puissant nous rappelle notre espérance suprême et les glorieuses retrouvailles qui attendent tous les croyants. Même dans les moments de séparation ou les épreuves terrestres, la promesse du retour du Christ et de la communion éternelle nous réconforte. Que cette assurance remplisse votre cœur de paix, fortifie votre foi et vous encourage à servir le Seigneur aujourd'hui dans la joie et l'attente."
+    verse_ref_english: FALLBACK_DEVOTIONAL.refEn,
+    verse_ref_kreyol: FALLBACK_DEVOTIONAL.refHt,
+    verse_text_english: FALLBACK_DEVOTIONAL.textEn,
+    verse_text_kreyol: FALLBACK_DEVOTIONAL.textHt,
+    lesson_english: FALLBACK_DEVOTIONAL.lessonEn,
+    lesson_kreyol: FALLBACK_DEVOTIONAL.lessonHt,
   };
 
   const activeDevotional = devotional || fallbackDevotional;
@@ -75,6 +78,75 @@ export default function DevotionalViewClient({ devotional, settings }: Devotiona
 
   const toggleLanguage = () => {
     setLanguage(language === 'fr_ht' ? 'en' : 'fr_ht');
+  };
+
+  const copyLessonForChat = async () => {
+    const pieces: string[] = [];
+    if (devotionalLang === 'kreyol' || devotionalLang === 'bilingual') {
+      pieces.push(
+        composeDevotionalBody(
+          activeDevotional.verse_ref_kreyol,
+          activeDevotional.verse_text_kreyol,
+          activeDevotional.lesson_kreyol,
+          'fr'
+        )
+      );
+    }
+    if (devotionalLang === 'english' || devotionalLang === 'bilingual') {
+      pieces.push(
+        composeDevotionalBody(
+          activeDevotional.verse_ref_english,
+          activeDevotional.verse_text_english,
+          activeDevotional.lesson_english,
+          'en'
+        )
+      );
+    }
+    try {
+      await navigator.clipboard.writeText(pieces.join('\n\n———\n\n'));
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  const renderDevotionalSection = (
+    ref: string,
+    text: string,
+    lesson: string,
+    lang: 'en' | 'fr',
+    label: string
+  ) => {
+    const scriptureLabel = lang === 'fr' ? 'Écriture' : 'Scripture';
+    const interpretation = devotionalInterpretation(ref, text, lesson);
+
+    return (
+      <div className="space-y-5">
+        {label ? (
+          <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">
+            {label}
+          </span>
+        ) : null}
+
+        <div className={`rounded-2xl border p-5 md:p-6 space-y-3 ${
+          isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/40 border-slate-800'
+        }`}>
+          <p className={`text-sm font-bold uppercase tracking-wide ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+            {scriptureLabel}: {ref}
+          </p>
+          <blockquote className={`text-lg md:text-xl font-serif leading-relaxed italic ${
+            isLight ? 'text-slate-800' : 'text-slate-100'
+          }`}>
+            &ldquo;{text}&rdquo;
+          </blockquote>
+        </div>
+
+        <p className={`text-base md:text-lg leading-8 ${textBody} whitespace-pre-line`}>
+          {interpretation}
+        </p>
+      </div>
+    );
   };
 
   return (
@@ -101,15 +173,18 @@ export default function DevotionalViewClient({ devotional, settings }: Devotiona
           <span>{language === 'fr_ht' ? "Retour à l'accueil" : 'Back to Home'}</span>
         </a>
 
-        <button 
-          onClick={toggleLanguage}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-bold transition-all duration-300 cursor-pointer hover:scale-105 ${
-            isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700' : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-amber-400'
-          }`}
-        >
-          <Globe2 className="w-4 h-4" />
-          <span>{t.btnToggleLanguage}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <CoordinatorContentManagerButton kind="devotional" isLight={isLight} />
+          <button 
+            onClick={toggleLanguage}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-bold transition-all duration-300 cursor-pointer hover:scale-105 ${
+              isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700' : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-amber-400'
+            }`}
+          >
+            <Globe2 className="w-4 h-4" />
+            <span>{t.btnToggleLanguage}</span>
+          </button>
+        </div>
       </header>
 
       {/* Main Content Area */}
@@ -174,115 +249,69 @@ export default function DevotionalViewClient({ devotional, settings }: Devotiona
             </button>
           </div>
 
-          {/* SCRIPTURE CARD */}
-          <div className={`w-full rounded-3xl ${bgCard} overflow-hidden group`}>
-            {/* Visual Header accent */}
+          {/* Morning group-chat body */}
+          <div className={`w-full rounded-3xl ${bgCard} overflow-hidden relative`}>
             <div className="w-full h-1.5 bg-gradient-to-r from-amber-500 via-blue-500 to-amber-600" />
-            
-            <div className="p-8 md:p-12 relative">
-              <BookOpen className={`absolute right-10 bottom-10 w-40 h-40 ${isLight ? 'text-slate-200/20' : 'text-slate-800/5'} -rotate-12 select-none pointer-events-none`} />
-
-              {/* Render Selected Presentation Layout */}
-              <div className="space-y-8 relative z-10">
-                
-                {/* 1. French Presentation */}
-                {(devotionalLang === 'kreyol' || devotionalLang === 'bilingual') && (
-                  <div className="space-y-6 notranslate" translate="no">
-                    {devotionalLang === 'bilingual' && (
-                      <span className="text-[10px] font-black uppercase tracking-widest text-blue-500 border border-blue-500/20 px-2 py-0.5 rounded">
-                        Français
-                      </span>
-                    )}
-                    <blockquote className={`text-xl md:text-2xl font-serif leading-relaxed italic ${isLight ? 'text-slate-800' : 'text-slate-100'}`}>
-                      &ldquo;{activeDevotional.verse_text_kreyol}&rdquo;
-                    </blockquote>
-                    <div className="flex justify-end">
-                      <span className="px-4 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold uppercase tracking-wider">
-                        {activeDevotional.verse_ref_kreyol}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Divider for bilingual side-by-side */}
-                {devotionalLang === 'bilingual' && (
-                  <hr className="border-dashed border-slate-200/10 my-8" />
-                )}
-
-                {/* 2. English Presentation */}
-                {(devotionalLang === 'english' || devotionalLang === 'bilingual') && (
-                  <div className="space-y-6">
-                    {devotionalLang === 'bilingual' && (
-                      <span className="text-[10px] font-black uppercase tracking-widest text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded">
-                        English
-                      </span>
-                    )}
-                    <blockquote className={`text-xl md:text-2xl font-serif leading-relaxed italic ${isLight ? 'text-slate-800' : 'text-slate-100'}`}>
-                      &ldquo;{activeDevotional.verse_text_english}&rdquo;
-                    </blockquote>
-                    <div className="flex justify-end">
-                      <span className="px-4 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider">
-                        {activeDevotional.verse_ref_english}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-              </div>
-            </div>
-          </div>
-
-          {/* PASTORAL REFLECTION LESSON */}
-          <div className={`w-full rounded-3xl ${bgCard} p-8 md:p-12 relative overflow-hidden`}>
             <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-amber-500 to-blue-600" />
             <HeartHandshake className={`absolute right-10 bottom-10 w-28 h-24 ${isLight ? 'text-slate-200/20' : 'text-slate-800/5'} select-none pointer-events-none`} />
 
-            <div className="relative z-10 flex flex-col gap-6">
-              <div className="border-l-4 border-amber-500 pl-4 py-1">
-                <h3 className={`text-lg md:text-xl font-bold font-serif ${textTitle}`}>
-                  {language === 'fr_ht' ? 'Méditation et enseignement pastoral' : 'Pastoral Meditation & Lesson'}
-                </h3>
-                <p className="text-xs text-slate-400">
-                  {language === 'fr_ht' ? 'Des paroles encourageantes pour grandir dans la foi' : 'Encouraging application words for spiritual growth'}
-                </p>
+            <div className="p-8 md:p-12 relative z-10 flex flex-col gap-6">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div className="border-l-4 border-amber-500 pl-4 py-1">
+                  <h3 className={`text-lg md:text-xl font-bold font-serif ${textTitle}`}>
+                    {language === 'fr_ht' ? 'Méditation du matin' : 'Morning Devotional'}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {language === 'fr_ht'
+                      ? 'Format groupe : à copier pour WhatsApp, Discord ou Slack'
+                      : 'Group-chat format — copy for WhatsApp, Discord, or Slack'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={copyLessonForChat}
+                  className={`inline-flex items-center gap-2 self-start px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    isLight
+                      ? 'bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700'
+                      : 'bg-slate-950/60 hover:bg-slate-900 border border-slate-800 text-slate-300'
+                  }`}
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>
+                    {copied
+                      ? language === 'fr_ht' ? 'Copié' : 'Copied'
+                      : language === 'fr_ht' ? 'Copier pour le groupe' : 'Copy for group chat'}
+                  </span>
+                </button>
               </div>
 
-              <div className="grid md:grid-cols-1 gap-6 mt-2">
-                
-                {/* 1. French Reflection */}
-                {(devotionalLang === 'kreyol' || devotionalLang === 'bilingual') && (
-                  <div className="space-y-2 notranslate" translate="no">
-                    {devotionalLang === 'bilingual' && (
-                      <span className="text-[10px] font-bold text-blue-500">
-                        Français :
-                      </span>
-                    )}
-                    <p className={`text-sm md:text-base leading-relaxed ${textBody} font-serif whitespace-pre-line`}>
-                      {activeDevotional.lesson_kreyol}
-                    </p>
-                  </div>
-                )}
+              {(devotionalLang === 'kreyol' || devotionalLang === 'bilingual') && (
+                <div className="notranslate" translate="no">
+                  {renderDevotionalSection(
+                    activeDevotional.verse_ref_kreyol,
+                    activeDevotional.verse_text_kreyol,
+                    activeDevotional.lesson_kreyol,
+                    'fr',
+                    devotionalLang === 'bilingual' ? 'Français' : ''
+                  )}
+                </div>
+              )}
 
-                {/* Divider for bilingual side-by-side */}
-                {devotionalLang === 'bilingual' && (
-                  <hr className="border-dashed border-slate-200/10 my-4" />
-                )}
+              {devotionalLang === 'bilingual' && (
+                <hr className="border-dashed border-slate-200/20" />
+              )}
 
-                {/* 2. English Reflection */}
-                {(devotionalLang === 'english' || devotionalLang === 'bilingual') && (
-                  <div className="space-y-2">
-                    {devotionalLang === 'bilingual' && (
-                      <span className="text-[10px] font-bold text-amber-500">
-                        English:
-                      </span>
-                    )}
-                    <p className={`text-sm md:text-base leading-relaxed ${textBody} font-serif whitespace-pre-line`}>
-                      {activeDevotional.lesson_english}
-                    </p>
-                  </div>
-                )}
-
-              </div>
+              {(devotionalLang === 'english' || devotionalLang === 'bilingual') && (
+                <div>
+                  {renderDevotionalSection(
+                    activeDevotional.verse_ref_english,
+                    activeDevotional.verse_text_english,
+                    activeDevotional.lesson_english,
+                    'en',
+                    devotionalLang === 'bilingual' ? 'English' : ''
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

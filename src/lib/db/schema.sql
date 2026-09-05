@@ -179,9 +179,11 @@ CREATE TABLE IF NOT EXISTS admin_section_configs (
   contact_name TEXT DEFAULT '',
   contact_email TEXT DEFAULT '',
   contact_phone TEXT DEFAULT '',
-  notification_emails TEXT DEFAULT ''
+  notification_emails TEXT DEFAULT '',
+  editor_emails TEXT DEFAULT ''
 );
 
+ALTER TABLE admin_section_configs ADD COLUMN IF NOT EXISTS editor_emails TEXT DEFAULT '';
 ALTER TABLE ministries ADD COLUMN IF NOT EXISTS contact_name TEXT DEFAULT '';
 ALTER TABLE ministries ADD COLUMN IF NOT EXISTS contact_email TEXT DEFAULT '';
 ALTER TABLE ministries ADD COLUMN IF NOT EXISTS contact_phone TEXT DEFAULT '';

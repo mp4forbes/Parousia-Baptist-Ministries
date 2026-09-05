@@ -6168,6 +6168,14 @@ export default function AdminDashboardClient({
                   </div>
                 ))}
               </div>
+
+              <AdminSectionContactExport
+                section="service_schedules"
+                language={language === 'fr_ht' ? 'fr_ht' : 'en'}
+                showExport={false}
+                showNotificationRecipients={false}
+                showEditors
+              />
             </div>
           )}
 
@@ -6887,6 +6895,7 @@ export default function AdminDashboardClient({
                 }
                 recordCount={events.length}
                 emptyMessage={language === 'en' ? 'No events to export yet.' : 'Aucun événement à exporter pour le moment.'}
+                showEditors
               />
             </div>
           )}
@@ -7250,7 +7259,7 @@ export default function AdminDashboardClient({
                     onClick={() => setSubSearch('')}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-[10px] font-bold"
                   >
-                    KLOSE
+                    {language === 'fr_ht' ? 'Effacer' : 'Clear'}
                   </button>
                 )}
               </div>
@@ -7482,7 +7491,7 @@ export default function AdminDashboardClient({
                     <div>
                       <label className="block text-xs font-bold text-slate-400 mb-1">{t.devotionalLessonHt}</label>
                       <textarea
-                        rows={3}
+                        rows={14}
                         value={editDevotionalForm.lesson_kreyol}
                         onChange={(e) => setEditDevotionalForm(prev => ({ ...prev, lesson_kreyol: e.target.value }))}
                         className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
@@ -7492,7 +7501,7 @@ export default function AdminDashboardClient({
                     <div>
                       <label className="block text-xs font-bold text-slate-400 mb-1">{t.devotionalLessonEn}</label>
                       <textarea
-                        rows={3}
+                        rows={14}
                         value={editDevotionalForm.lesson_english}
                         onChange={(e) => setEditDevotionalForm(prev => ({ ...prev, lesson_english: e.target.value }))}
                         className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
@@ -7547,7 +7556,7 @@ export default function AdminDashboardClient({
                     onClick={() => setDevotionalSearch('')}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-[10px] font-bold"
                   >
-                    KLOSE
+                    {language === 'fr_ht' ? 'Effacer' : 'Clear'}
                   </button>
                 )}
               </div>
@@ -7636,7 +7645,7 @@ export default function AdminDashboardClient({
                           <p className="text-slate-200 italic font-medium leading-relaxed">
                             "{d.verse_text_kreyol}"
                           </p>
-                          <p className="text-slate-400 leading-relaxed bg-slate-950/20 p-2.5 rounded-lg border border-slate-850/50">
+                          <p className="text-slate-400 leading-relaxed bg-slate-950/20 p-2.5 rounded-lg border border-slate-850/50 whitespace-pre-line max-h-56 overflow-y-auto">
                             {d.lesson_kreyol}
                           </p>
                         </div>
@@ -7650,7 +7659,7 @@ export default function AdminDashboardClient({
                           <p className="text-slate-200 italic font-medium leading-relaxed">
                             "{d.verse_text_english}"
                           </p>
-                          <p className="text-slate-400 leading-relaxed bg-slate-950/20 p-2.5 rounded-lg border border-slate-850/50">
+                          <p className="text-slate-400 leading-relaxed bg-slate-950/20 p-2.5 rounded-lg border border-slate-850/50 whitespace-pre-line max-h-56 overflow-y-auto">
                             {d.lesson_english}
                           </p>
                         </div>
@@ -7659,6 +7668,14 @@ export default function AdminDashboardClient({
                   ))}
                 </div>
               )}
+
+              <AdminSectionContactExport
+                section="daily_devotional"
+                language={language === 'fr_ht' ? 'fr_ht' : 'en'}
+                showExport={false}
+                showNotificationRecipients={false}
+                showEditors
+              />
             </div>
           )}
 
@@ -8110,6 +8127,14 @@ export default function AdminDashboardClient({
                   </div>
                 </div>
               )}
+
+              <AdminSectionContactExport
+                section="pastors_blog"
+                language={language === 'fr_ht' ? 'fr_ht' : 'en'}
+                showExport={false}
+                showNotificationRecipients={false}
+                showEditors
+              />
             </div>
           )}
 

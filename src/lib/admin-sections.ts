@@ -6,6 +6,9 @@ export const ADMIN_SECTION_SLUGS = [
   'prayer_moderation',
   'ebook_subscribers',
   'administrative_care',
+  'pastors_blog',
+  'daily_devotional',
+  'service_schedules',
 ] as const;
 
 export type AdminSectionSlug = (typeof ADMIN_SECTION_SLUGS)[number];

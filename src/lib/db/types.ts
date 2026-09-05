@@ -198,6 +198,7 @@ export interface AdminSectionConfig {
   contact_email: string;
   contact_phone: string;
   notification_emails: string;
+  editor_emails: string;
 }
 
 export interface AdministrativeCareCategory {
