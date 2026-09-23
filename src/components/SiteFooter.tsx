@@ -87,6 +87,9 @@ export default function SiteFooter({ settings }: SiteFooterProps) {
               <Link href="/administrative-care" className={`inline-flex items-center gap-1.5 transition-colors font-semibold ${isLight ? 'text-slate-600 hover:text-amber-600' : 'text-slate-300 hover:text-amber-400'}`}>
                 {t.navAdministrativeCare}
               </Link>
+              <Link href="/gallery" className={`inline-flex items-center gap-1.5 transition-colors font-semibold ${isLight ? 'text-slate-600 hover:text-amber-600' : 'text-slate-300 hover:text-amber-400'}`}>
+                {t.navGallery}
+              </Link>
               <Link href="/contact" className={`inline-flex items-center gap-1.5 transition-colors font-semibold ${isLight ? 'text-slate-600 hover:text-amber-600' : 'text-slate-300 hover:text-amber-400'}`}>
                 {t.contactTitle}
               </Link>

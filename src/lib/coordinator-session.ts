@@ -274,6 +274,12 @@ export async function canManageServiceSchedules(): Promise<boolean> {
   return access.source === 'coordinator' && access.schedules && !access.needsPasswordSetup;
 }
 
+export async function canManageGallery(): Promise<boolean> {
+  if (await checkAdminAuth()) return true;
+  const access = await getRegistrantAccess();
+  return access.source === 'coordinator' && access.gallery && !access.needsPasswordSetup;
+}
+
 export async function getRegistrantAccess(): Promise<RegistrantAccess> {
   const session = await getCoordinatorSession();
   const coordinator = session?.email ?? null;
@@ -339,6 +345,7 @@ export async function getRegistrantAccess(): Promise<RegistrantAccess> {
     access.devotional = emailMatchesEditorFields(normalized, await loadSection('daily_devotional'), { legacyNotificationFallback: true });
     access.events = emailMatchesEditorFields(normalized, await loadSection('events_signups'));
     access.schedules = emailMatchesEditorFields(normalized, await loadSection('service_schedules'));
+    access.gallery = emailMatchesEditorFields(normalized, await loadSection('photo_gallery'));
   } catch (error) {
     console.error('Error building registrant access:', error);
   }

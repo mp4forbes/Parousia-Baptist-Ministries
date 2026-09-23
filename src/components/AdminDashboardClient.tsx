@@ -128,6 +128,7 @@ import {
   EyeOff,
   Wand2,
   Layers,
+  Images,
   ArrowUp,
   ArrowDown,
   AlertTriangle
@@ -150,7 +151,7 @@ interface AdminDashboardProps {
   envSuperAdminEmails?: string[];
 }
 
-type TabType = 'settings' | 'hometabs' | 'schedules' | 'missions' | 'outreach' | 'events' | 'registrations' | 'sermons' | 'subscribers' | 'devotional' | 'admins' | 'contact' | 'prayers' | 'blog' | 'ministries' | 'administrative-care';
+type TabType = 'settings' | 'hometabs' | 'schedules' | 'missions' | 'outreach' | 'events' | 'gallery' | 'registrations' | 'sermons' | 'subscribers' | 'devotional' | 'admins' | 'contact' | 'prayers' | 'blog' | 'ministries' | 'administrative-care';
 
 type TeamMemberKey = `${number}-${number}`;
 
@@ -3426,6 +3427,14 @@ export default function AdminDashboardClient({
           >
             <Calendar className="w-4 h-4" />
             <span>{t.adminTabEvents}</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('gallery'); }}
+            className={`w-full text-left px-4 py-3.5 rounded-xl border flex items-center gap-3 text-sm font-semibold transition-all cursor-pointer ${activeTab === 'gallery' ? 'bg-amber-500 border-amber-500 text-slate-950 shadow-lg shadow-amber-500/10' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'}`}
+          >
+            <Images className="w-4 h-4" />
+            <span>{t.adminTabGallery}</span>
           </button>
 
           <button 
@@ -8521,6 +8530,31 @@ export default function AdminDashboardClient({
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {activeTab === 'gallery' && (
+            <div className="space-y-6">
+              <div className="border-b border-slate-800 pb-3">
+                <h3 className="text-xl font-bold text-white font-serif">{t.adminTabGallery}</h3>
+                <p className="text-sm text-slate-400 mt-2 max-w-3xl">{t.adminGalleryIntro}</p>
+                <a href="/gallery" className="inline-flex mt-3 text-xs font-bold text-amber-400 hover:text-amber-300">
+                  {t.galleryOpenPublic}
+                </a>
+              </div>
+              <AdminSectionContactExport
+                section="photo_gallery"
+                language={language === 'fr_ht' ? 'fr_ht' : 'en'}
+                showExport={false}
+                showNotificationRecipients={false}
+                showContactFields={false}
+                showEditors
+                settingsTitle={language === 'fr_ht' ? 'Coordinateurs de la galerie' : 'Gallery coordinators'}
+                editorLabel={language === 'fr_ht' ? 'Adresses des coordinateurs' : 'Coordinator email addresses'}
+                editorHint={language === 'fr_ht'
+                  ? 'Ces personnes peuvent se connecter sur la page Galerie pour ajouter des photos, une légende facultative et une étiquette d’événement, sans accès au portail d’administration.'
+                  : 'These people can sign in on the Gallery page to add photos, an optional caption, and an event tag, without admin-portal access.'}
+              />
             </div>
           )}
 

@@ -249,3 +249,12 @@ CREATE TABLE IF NOT EXISTS administrative_care_submissions (
 
 ALTER TABLE administrative_care_submissions ADD COLUMN IF NOT EXISTS follow_up_status TEXT DEFAULT 'new';
 ALTER TABLE administrative_care_submissions ADD COLUMN IF NOT EXISTS memo TEXT DEFAULT '';
+
+CREATE TABLE IF NOT EXISTS gallery_photos (
+  id SERIAL PRIMARY KEY,
+  image_url TEXT NOT NULL,
+  event_tag TEXT NOT NULL DEFAULT '',
+  caption TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  uploaded_by TEXT NOT NULL DEFAULT ''
+);

@@ -38,6 +38,7 @@ export interface RegistrantAccess {
   devotional: boolean;
   events: boolean;
   schedules: boolean;
+  gallery: boolean;
 }
 
 export const EMPTY_REGISTRANT_ACCESS: RegistrantAccess = {
@@ -55,6 +56,7 @@ export const EMPTY_REGISTRANT_ACCESS: RegistrantAccess = {
   devotional: false,
   events: false,
   schedules: false,
+  gallery: false,
 };
 
 export function scopeIsAllowed(scope: RegistrantScope, access: RegistrantAccess | null): boolean {
@@ -105,7 +107,7 @@ export function contentCoordinatorIsAllowed(
 
 export function hasAnyContentCoordinatorAccess(access: RegistrantAccess | null): boolean {
   if (!access?.email || access.needsPasswordSetup) return false;
-  return access.blog || access.devotional || access.events || access.schedules;
+  return access.blog || access.devotional || access.events || access.schedules || access.gallery;
 }
 
 export function hasAnyCoordinatorWorkbenchAccess(access: RegistrantAccess | null): boolean {

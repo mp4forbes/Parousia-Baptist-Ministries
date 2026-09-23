@@ -34,6 +34,7 @@ export const HASH_REDIRECTS: Record<string, string> = {
   blog: '/blog',
   ministries: '/ministries',
   events: '/events',
+  gallery: '/gallery',
   giving: '/giving',
   contact: '/contact',
   'devotional-gift': '/free-gift',

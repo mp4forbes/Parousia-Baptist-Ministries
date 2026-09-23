@@ -18,6 +18,9 @@ interface AdminSectionContactExportProps {
   showExport?: boolean;
   showEditors?: boolean;
   showNotificationRecipients?: boolean;
+  showContactFields?: boolean;
+  settingsTitle?: string;
+  editorLabel?: string;
   recipientHint?: string;
   editorHint?: string;
   onSaved?: () => void;
@@ -43,6 +46,9 @@ export default function AdminSectionContactExport({
   showExport = true,
   showEditors = false,
   showNotificationRecipients = true,
+  showContactFields = true,
+  settingsTitle,
+  editorLabel,
   recipientHint,
   editorHint,
   onSaved,
@@ -130,7 +136,7 @@ export default function AdminSectionContactExport({
       {showContactConfig && (
         <div className="p-5 rounded-2xl bg-slate-950/30 border border-slate-850 space-y-4">
           <h4 className="text-sm font-bold text-white">
-            {language === 'en' ? 'Committee Contact & Notifications' : 'Contact du comité et notifications'}
+            {settingsTitle || (language === 'en' ? 'Committee Contact & Notifications' : 'Contact du comité et notifications')}
           </h4>
 
           {loading ? (
@@ -139,6 +145,7 @@ export default function AdminSectionContactExport({
             </p>
           ) : (
             <>
+              {showContactFields && (
               <div className="grid md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
@@ -174,6 +181,7 @@ export default function AdminSectionContactExport({
                   />
                 </div>
               </div>
+              )}
 
               {showNotificationRecipients && (
                 <div>
@@ -198,7 +206,7 @@ export default function AdminSectionContactExport({
               {showEditors && (
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                    {language === 'en' ? 'Section Content Editors' : 'Éditeurs du contenu de la section'}
+                    {editorLabel || (language === 'en' ? 'Section Content Editors' : 'Éditeurs du contenu de la section')}
                   </label>
                   <textarea
                     rows={3}

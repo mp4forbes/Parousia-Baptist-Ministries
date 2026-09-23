@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { checkAdminAuth } from '@/lib/actions';
-import { canManageEventsContent, canManageServiceSchedules } from '@/lib/coordinator-session';
+import { canManageEventsContent, canManageGallery, canManageServiceSchedules } from '@/lib/coordinator-session';
 import { getAssetDir } from '@/lib/paths';
 
 export async function POST(request: NextRequest) {
   try {
     const isAuthed = (await checkAdminAuth())
       || (await canManageEventsContent())
-      || (await canManageServiceSchedules());
+      || (await canManageServiceSchedules())
+      || (await canManageGallery());
     if (!isAuthed) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }

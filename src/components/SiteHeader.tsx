@@ -384,6 +384,7 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
             </div>
 
             <Link href="/events" className={navLinkClass('/events', navLabelClass)}>{t.navEvents}</Link>
+            <Link href="/gallery" className={navLinkClass('/gallery', navLabelClass)}>{t.navGallery}</Link>
             <Link href="/giving" className={navLinkClass('/giving', navLabelClass)}>{t.navGiving}</Link>
             </nav>
           </div>
@@ -555,6 +556,7 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
             </div>
 
             <Link href="/events" className="hover:text-amber-500 transition-colors">{t.navEvents}</Link>
+            <Link href="/gallery" className="hover:text-amber-500 transition-colors">{t.navGallery}</Link>
             <Link href="/giving" className="hover:text-amber-500 transition-colors">{t.navGiving}</Link>
 
             {access.source === 'coordinator' ? (

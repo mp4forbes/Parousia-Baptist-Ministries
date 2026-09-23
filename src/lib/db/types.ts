@@ -214,6 +214,15 @@ export interface AdministrativeCareCategory {
   notification_emails?: string;
 }
 
+export interface GalleryPhoto {
+  id: number;
+  image_url: string;
+  event_tag: string;
+  caption: string;
+  created_at: string;
+  uploaded_by: string;
+}
+
 export interface AdministrativeCareSubmission {
   id: number;
   category_slug: string;

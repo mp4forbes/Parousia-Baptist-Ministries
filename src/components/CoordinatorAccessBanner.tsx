@@ -109,6 +109,14 @@ export default function CoordinatorAccessBanner({ settings }: { settings: Record
             {access.schedules && (
               <CoordinatorContentManagerButton kind="schedules" isLight={theme.isLight} />
             )}
+            {access.gallery && (
+              <Link
+                href="/gallery?manage=1"
+                className="px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 text-xs font-bold hover:bg-amber-400"
+              >
+                {t.coordinatorManageGallery}
+              </Link>
+            )}
             {links.map((link) => {
               const label = labelFor(link);
               const scope = registrantAccessScope(link);
