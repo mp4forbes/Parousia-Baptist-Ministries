@@ -406,8 +406,8 @@ export default function GalleryClient({ settings, initialPhotos, canPost }: Gall
               <ul className="grid sm:grid-cols-2 gap-3">
                 {drafts.map((draft) => (
                   <li key={draft.id} className={`rounded-2xl overflow-hidden border ${theme.isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-                    <div className="relative aspect-[4/3] bg-slate-900">
-                      <img src={draft.previewUrl} alt="" className="w-full h-full object-cover" />
+                    <div className={`relative ${theme.isLight ? 'bg-slate-200' : 'bg-slate-900'}`}>
+                      <img src={draft.previewUrl} alt="" className="w-full h-auto block" />
                       <button
                         type="button"
                         onClick={() => removeDraft(draft.id)}
@@ -514,13 +514,14 @@ export default function GalleryClient({ settings, initialPhotos, canPost }: Gall
               <button
                 type="button"
                 onClick={() => setActiveId(photo.id)}
-                className="w-full text-left cursor-pointer group"
+                className="w-full text-left cursor-pointer"
               >
-                <div className={`aspect-[4/3] overflow-hidden rounded-2xl ${theme.isLight ? 'bg-slate-200' : 'bg-slate-900'}`}>
+                <div className={`overflow-hidden rounded-2xl ${theme.isLight ? 'bg-slate-200' : 'bg-slate-900'}`}>
                   <img
                     src={photo.image_url}
                     alt={photo.caption || photo.event_tag}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    className="w-full h-auto block"
+                    loading="lazy"
                   />
                 </div>
                 <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-amber-500">{photo.event_tag}</p>
