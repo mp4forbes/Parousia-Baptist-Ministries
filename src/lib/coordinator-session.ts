@@ -27,6 +27,7 @@ type CoordinatorSession = {
   email: string;
   exp: number;
   pendingPasswordSetup?: boolean;
+  pendingPasswordReset?: boolean;
 };
 
 type CoordinatorRecord = {
@@ -91,7 +92,7 @@ export async function getLoggedInViewerEmail(): Promise<string | null> {
 
 async function setCoordinatorSession(
   email: string,
-  options?: { pendingPasswordSetup?: boolean; maxAgeSeconds?: number }
+  options?: { pendingPasswordSetup?: boolean; pendingPasswordReset?: boolean; maxAgeSeconds?: number }
 ): Promise<void> {
   const maxAgeSeconds = options?.maxAgeSeconds ?? SESSION_SECONDS;
   const cookieStore = await cookies();
@@ -99,6 +100,7 @@ async function setCoordinatorSession(
     email: email.toLowerCase().trim(),
     exp: Date.now() + maxAgeSeconds * 1000,
     pendingPasswordSetup: options?.pendingPasswordSetup === true,
+    pendingPasswordReset: options?.pendingPasswordReset === true,
   } satisfies CoordinatorSession);
   cookieStore.set(COORDINATOR_COOKIE, encryptSession(sessionPayload), {
     httpOnly: true,
@@ -108,7 +110,7 @@ async function setCoordinatorSession(
     path: '/',
   });
 
-  if (options?.pendingPasswordSetup) {
+  if (options?.pendingPasswordSetup || options?.pendingPasswordReset) {
     cookieStore.delete(COORDINATOR_UI_COOKIE);
   } else {
     cookieStore.set(COORDINATOR_UI_COOKIE, '1', coordinatorUiCookieOptions(maxAgeSeconds));
@@ -292,7 +294,7 @@ export async function getRegistrantAccess(): Promise<RegistrantAccess> {
     ...EMPTY_REGISTRANT_ACCESS,
     email: normalized,
     source: coordinator ? 'coordinator' : 'admin',
-    needsPasswordSetup: session?.pendingPasswordSetup === true,
+    needsPasswordSetup: session?.pendingPasswordSetup === true || session?.pendingPasswordReset === true,
   };
 
   try {
@@ -477,11 +479,40 @@ export async function requestCoordinatorOtp(
   return requestCoordinatorLogin(email, '', '', language);
 }
 
+export async function requestCoordinatorForgotPassword(
+  email: string,
+  language: 'en' | 'fr_ht' = 'en'
+): Promise<{ success: boolean; fromEmail?: string; error?: string }> {
+  const normalizedEmail = normalizeAdminEmail(email);
+  const formatError = getAdminEmailFormatError(normalizedEmail, language);
+  if (formatError) return { success: false, error: formatError };
+
+  if (!(await isNotificationRecipientEmail(normalizedEmail))) {
+    return { success: false, error: unauthorizedError(language) };
+  }
+
+  const record = await getCoordinatorRecord(normalizedEmail);
+  if (!coordinatorHasPassword(record)) {
+    return {
+      success: false,
+      error:
+        language === 'fr_ht'
+          ? 'Aucun mot de passe n’est encore défini. Laissez le mot de passe vide à la connexion pour en créer un.'
+          : 'No password has been set yet. Leave the password blank on sign-in to create one.',
+    };
+  }
+
+  const otp = await issueRecipientOtp(normalizedEmail);
+  if (!otp.success) return { success: false, error: otp.error };
+  return { success: true, fromEmail: otp.fromEmail };
+}
+
 export async function verifyCoordinatorOtp(
   email: string,
   otpCode: string,
   deviceHash: string,
-  language: 'en' | 'fr_ht' = 'en'
+  language: 'en' | 'fr_ht' = 'en',
+  options?: { passwordReset?: boolean }
 ): Promise<CoordinatorLoginResult> {
   try {
     const normalizedEmail = normalizeAdminEmail(email);
@@ -517,10 +548,30 @@ export async function verifyCoordinatorOtp(
     }
 
     await db.prepare('DELETE FROM admin_otps WHERE LOWER(email) = ?').run(normalizedEmail);
-    await upsertCoordinator(normalizedEmail);
 
     const record = await getCoordinatorRecord(normalizedEmail);
-    if (!coordinatorHasPassword(record)) {
+
+    if (options?.passwordReset) {
+      if (!coordinatorHasPassword(record)) {
+        return {
+          success: false,
+          error:
+            language === 'fr_ht'
+              ? 'La réinitialisation du mot de passe n’est pas disponible pour ce compte.'
+              : 'Password reset is not available for this account.',
+        };
+      }
+      await setCoordinatorSession(normalizedEmail, {
+        pendingPasswordReset: true,
+        maxAgeSeconds: SETUP_SESSION_SECONDS,
+      });
+      return { success: true, setupPasswordRequired: true, access: await getRegistrantAccess() };
+    }
+
+    await upsertCoordinator(normalizedEmail);
+
+    const refreshedRecord = await getCoordinatorRecord(normalizedEmail);
+    if (!coordinatorHasPassword(refreshedRecord)) {
       await setCoordinatorSession(normalizedEmail, {
         pendingPasswordSetup: true,
         maxAgeSeconds: SETUP_SESSION_SECONDS,
@@ -545,7 +596,7 @@ export async function completeCoordinatorPasswordSetup(
 ): Promise<CoordinatorLoginResult> {
   try {
     const session = await getCoordinatorSession();
-    if (!session?.pendingPasswordSetup) {
+    if (!session?.pendingPasswordSetup && !session?.pendingPasswordReset) {
       return {
         success: false,
         error: language === 'fr_ht'
@@ -557,6 +608,17 @@ export async function completeCoordinatorPasswordSetup(
     const normalizedEmail = session.email.toLowerCase().trim();
     if (!(await isNotificationRecipientEmail(normalizedEmail))) {
       return { success: false, error: unauthorizedError(language) };
+    }
+
+    const record = await getCoordinatorRecord(normalizedEmail);
+    if (session.pendingPasswordSetup && !session.pendingPasswordReset && coordinatorHasPassword(record)) {
+      return {
+        success: false,
+        error:
+          language === 'fr_ht'
+            ? 'Un mot de passe est déjà défini pour ce compte.'
+            : 'A password is already set for this account.',
+      };
     }
 
     const trimmedPassword = password.trim();

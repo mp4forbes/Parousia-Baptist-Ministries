@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Eye, EyeOff, KeyRound, Mail, ShieldCheck, X } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, KeyRound, Mail, ShieldCheck, X } from 'lucide-react';
 import {
   completeCoordinatorPasswordSetup,
   prevalidateCoordinatorLogin,
+  requestCoordinatorForgotPassword,
   requestCoordinatorLogin,
   verifyCoordinatorOtp,
 } from '@/lib/coordinator-session';
@@ -33,6 +34,8 @@ export default function CoordinatorLoginModal({ isLight }: { isLight: boolean })
   const [step, setStep] = useState<'credentials' | 'code' | 'password'>(
     access.needsPasswordSetup ? 'password' : 'credentials'
   );
+  const [credentialsView, setCredentialsView] = useState<'login' | 'forgot'>('login');
+  const [isPasswordReset, setIsPasswordReset] = useState(false);
   const [fromEmail, setFromEmail] = useState('');
   const [deviceHash, setDeviceHash] = useState(() => (typeof window === 'undefined' ? '' : getDeviceHash()));
   const [trusted, setTrusted] = useState(false);
@@ -53,7 +56,7 @@ export default function CoordinatorLoginModal({ isLight }: { isLight: boolean })
   }, [access.needsPasswordSetup, access.email]);
 
   useEffect(() => {
-    if (!loginOpen || !deviceHash || !email.trim() || step !== 'credentials') {
+    if (!loginOpen || !deviceHash || !email.trim() || step !== 'credentials' || credentialsView !== 'login') {
       return;
     }
 
@@ -74,7 +77,7 @@ export default function CoordinatorLoginModal({ isLight }: { isLight: boolean })
       cancelled = true;
       clearTimeout(timeout);
     };
-  }, [email, deviceHash, language, loginOpen, step]);
+  }, [email, deviceHash, language, loginOpen, step, credentialsView]);
 
   if (!loginOpen) return null;
 
@@ -91,6 +94,8 @@ export default function CoordinatorLoginModal({ isLight }: { isLight: boolean })
       setCoordinatorUiClient();
       setLoginOpen(false);
       setStep('credentials');
+      setCredentialsView('login');
+      setIsPasswordReset(false);
       setPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -107,6 +112,8 @@ export default function CoordinatorLoginModal({ isLight }: { isLight: boolean })
     if (access.needsPasswordSetup) return;
     setLoginOpen(false);
     setStep('credentials');
+    setCredentialsView('login');
+    setIsPasswordReset(false);
     setCode('');
     setError('');
     setBusy(false);
@@ -123,11 +130,13 @@ export default function CoordinatorLoginModal({ isLight }: { isLight: boolean })
       return;
     }
     if (res.otpRequired) {
+      setIsPasswordReset(false);
       setFromEmail(res.fromEmail || '');
       setStep('code');
       return;
     }
     if (res.setupPasswordRequired) {
+      setIsPasswordReset(false);
       setStep('password');
       if (res.access) applyAccess(res.access);
       return;
@@ -135,11 +144,28 @@ export default function CoordinatorLoginModal({ isLight }: { isLight: boolean })
     finishLogin(res.access);
   };
 
+  const submitForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    const res = await requestCoordinatorForgotPassword(email, language);
+    setBusy(false);
+    if (!res.success) {
+      setError(res.error || t.coordinatorNotRecipient);
+      return;
+    }
+    setIsPasswordReset(true);
+    setFromEmail(res.fromEmail || '');
+    setStep('code');
+  };
+
   const submitCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError('');
-    const res = await verifyCoordinatorOtp(email, code, deviceHash, language);
+    const res = await verifyCoordinatorOtp(email, code, deviceHash, language, {
+      passwordReset: isPasswordReset,
+    });
     setBusy(false);
     if (!res.success) {
       setError(res.error || t.coordinatorInvalidCode);
@@ -163,6 +189,7 @@ export default function CoordinatorLoginModal({ isLight }: { isLight: boolean })
       setError(res.error || t.coordinatorPasswordSaveError);
       return;
     }
+    setIsPasswordReset(false);
     finishLogin(res.access);
   };
 
@@ -171,6 +198,9 @@ export default function CoordinatorLoginModal({ isLight }: { isLight: boolean })
     : trusted
       ? t.coordinatorTrustedDeviceHint
       : t.coordinatorNewDeviceHint;
+
+  const passwordStepTitle = isPasswordReset ? t.coordinatorResetPasswordTitle : t.coordinatorCreatePasswordTitle;
+  const passwordStepHint = isPasswordReset ? t.coordinatorResetPasswordHint : t.coordinatorCreatePasswordHint;
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
@@ -188,14 +218,24 @@ export default function CoordinatorLoginModal({ isLight }: { isLight: boolean })
         <div className="flex items-center gap-2 mb-2">
           <ShieldCheck className="w-5 h-5 text-amber-500" />
           <h2 className="text-lg font-bold font-serif">
-            {step === 'password' ? t.coordinatorCreatePasswordTitle : t.coordinatorSignIn}
+            {step === 'password'
+              ? passwordStepTitle
+              : step === 'code' && isPasswordReset
+                ? t.coordinatorForgotTitle
+                : credentialsView === 'forgot'
+                  ? t.coordinatorForgotTitle
+                  : t.coordinatorSignIn}
           </h2>
         </div>
         <p className={`text-sm mb-5 ${muted}`}>
-          {step === 'password' ? t.coordinatorCreatePasswordHint : t.coordinatorSignInHint}
+          {step === 'password'
+            ? passwordStepHint
+            : credentialsView === 'forgot'
+              ? t.coordinatorForgotDesc
+              : t.coordinatorSignInHint}
         </p>
 
-        {step === 'credentials' && (
+        {step === 'credentials' && credentialsView === 'login' && (
           <form onSubmit={submitCredentials} className="space-y-4">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
               {t.coordinatorEmail}
@@ -210,26 +250,41 @@ export default function CoordinatorLoginModal({ isLight }: { isLight: boolean })
                 className={`${fieldClass} pl-10`}
               />
             </div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              {t.coordinatorPassword}
-            </label>
-            <div className="relative">
-              <KeyRound className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isLight ? 'text-slate-400' : 'text-slate-500'}`} />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                className={`${fieldClass} pl-10 pr-10`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                className={`absolute right-3 top-1/2 -translate-y-1/2 ${isLight ? 'text-slate-400' : 'text-slate-500'} cursor-pointer`}
-                aria-label={showPassword ? t.coordinatorHidePassword : t.coordinatorShowPassword}
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  {t.coordinatorPassword}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCredentialsView('forgot');
+                    setError('');
+                    setPassword('');
+                  }}
+                  className="text-[11px] font-bold text-amber-600 hover:text-amber-500 cursor-pointer"
+                >
+                  {t.coordinatorForgotPassword}
+                </button>
+              </div>
+              <div className="relative">
+                <KeyRound className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isLight ? 'text-slate-400' : 'text-slate-500'}`} />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  className={`${fieldClass} pl-10 pr-10`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 ${isLight ? 'text-slate-400' : 'text-slate-500'} cursor-pointer`}
+                  aria-label={showPassword ? t.coordinatorHidePassword : t.coordinatorShowPassword}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
             <p className={`text-xs ${muted}`}>{hint}</p>
             {error && <p className="text-xs text-rose-500">{error}</p>}
@@ -239,6 +294,43 @@ export default function CoordinatorLoginModal({ isLight }: { isLight: boolean })
               className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-slate-950 text-sm font-bold cursor-pointer"
             >
               {busy ? t.coordinatorSending : (hasPassword && trusted ? t.coordinatorLogin : t.coordinatorContinue)}
+            </button>
+          </form>
+        )}
+
+        {step === 'credentials' && credentialsView === 'forgot' && (
+          <form onSubmit={submitForgotPassword} className="space-y-4">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              {t.coordinatorEmail}
+            </label>
+            <div className="relative">
+              <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isLight ? 'text-slate-400' : 'text-slate-500'}`} />
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={`${fieldClass} pl-10`}
+              />
+            </div>
+            {error && <p className="text-xs text-rose-500">{error}</p>}
+            <button
+              type="submit"
+              disabled={busy}
+              className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-slate-950 text-sm font-bold cursor-pointer"
+            >
+              {busy ? t.coordinatorSending : t.coordinatorSendCode}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCredentialsView('login');
+                setError('');
+              }}
+              className="w-full inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-amber-600 cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              {t.coordinatorBackToSignIn}
             </button>
           </form>
         )}
@@ -269,7 +361,13 @@ export default function CoordinatorLoginModal({ isLight }: { isLight: boolean })
             </button>
             <button
               type="button"
-              onClick={() => { setStep('credentials'); setError(''); }}
+              onClick={() => {
+                setStep('credentials');
+                setCredentialsView(isPasswordReset ? 'forgot' : 'login');
+                setIsPasswordReset(false);
+                setError('');
+                setCode('');
+              }}
               className="w-full text-xs font-semibold text-amber-600 cursor-pointer"
             >
               {t.coordinatorUseDifferentEmail}
