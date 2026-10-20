@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { db, ServiceSchedule, HaitiMission, LocalOutreach, EventRecord, Registration, Sermon, KnowledgeBaseItem, Lead, DailyDevotional, AdminRecord, AdminDevice, PrayerRequest, ContactSubmission, BlogPost, Ministry, MinistrySignup, AdminSectionConfig, AdministrativeCareCategory, AdministrativeCareSubmission } from './db';
-import { sendEmail, sendAdminOtpEmail } from './notify';
+import { sendEmail, sendAdminOtpEmail, shouldUseDevOtpFallback } from './notify';
 import { encryptSession, decryptSession } from './session-crypto';
 import { parseNotificationEmails } from './notification-emails';
 import { buildChurchEmailHtml, getChurchFromEmail, textToHtmlParagraphs } from './email-templates';
@@ -3460,9 +3460,7 @@ async function sendAdminOtpCode(
   const emailResult = await sendAdminOtpEmail(normalizedEmail, otpCode, expiresAt);
 
   if (!emailResult.success) {
-    const isDev = process.env.NODE_ENV !== 'production';
-
-    if (isDev) {
+    if (shouldUseDevOtpFallback()) {
       console.log(`\n======================================================`);
       console.log(`[DEV OTP] Email delivery failed; fallback code for ${normalizedEmail}`);
       console.log(`CODE: ${otpCode}`);

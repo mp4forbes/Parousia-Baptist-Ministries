@@ -159,6 +159,21 @@ export default function CoordinatorLoginModal({ isLight }: { isLight: boolean })
     setStep('code');
   };
 
+  const resendCode = async () => {
+    setBusy(true);
+    setError('');
+    const res = isPasswordReset
+      ? await requestCoordinatorForgotPassword(email, language)
+      : await requestCoordinatorLogin(email, password, deviceHash, language);
+    setBusy(false);
+    if (!res.success) {
+      setError(res.error || t.coordinatorNotRecipient);
+      return;
+    }
+    setFromEmail(res.fromEmail || fromEmail);
+    setCode('');
+  };
+
   const submitCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
@@ -340,6 +355,7 @@ export default function CoordinatorLoginModal({ isLight }: { isLight: boolean })
             <p className={`text-xs ${muted}`}>
               {t.coordinatorCodeSent}{fromEmail ? ` (${fromEmail})` : ''}
             </p>
+            <p className={`text-[11px] leading-relaxed ${muted}`}>{t.coordinatorCodeDeliverabilityHint}</p>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
               {t.coordinatorCode}
             </label>
@@ -358,6 +374,14 @@ export default function CoordinatorLoginModal({ isLight }: { isLight: boolean })
               className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-slate-950 text-sm font-bold cursor-pointer"
             >
               {busy ? t.coordinatorVerifying : t.coordinatorVerify}
+            </button>
+            <button
+              type="button"
+              onClick={resendCode}
+              disabled={busy}
+              className="w-full py-2 rounded-xl border border-slate-300/40 text-xs font-semibold text-amber-600 cursor-pointer disabled:opacity-60"
+            >
+              {busy ? t.coordinatorResendingCode : t.coordinatorResendCode}
             </button>
             <button
               type="button"

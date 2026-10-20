@@ -132,7 +132,8 @@ Routes under `src/app/(site)/` with shared layout (`SiteHeader`, `SiteFooter`, `
 | Cloud Run service | `parousia-baptist-ministries` (`us-west1`) |
 | Custom domain | https://parousiabaptistchurch.org |
 | Assets | GCS bucket `gen-lang-client-0983602251-parousia-assets` mounted at `/data/assets` |
-| SendGrid from | `contact@parousiabaptistchurch.org` |
+| Transactional email | **Resend** when `RESEND_API_KEY` is set (`RESEND_FROM_EMAIL` / `RESEND_FROM_NAME` optional); else SendGrid fallback |
+| From address | `contact@parousiabaptistchurch.org` (domain must be verified in Resend) |
 | Default public language | French (`fr_ht`) |
 | GitHub Actions | `.github/workflows/deploy.yml` exists but may lack GCP secrets — manual deploy used |
 
@@ -163,7 +164,9 @@ Do **not** pass full `--set-secrets` / `--add-cloudsql-instances` flags on routi
 npm run dev -- -p 3000
 ```
 
-Requires `.env.local` with `DATABASE_URL`, `DATA_DIR=./data`, etc. Local Postgres DB must have `theme_mode: light` in `settings` for production-like appearance; if DB init fails, settings fall back to dark theme.
+Requires `.env.local` with `DATABASE_URL`, `DATA_DIR=./data`, `RESEND_API_KEY`, etc. Local Postgres DB must have `theme_mode: light` in `settings` for production-like appearance; if DB init fails, settings fall back to dark theme.
+
+**Resend (local / production):** Add `RESEND_API_KEY` to `.env.local` or GCP Secret Manager. Verify `parousiabaptistchurch.org` in the Resend dashboard and set DNS (SPF/DKIM) there. Optional: `RESEND_FROM_EMAIL=contact@parousiabaptistchurch.org`, `RESEND_FROM_NAME=Parousia Baptist Ministries`. Resend takes precedence over SendGrid when both keys exist.
 
 ---
 

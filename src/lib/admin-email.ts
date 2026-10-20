@@ -23,6 +23,13 @@ export function normalizeAdminEmail(email: string): string {
   return email.toLowerCase().trim();
 }
 
+/** Trim junk punctuation sometimes pasted with addresses in admin lists (e.g. user@yahoo.com,). */
+export function sanitizeEmailRecipient(email: string): string {
+  return normalizeAdminEmail(email)
+    .replace(/^mailto:/, '')
+    .replace(/[.,;)>]+$/g, '');
+}
+
 export function getAdminEmailDomain(email: string): string | null {
   const normalized = normalizeAdminEmail(email);
   if (!isValidAdminEmailFormat(normalized)) {

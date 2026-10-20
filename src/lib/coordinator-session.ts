@@ -5,10 +5,15 @@ import path from 'path';
 import { cookies } from 'next/headers';
 import { db } from './db';
 import { checkAdminAuth, getLoggedInAdminEmail } from './actions';
-import { getAdminEmailFormatError, isValidAdminEmailFormat, normalizeAdminEmail } from './admin-email';
+import {
+  getAdminEmailFormatError,
+  isValidAdminEmailFormat,
+  normalizeAdminEmail,
+  sanitizeEmailRecipient,
+} from './admin-email';
 import { COORDINATOR_UI_COOKIE, coordinatorUiCookieOptions } from './coordinator-cookies';
 import { emailsFromContactFields, emailMatchesContactFields, emailMatchesEditorFields, emailsFromLoginFields } from './notification-emails';
-import { sendRecipientOtpEmail } from './notify';
+import { sendRecipientOtpEmail, shouldUseDevOtpFallback } from './notify';
 import {
   EMPTY_REGISTRANT_ACCESS,
   scopeIsAllowed,
@@ -372,27 +377,35 @@ export async function getRegistrantAccess(): Promise<RegistrantAccess> {
 async function issueRecipientOtp(
   normalizedEmail: string
 ): Promise<{ success: boolean; fromEmail?: string; error?: string }> {
+  const recipient = sanitizeEmailRecipient(normalizedEmail);
   const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
   await db.prepare('INSERT OR REPLACE INTO admin_otps (email, code, expires_at) VALUES (?, ?, ?)').run(
-    normalizedEmail,
+    recipient,
     otpCode,
     expiresAt
   );
 
-  const emailResult = await sendRecipientOtpEmail(normalizedEmail, otpCode, expiresAt);
+  const emailResult = await sendRecipientOtpEmail(recipient, otpCode, expiresAt);
+  if (!emailResult.success) {
+    console.error('[otp] Coordinator verification email failed', {
+      domain: recipient.split('@')[1] || 'unknown',
+      error: emailResult.error,
+      messageId: emailResult.messageId,
+    });
+  }
   if (emailResult.success) {
     return { success: true, fromEmail: emailResult.fromEmail };
   }
 
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(`[DEV OTP] Recipient fallback code for ${normalizedEmail}: ${otpCode}`);
+  if (shouldUseDevOtpFallback()) {
+    console.log(`[DEV OTP] Recipient fallback code for ${recipient}: ${otpCode}`);
     try {
       const scratchDir = path.resolve(process.cwd(), 'scratch');
       if (!fs.existsSync(scratchDir)) fs.mkdirSync(scratchDir, { recursive: true });
       fs.writeFileSync(
         path.resolve(scratchDir, 'dev_last_recipient_otp.json'),
-        JSON.stringify({ email: normalizedEmail, code: otpCode, expiresAt, emailError: emailResult.error }, null, 2),
+        JSON.stringify({ email: recipient, code: otpCode, expiresAt, emailError: emailResult.error }, null, 2),
         'utf8'
       );
     } catch {
@@ -401,7 +414,7 @@ async function issueRecipientOtp(
     return { success: true, fromEmail: emailResult.fromEmail };
   }
 
-  await db.prepare('DELETE FROM admin_otps WHERE LOWER(email) = ?').run(normalizedEmail);
+  await db.prepare('DELETE FROM admin_otps WHERE LOWER(email) = ?').run(recipient);
   return {
     success: false,
     error: emailResult.error

@@ -1,13 +1,23 @@
+import { sanitizeEmailRecipient } from './admin-email';
+
+function addParsedEmail(emails: Set<string>, raw: string): void {
+  const email = sanitizeEmailRecipient(raw);
+  if (email.includes('@') && email.includes('.')) {
+    emails.add(email);
+  }
+}
+
 export function parseNotificationEmails(value?: string | null): string[] {
   if (!value?.trim()) return [];
   const emails = new Set<string>();
   const matches = value.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || [];
   for (const email of matches) {
-    emails.add(email.toLowerCase());
+    addParsedEmail(emails, email);
   }
   for (const part of value.split(/[,;\n]+/)) {
-    const email = part.trim().toLowerCase().replace(/^mailto:/, '');
-    if (email.includes('@')) emails.add(email);
+    if (part.trim().includes('@')) {
+      addParsedEmail(emails, part);
+    }
   }
   return [...emails];
 }
