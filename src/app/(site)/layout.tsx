@@ -1,4 +1,4 @@
-import { getSettings } from '@/lib/actions';
+import { getMinistries, getSettings } from '@/lib/actions';
 import SiteChrome from '@/components/SiteChrome';
 
 export const dynamic = 'force-dynamic';
@@ -9,6 +9,10 @@ export default async function SiteLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const settings = await getSettings();
-  return <SiteChrome settings={settings}>{children}</SiteChrome>;
+  const [settings, ministries] = await Promise.all([getSettings(), getMinistries()]);
+  return (
+    <SiteChrome settings={settings} ministries={ministries}>
+      {children}
+    </SiteChrome>
+  );
 }

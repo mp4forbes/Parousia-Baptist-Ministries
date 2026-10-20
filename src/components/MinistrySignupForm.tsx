@@ -3,12 +3,12 @@
 import React, { useMemo, useState } from 'react';
 import { Ministry } from '@/lib/db';
 import { submitMinistrySignup } from '@/lib/actions';
-import { MINISTRY_SIGNUP_FIELDS, MinistrySignupSlug } from '@/lib/ministry-signup-fields';
+import { getMinistrySignupFields } from '@/lib/ministry-signup-fields';
 import { frenchMinistryField } from '@/lib/french-content';
 import { CheckCircle, Loader2, X } from 'lucide-react';
 
 interface MinistrySignupFormProps {
-  slug: MinistrySignupSlug;
+  slug: string;
   ministry?: Ministry | null;
   language: 'fr_ht' | 'en';
   isLight: boolean;
@@ -36,7 +36,7 @@ export default function MinistrySignupForm({
   cancelLabel,
   submitLabel,
 }: MinistrySignupFormProps) {
-  const fields = MINISTRY_SIGNUP_FIELDS[slug];
+  const fields = getMinistrySignupFields(slug);
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');

@@ -13,7 +13,7 @@ export type PublicSiteSection =
 export const ABOUT_TABS = ['aboutUs', 'beliefs', 'team', 'expect'] as const;
 export type AboutTab = (typeof ABOUT_TABS)[number];
 
-export const MINISTRY_NAV_SLUGS = ['women', 'men', 'children', 'missions'] as const;
+export const MINISTRY_NAV_SLUGS = ['women', 'men', 'children', 'youth', 'missions'] as const;
 export type MinistryNavSlug = (typeof MINISTRY_NAV_SLUGS)[number];
 
 export const ADMINISTRATIVE_CARE_SLUGS = [

@@ -17,11 +17,14 @@ import {
   isNavActive,
   ministryHref,
 } from '@/lib/site-nav';
+import type { Ministry } from '@/lib/db/types';
+import { ministryDropdownLabel, sortMinistriesForNav } from '@/lib/ministries-nav';
 import { siteShellClass } from '@/lib/site-layout';
 import { getSiteTheme } from '@/lib/site-theme';
 
 interface SiteHeaderProps {
   settings: Record<string, string>;
+  ministries: Ministry[];
 }
 
 type NavLayoutMode = 'full' | 'scroll-and-menu' | 'menu-only';
@@ -34,7 +37,7 @@ const CARE_TITLE_KEYS: Record<(typeof ADMINISTRATIVE_CARE_SLUGS)[number], 'careW
   'hospice-support': 'careHospice',
 };
 
-export default function SiteHeader({ settings }: SiteHeaderProps) {
+export default function SiteHeader({ settings, ministries }: SiteHeaderProps) {
   const pathname = usePathname();
   const { language, setLanguage, t } = useLanguage();
   const [isPending, startTransition] = useTransition();
@@ -65,6 +68,7 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
   const FALLBACK_COMPACT_ACTIONS_WIDTH = 160;
 
   const isHt = language === 'fr_ht';
+  const navMinistries = sortMinistriesForNav(ministries);
   const dAboutUsTitle = isHt
     ? frenchSetting(settings, 'about_us_title_ht', 'about_us_title_en')
     : (settings.about_us_title_en || t.tabAboutUs || 'About Us');
@@ -466,10 +470,11 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
 
       {renderFixedDropdown('ministries', (
         <>
-          <Link href={ministryHref('women')} className={dropdownItem}>{t.ministryWomen}</Link>
-          <Link href={ministryHref('men')} className={dropdownItem}>{t.ministryMen}</Link>
-          <Link href={ministryHref('children')} className={dropdownItem}>{t.ministryChildren}</Link>
-          <Link href={ministryHref('missions')} className={dropdownItem}>{t.ministryMissions}</Link>
+          {navMinistries.map((ministry) => (
+            <Link key={ministry.slug} href={ministryHref(ministry.slug)} className={dropdownItem}>
+              {ministryDropdownLabel(ministry, isHt ? 'fr_ht' : 'en')}
+            </Link>
+          ))}
         </>
       ))}
 
@@ -523,11 +528,16 @@ export default function SiteHeader({ settings }: SiteHeaderProps) {
                   <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${mobileMinistriesExpanded ? 'rotate-180' : ''}`} />
                 </button>
               </div>
-              <div className={`pl-4 flex flex-col gap-3 overflow-hidden transition-all duration-300 ${mobileMinistriesExpanded ? 'max-h-56 mt-3 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'}`}>
-                <Link href={ministryHref('women')} className="text-left text-base font-semibold hover:text-amber-500 transition-colors">{t.ministryWomen}</Link>
-                <Link href={ministryHref('men')} className="text-left text-base font-semibold hover:text-amber-500 transition-colors">{t.ministryMen}</Link>
-                <Link href={ministryHref('children')} className="text-left text-base font-semibold hover:text-amber-500 transition-colors">{t.ministryChildren}</Link>
-                <Link href={ministryHref('missions')} className="text-left text-base font-semibold hover:text-amber-500 transition-colors">{t.ministryMissions}</Link>
+              <div className={`pl-4 flex flex-col gap-3 overflow-hidden transition-all duration-300 ${mobileMinistriesExpanded ? 'max-h-80 mt-3 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'}`}>
+                {navMinistries.map((ministry) => (
+                  <Link
+                    key={ministry.slug}
+                    href={ministryHref(ministry.slug)}
+                    className="text-left text-base font-semibold hover:text-amber-500 transition-colors"
+                  >
+                    {ministryDropdownLabel(ministry, isHt ? 'fr_ht' : 'en')}
+                  </Link>
+                ))}
               </div>
             </div>
 

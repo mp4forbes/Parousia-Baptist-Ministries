@@ -79,6 +79,8 @@ export const translations = {
     coordinatorManageDevotional: "Gérer la méditation",
     coordinatorManageEvents: "Gérer les événements",
     coordinatorManageSchedules: "Gérer les horaires",
+    coordinatorManageHomeTabs: "Gérer l’accueil",
+    coordinatorManageLiveArchives: "Gérer En direct et archives",
     coordinatorManageGallery: "Gérer la galerie",
     galleryTitle: "Galerie photos",
     gallerySubtitle: "Photos des cultes, des événements spéciaux et des sorties de l’église.",
@@ -170,6 +172,7 @@ export const translations = {
     ministryWomen: "Femmes",
     ministryMen: "Hommes",
     ministryChildren: "Enfants",
+    ministryYouth: "Jeunesse",
     ministryMissions: "Missions",
 
     // Service Schedules Section
@@ -498,6 +501,8 @@ export const translations = {
     coordinatorManageDevotional: "Manage Daily Devotional",
     coordinatorManageEvents: "Manage Events",
     coordinatorManageSchedules: "Manage Service Schedules",
+    coordinatorManageHomeTabs: "Manage Home Page Tabs",
+    coordinatorManageLiveArchives: "Manage Live & Archives",
     coordinatorManageGallery: "Manage Gallery",
     galleryTitle: "Photo gallery",
     gallerySubtitle: "Photos from worship services, special events, and church outings.",
@@ -589,6 +594,7 @@ export const translations = {
     ministryWomen: "Women",
     ministryMen: "Men",
     ministryChildren: "Children",
+    ministryYouth: "Youth",
     ministryMissions: "Missions",
 
     // Service Schedules Section

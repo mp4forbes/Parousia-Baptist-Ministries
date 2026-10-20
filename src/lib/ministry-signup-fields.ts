@@ -11,8 +11,19 @@ export interface MinistrySignupField {
   options?: { value: string; label_en: string; label_ht: string }[];
 }
 
-export const MINISTRY_SIGNUP_SLUGS = ['women', 'men', 'children', 'missions'] as const;
+export const MINISTRY_SIGNUP_SLUGS = ['women', 'men', 'children', 'youth', 'missions'] as const;
 export type MinistrySignupSlug = (typeof MINISTRY_SIGNUP_SLUGS)[number];
+
+export function isMinistrySignupSlug(slug: string): slug is MinistrySignupSlug {
+  return (MINISTRY_SIGNUP_SLUGS as readonly string[]).includes(slug);
+}
+
+export function getMinistrySignupFields(slug: string): MinistrySignupField[] {
+  if (isMinistrySignupSlug(slug)) {
+    return MINISTRY_SIGNUP_FIELDS[slug];
+  }
+  return MINISTRY_SIGNUP_FIELDS.men;
+}
 
 export const MINISTRY_SIGNUP_FIELDS: Record<MinistrySignupSlug, MinistrySignupField[]> = {
   women: [
@@ -78,6 +89,22 @@ export const MINISTRY_SIGNUP_FIELDS: Record<MinistrySignupSlug, MinistrySignupFi
       label_ht: 'Allergies, besoins particuliers ou remarques',
       placeholder_en: 'Optional',
       placeholder_ht: 'Facultatif',
+    },
+  ],
+  youth: [
+    {
+      key: 'interests',
+      type: 'textarea',
+      label_en: 'What youth activities interest you?',
+      label_ht: 'Quelles activités pour la jeunesse vous intéressent ?',
+      placeholder_en: 'Bible study, fellowship, service projects...',
+      placeholder_ht: 'Étude biblique, communion fraternelle, projets de service...',
+    },
+    {
+      key: 'availability',
+      type: 'text',
+      label_en: 'When are you usually available?',
+      label_ht: 'Quand êtes-vous généralement disponible ?',
     },
   ],
   missions: [

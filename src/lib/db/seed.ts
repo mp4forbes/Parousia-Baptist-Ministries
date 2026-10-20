@@ -402,6 +402,123 @@ async function migrateKnownLegacyCreoleRecords(pool: Pool): Promise<void> {
   }
 }
 
+const MINISTRY_SORT_ORDER: Record<string, number> = {
+  women: 10,
+  men: 20,
+  children: 30,
+  youth: 40,
+  missions: 50,
+};
+
+const CHILDREN_ONLY_EN = {
+  title: "Children's Ministry",
+  description:
+    "We believe in investing in the next generation. Our children's Sunday school offers engaging, age-appropriate lessons, worship, music, and fun activities that ground young hearts in God's Word.",
+  bullets:
+    "Sunday School Classes: Sundays at 10:30 AM\nChildren's Choir and Instrumental Training\nAnnual Vacation Bible School (VBS) summer camps",
+};
+
+const CHILDREN_ONLY_FR = {
+  title: 'Ministère des enfants',
+  description:
+    "Nous enseignons aux enfants les voies du Seigneur dès leur plus jeune âge. Nos classes d'école du dimanche proposent des leçons bibliques adaptées, des temps de louange, de la musique et des jeux qui enracinent leur foi dans la Parole de Dieu.",
+  bullets:
+    "Classes d'école du dimanche : chaque dimanche à 10 h 30\nChorale des enfants et formation instrumentale\nCamps bibliques d'été annuels",
+};
+
+async function migrateMinistriesNavAndYouthSplit(pool: Pool): Promise<void> {
+  try {
+    await pool.query('ALTER TABLE ministries ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0');
+    await pool.query('ALTER TABLE ministries ADD COLUMN IF NOT EXISTS nav_label_english TEXT DEFAULT \'\'');
+    await pool.query('ALTER TABLE ministries ADD COLUMN IF NOT EXISTS nav_label_kreyol TEXT DEFAULT \'\'');
+
+    for (const [slug, order] of Object.entries(MINISTRY_SORT_ORDER)) {
+      await pool.query(
+        `UPDATE ministries SET sort_order = $1 WHERE slug = $2 AND COALESCE(sort_order, 0) = 0`,
+        [order, slug]
+      );
+    }
+
+    const youthRow = await pool.query('SELECT 1 FROM ministries WHERE slug = $1', ['youth']);
+    if ((youthRow.rowCount ?? 0) > 0) {
+      return;
+    }
+
+    const childrenResult = await pool.query<{
+      slug: string;
+      title_kreyol: string;
+      title_english: string;
+      description_kreyol: string;
+      description_english: string;
+      image_url: string;
+      bullets_kreyol: string;
+      bullets_english: string;
+      contact_name: string;
+      contact_email: string;
+      contact_phone: string;
+      notification_emails: string;
+      google_sheet_id: string;
+    }>('SELECT * FROM ministries WHERE slug = $1', ['children']);
+
+    const children = childrenResult.rows[0];
+    if (!children) {
+      return;
+    }
+
+    await pool.query(
+      `INSERT INTO ministries
+       (slug, title_kreyol, title_english, description_kreyol, description_english, image_url, bullets_kreyol, bullets_english,
+        contact_name, contact_email, contact_phone, notification_emails, google_sheet_id, sort_order, nav_label_english, nav_label_kreyol)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+      [
+        'youth',
+        children.title_kreyol,
+        children.title_english,
+        children.description_kreyol,
+        children.description_english,
+        children.image_url,
+        children.bullets_kreyol,
+        children.bullets_english,
+        children.contact_name || '',
+        children.contact_email || '',
+        children.contact_phone || '',
+        children.notification_emails || '',
+        children.google_sheet_id || '',
+        MINISTRY_SORT_ORDER.youth,
+        'Youth',
+        'Jeunesse',
+      ]
+    );
+
+    await pool.query(
+      `UPDATE ministries
+       SET title_english = $1,
+           title_kreyol = $2,
+           description_english = $3,
+           description_kreyol = $4,
+           bullets_english = $5,
+           bullets_kreyol = $6,
+           nav_label_english = $7,
+           nav_label_kreyol = $8,
+           sort_order = $9
+       WHERE slug = 'children'`,
+      [
+        CHILDREN_ONLY_EN.title,
+        CHILDREN_ONLY_FR.title,
+        CHILDREN_ONLY_EN.description,
+        CHILDREN_ONLY_FR.description,
+        CHILDREN_ONLY_EN.bullets,
+        CHILDREN_ONLY_FR.bullets,
+        'Children',
+        'Enfants',
+        MINISTRY_SORT_ORDER.children,
+      ]
+    );
+  } catch (error) {
+    console.warn('[DB MIGRATE] Skipped ministries nav / youth split:', error);
+  }
+}
+
 async function sanitizeMissingFreeGiftAssets(pool: Pool): Promise<void> {
   for (const key of FREE_GIFT_FILE_SETTING_KEYS) {
     const result = await pool.query<{ value: string }>('SELECT value FROM settings WHERE key = $1', [key]);
@@ -755,6 +872,7 @@ export async function seedDatabase(pool: Pool): Promise<void> {
     );
   }
 
+  await migrateMinistriesNavAndYouthSplit(pool);
   await migrateLegacyFrenchContent(pool);
   await sanitizeMissingFreeGiftAssets(pool);
 }

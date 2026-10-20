@@ -24,7 +24,7 @@ import {
   parseEventRegistrationResponses,
 } from './event-registration-fields';
 import { isEventPaymentRequired } from './event-payment';
-import { MINISTRY_SIGNUP_FIELDS, MINISTRY_SIGNUP_SLUGS, type MinistrySignupSlug } from './ministry-signup-fields';
+import { getMinistrySignupFields } from './ministry-signup-fields';
 import {
   followUpColumns,
   followUpValues,
@@ -155,14 +155,14 @@ export async function listRegistrants(
     }
 
     if (scope.kind === 'ministry') {
-      if (!MINISTRY_SIGNUP_SLUGS.includes(scope.slug as MinistrySignupSlug)) {
-        return { success: false, error: 'Invalid ministry.' };
-      }
-      const slug = scope.slug as MinistrySignupSlug;
-      const ministry = await db.prepare('SELECT title_english, title_kreyol FROM ministries WHERE slug = ?').get(slug) as
+      const ministry = await db.prepare('SELECT title_english, title_kreyol FROM ministries WHERE slug = ?').get(scope.slug) as
         | { title_english: string; title_kreyol: string }
         | undefined;
-      const fields = MINISTRY_SIGNUP_FIELDS[slug];
+      if (!ministry) {
+        return { success: false, error: 'Invalid ministry.' };
+      }
+      const slug = scope.slug;
+      const fields = getMinistrySignupFields(slug);
       const columns: RegistrantColumn[] = [
         { key: 'name', label: language === 'fr_ht' ? 'Nom' : 'Name', type: 'text', required: true },
         { key: 'email', label: language === 'fr_ht' ? 'Courriel' : 'Email', type: 'text', required: true },
@@ -390,7 +390,10 @@ export async function saveRegistrant(
     }
 
     if (scope.kind === 'ministry') {
-      if (!MINISTRY_SIGNUP_SLUGS.includes(scope.slug as MinistrySignupSlug)) {
+      const ministryRow = await db.prepare('SELECT slug FROM ministries WHERE slug = ?').get(scope.slug) as
+        | { slug: string }
+        | undefined;
+      if (!ministryRow) {
         return { success: false, error: 'Invalid ministry.' };
       }
       if (!name || !email) return { success: false, error: 'Name and email are required.' };

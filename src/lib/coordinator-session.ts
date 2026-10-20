@@ -282,6 +282,18 @@ export async function canManageGallery(): Promise<boolean> {
   return access.source === 'coordinator' && access.gallery && !access.needsPasswordSetup;
 }
 
+export async function canManageLiveArchives(): Promise<boolean> {
+  if (await checkAdminAuth()) return true;
+  const access = await getRegistrantAccess();
+  return access.source === 'coordinator' && access.liveArchives && !access.needsPasswordSetup;
+}
+
+export async function canManageHomeTabs(): Promise<boolean> {
+  if (await checkAdminAuth()) return true;
+  const access = await getRegistrantAccess();
+  return access.source === 'coordinator' && access.homeTabs && !access.needsPasswordSetup;
+}
+
 export async function getRegistrantAccess(): Promise<RegistrantAccess> {
   const session = await getCoordinatorSession();
   const coordinator = session?.email ?? null;
@@ -348,6 +360,8 @@ export async function getRegistrantAccess(): Promise<RegistrantAccess> {
     access.events = emailMatchesEditorFields(normalized, await loadSection('events_signups'));
     access.schedules = emailMatchesEditorFields(normalized, await loadSection('service_schedules'));
     access.gallery = emailMatchesEditorFields(normalized, await loadSection('photo_gallery'));
+    access.liveArchives = emailMatchesEditorFields(normalized, await loadSection('live_archives'));
+    access.homeTabs = emailMatchesEditorFields(normalized, await loadSection('home_page_tabs'));
   } catch (error) {
     console.error('Error building registrant access:', error);
   }

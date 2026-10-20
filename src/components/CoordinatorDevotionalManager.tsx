@@ -18,7 +18,7 @@ import AdminBilingualTranslateBar from '@/components/AdminBilingualTranslateBar'
 import CoordinatorContentPanel from '@/components/CoordinatorContentPanel';
 import {
   applyTranslatedFields,
-  collectTextsForTranslation,
+  prepareBilingualTranslation,
   type BilingualTextField,
   type TranslateDirection,
 } from '@/lib/admin-translate';
@@ -187,14 +187,29 @@ export default function CoordinatorDevotionalManager({ open, isLight, onClose }:
       { id: 'verse_text', kreyol: form.verse_text_kreyol, english: form.verse_text_english },
       { id: 'lesson', kreyol: form.lesson_kreyol, english: form.lesson_english },
     ];
-    const payload = collectTextsForTranslation(fields, bilingualTranslateDirection, language);
-    if (!payload) {
+    const prepared = prepareBilingualTranslation(fields, bilingualTranslateDirection, language);
+    if (!prepared.payload && !prepared.clearedOnly) {
       setMessage({
         type: 'error',
         text: isHt ? 'Veuillez saisir du texte dans la langue source.' : 'Please enter source-language text.',
       });
       return;
     }
+    if (!prepared.payload && prepared.clearedOnly) {
+      const byId = Object.fromEntries(prepared.fields.map((field) => [field.id, field]));
+      setForm((prev) => ({
+        ...prev,
+        verse_ref_kreyol: byId.verse_ref?.kreyol ?? prev.verse_ref_kreyol,
+        verse_ref_english: byId.verse_ref?.english ?? prev.verse_ref_english,
+        verse_text_kreyol: byId.verse_text?.kreyol ?? prev.verse_text_kreyol,
+        verse_text_english: byId.verse_text?.english ?? prev.verse_text_english,
+        lesson_kreyol: byId.lesson?.kreyol ?? prev.lesson_kreyol,
+        lesson_english: byId.lesson?.english ?? prev.lesson_english,
+      }));
+      setMessage({ type: 'success', text: isHt ? 'Champs cible effacés.' : 'Target language fields cleared.' });
+      return;
+    }
+    const payload = prepared.payload!;
 
     setIsTranslating(true);
     try {
@@ -203,7 +218,7 @@ export default function CoordinatorDevotionalManager({ open, isLight, onClose }:
         setMessage({ type: 'error', text: res.error || (isHt ? 'Échec de la traduction.' : 'Translation failed.') });
         return;
       }
-      const updated = applyTranslatedFields(fields, res.translations, payload.fromLang);
+      const updated = applyTranslatedFields(prepared.fields, res.translations, payload.fromLang);
       const byId = Object.fromEntries(updated.map((field) => [field.id, field]));
       setForm((prev) => ({
         ...prev,

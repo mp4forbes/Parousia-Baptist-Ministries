@@ -14,8 +14,8 @@ import {
 } from '@/lib/actions';
 import { frenchSetting, frenchMinistryField, frenchField, pickLocalizedField, frenchFreeGiftTitle, frenchFreeGiftDescription, frenchBlogFields, frenchEventFields, frenchHaitiMissionFields, frenchPrayerRequest } from '@/lib/french-content';
 import MinistrySignupForm from '@/components/MinistrySignupForm';
-import { MinistrySignupSlug } from '@/lib/ministry-signup-fields';
-import { aboutTabHref, ministryHref, type AboutTab, type MinistryNavSlug, type PublicSiteSection } from '@/lib/site-nav';
+import { ministryDropdownLabel, sortMinistriesForNav } from '@/lib/ministries-nav';
+import { aboutTabHref, ministryHref, type AboutTab, type PublicSiteSection } from '@/lib/site-nav';
 import { parseTeamDepartments, type TeamDepartment, type TeamMember } from '@/lib/team-departments';
 import { downloadAssetFile } from '@/lib/client-download';
 import { getGiftDownloadUrls } from '@/lib/gift-download';
@@ -74,7 +74,7 @@ interface PublicHomeProps {
   ministries: Ministry[];
   section?: PublicSiteSection;
   initialAboutTab?: AboutTab;
-  initialMinistrySlug?: MinistryNavSlug;
+  initialMinistrySlug?: string;
 }
 
 export default function PublicHome({ 
@@ -94,6 +94,13 @@ export default function PublicHome({
 
   const activeAboutTab = initialAboutTab;
   const activeMinistryTab = initialMinistrySlug;
+  const navMinistries = sortMinistriesForNav(ministries);
+  const ministryTabIcon = (slug: string) => {
+    if (slug === 'women') return Heart;
+    if (slug === 'men') return Users;
+    if (slug === 'missions') return Globe2;
+    return Sparkles;
+  };
 
   // Dynamic public database states loaded via client side effects
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
@@ -1149,6 +1156,9 @@ export default function PublicHome({
             <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">{language === 'fr_ht' ? 'Diffusions en direct et archives' : 'Live Broadcasts & Archives'}</h3>
             <h4 className={`text-3xl sm:text-4xl font-extrabold font-serif ${textTitle} mb-4`}>{t.sermonsTitle}</h4>
             <p className={`${textMuted} text-base`}>{t.sermonsSubtitle}</p>
+            <div className="mt-5 flex justify-center">
+              <CoordinatorContentManagerButton kind="liveArchives" isLight={isLight} />
+            </div>
           </div>
 
           <div className="grid lg:grid-cols-12 gap-12 mb-16">
@@ -1564,18 +1574,14 @@ export default function PublicHome({
 
           {/* Premium Tab Selector */}
           <div className="flex flex-wrap justify-center gap-2 mb-12">
-            {[
-              { id: 'women', label: t.ministryWomen, icon: Heart },
-              { id: 'men', label: t.ministryMen, icon: Users },
-              { id: 'children', label: t.ministryChildren, icon: Sparkles },
-              { id: 'missions', label: t.ministryMissions, icon: Globe2 }
-            ].map(tab => {
-              const IconComp = tab.icon;
-              const isSelected = activeMinistryTab === tab.id;
+            {navMinistries.map((ministry) => {
+              const IconComp = ministryTabIcon(ministry.slug);
+              const isSelected = activeMinistryTab === ministry.slug;
+              const label = ministryDropdownLabel(ministry, language === 'fr_ht' ? 'fr_ht' : 'en');
               return (
                 <Link
-                  key={tab.id}
-                  href={ministryHref(tab.id)}
+                  key={ministry.slug}
+                  href={ministryHref(ministry.slug)}
                   className={`flex items-center gap-2 px-5 py-3 rounded-xl border font-bold text-sm transition-all duration-300 cursor-pointer ${
                     isSelected
                       ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-lg shadow-amber-500/20 scale-105'
@@ -1583,7 +1589,7 @@ export default function PublicHome({
                   }`}
                 >
                   <IconComp className="w-4 h-4" />
-                  <span>{tab.label}</span>
+                  <span>{label}</span>
                 </Link>
               );
             })}
@@ -1591,7 +1597,7 @@ export default function PublicHome({
 
           {/* Tab Contents */}
           <div className="mt-8 transition-all duration-500">
-            {['women', 'men', 'children'].includes(activeMinistryTab) && (() => {
+            {activeMinistryTab !== 'missions' && (() => {
               const m = ministries.find(item => item.slug === activeMinistryTab);
               if (!m) return null;
               
@@ -1619,7 +1625,7 @@ export default function PublicHome({
                         ))}
                       </ul>
                       <MinistrySignupForm
-                        slug={activeMinistryTab as MinistrySignupSlug}
+                        slug={activeMinistryTab}
                         ministry={m}
                         language={language}
                         isLight={isLight}
@@ -1748,7 +1754,10 @@ export default function PublicHome({
       {/* 5. ABOUT US & BELIEFS SECTION (ABOUT) */}
       <section id="about" className={`py-24 ${isLight ? 'bg-white border-t border-slate-200' : 'bg-slate-950 border-t border-slate-900'} relative`}>
         <div className={siteShellClass}>
-          
+          <div className="flex justify-end mb-4">
+            <CoordinatorContentManagerButton kind="homeTabs" isLight={isLight} />
+          </div>
+
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h3 className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">{language === 'fr_ht' ? 'Découvrez-nous' : 'Discover Us'}</h3>
             <h4 className={`text-3xl sm:text-4xl font-extrabold font-serif ${textTitle} mb-4`}>

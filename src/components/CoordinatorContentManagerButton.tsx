@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { BookOpen, Calendar, Clock, FileText } from 'lucide-react';
+import { BookOpen, Calendar, Clock, FileText, Home, Video } from 'lucide-react';
 import { useCoordinatorSession } from '@/lib/CoordinatorSessionContext';
 import { useLanguage } from '@/lib/LanguageContext';
 import { contentCoordinatorIsAllowed, type ContentCoordinatorKind } from '@/lib/registrant-scope';
@@ -9,6 +9,8 @@ import CoordinatorBlogManager from '@/components/CoordinatorBlogManager';
 import CoordinatorDevotionalManager from '@/components/CoordinatorDevotionalManager';
 import CoordinatorEventsManager from '@/components/CoordinatorEventsManager';
 import CoordinatorSchedulesManager from '@/components/CoordinatorSchedulesManager';
+import CoordinatorLiveArchivesManager from '@/components/CoordinatorLiveArchivesManager';
+import CoordinatorHomeTabsManager from '@/components/CoordinatorHomeTabsManager';
 
 interface CoordinatorContentManagerButtonProps {
   kind: ContentCoordinatorKind;
@@ -16,11 +18,13 @@ interface CoordinatorContentManagerButtonProps {
   label?: string;
 }
 
-const KIND_META: Record<ContentCoordinatorKind, { icon: typeof FileText; labelKey: 'coordinatorManageBlog' | 'coordinatorManageDevotional' | 'coordinatorManageEvents' | 'coordinatorManageSchedules' }> = {
+const KIND_META: Record<ContentCoordinatorKind, { icon: typeof FileText; labelKey: 'coordinatorManageBlog' | 'coordinatorManageDevotional' | 'coordinatorManageEvents' | 'coordinatorManageSchedules' | 'coordinatorManageHomeTabs' | 'coordinatorManageLiveArchives' }> = {
   blog: { icon: FileText, labelKey: 'coordinatorManageBlog' },
   devotional: { icon: BookOpen, labelKey: 'coordinatorManageDevotional' },
   events: { icon: Calendar, labelKey: 'coordinatorManageEvents' },
   schedules: { icon: Clock, labelKey: 'coordinatorManageSchedules' },
+  homeTabs: { icon: Home, labelKey: 'coordinatorManageHomeTabs' },
+  liveArchives: { icon: Video, labelKey: 'coordinatorManageLiveArchives' },
 };
 
 export default function CoordinatorContentManagerButton({ kind, isLight, label }: CoordinatorContentManagerButtonProps) {
@@ -48,6 +52,8 @@ export default function CoordinatorContentManagerButton({ kind, isLight, label }
       {kind === 'devotional' && <CoordinatorDevotionalManager open={open} isLight={isLight} onClose={() => setOpen(false)} />}
       {kind === 'events' && <CoordinatorEventsManager open={open} isLight={isLight} onClose={() => setOpen(false)} />}
       {kind === 'schedules' && <CoordinatorSchedulesManager open={open} isLight={isLight} onClose={() => setOpen(false)} />}
+      {kind === 'homeTabs' && <CoordinatorHomeTabsManager open={open} isLight={isLight} onClose={() => setOpen(false)} />}
+      {kind === 'liveArchives' && <CoordinatorLiveArchivesManager open={open} isLight={isLight} onClose={() => setOpen(false)} />}
     </>
   );
 }

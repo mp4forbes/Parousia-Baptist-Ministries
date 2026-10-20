@@ -28,6 +28,43 @@ export function resolveTranslateSourceLang(
   return null;
 }
 
+/** When translating in one direction, an empty source field clears the opposite language. */
+export function applyDirectionalTargetClears(
+  fields: BilingualTextField[],
+  direction: TranslateDirection
+): BilingualTextField[] {
+  if (direction === 'en_to_fr_ht') {
+    return fields.map((field) => (field.english.trim() ? field : { ...field, kreyol: '' }));
+  }
+  if (direction === 'fr_ht_to_en') {
+    return fields.map((field) => (field.kreyol.trim() ? field : { ...field, english: '' }));
+  }
+  return fields;
+}
+
+export function bilingualFieldsDiffer(a: BilingualTextField[], b: BilingualTextField[]): boolean {
+  if (a.length !== b.length) return true;
+  return a.some(
+    (field, index) =>
+      field.kreyol !== b[index].kreyol || field.english !== b[index].english || field.id !== b[index].id
+  );
+}
+
+export function prepareBilingualTranslation(
+  fields: BilingualTextField[],
+  direction: TranslateDirection,
+  uiLanguage: 'en' | 'fr_ht' = 'fr_ht'
+): {
+  fields: BilingualTextField[];
+  payload: { fromLang: 'en' | 'fr_ht'; items: Array<{ id: string; text: string }> } | null;
+  clearedOnly: boolean;
+} {
+  const clearedFields = applyDirectionalTargetClears(fields, direction);
+  const payload = collectTextsForTranslation(clearedFields, direction, uiLanguage);
+  const clearedOnly = !payload && bilingualFieldsDiffer(fields, clearedFields);
+  return { fields: clearedFields, payload, clearedOnly };
+}
+
 export function collectTextsForTranslation(
   fields: BilingualTextField[],
   direction: TranslateDirection,

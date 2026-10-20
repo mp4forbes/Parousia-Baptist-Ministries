@@ -15,7 +15,7 @@ import { normalizeEventEndDate } from '@/lib/event-dates';
 import { parseEventImages, serializeEventImages } from '@/lib/event-images';
 import {
   applyTranslatedFields,
-  collectTextsForTranslation,
+  prepareBilingualTranslation,
   type BilingualTextField,
   type TranslateDirection,
 } from '@/lib/admin-translate';
@@ -269,11 +269,26 @@ export default function CoordinatorEventsManager({ open, isLight, onClose }: Coo
       { id: 'location', kreyol: form.location_kreyol, english: form.location_english },
       { id: 'description', kreyol: form.description_kreyol, english: form.description_english },
     ];
-    const payload = collectTextsForTranslation(fields, direction, language);
-    if (!payload) {
+    const prepared = prepareBilingualTranslation(fields, direction, language);
+    if (!prepared.payload && !prepared.clearedOnly) {
       setMessage({ type: 'error', text: isHt ? 'Saisissez du texte source.' : 'Enter source-language text.' });
       return;
     }
+    if (!prepared.payload && prepared.clearedOnly) {
+      const byId = Object.fromEntries(prepared.fields.map((f) => [f.id, f]));
+      setForm((prev) => ({
+        ...prev,
+        title_kreyol: byId.title?.kreyol ?? prev.title_kreyol,
+        title_english: byId.title?.english ?? prev.title_english,
+        location_kreyol: byId.location?.kreyol ?? prev.location_kreyol,
+        location_english: byId.location?.english ?? prev.location_english,
+        description_kreyol: byId.description?.kreyol ?? prev.description_kreyol,
+        description_english: byId.description?.english ?? prev.description_english,
+      }));
+      setMessage({ type: 'success', text: isHt ? 'Champs cible effacés.' : 'Target language fields cleared.' });
+      return;
+    }
+    const payload = prepared.payload!;
     setIsTranslating(true);
     try {
       const res = await translateAdminTextsAction(payload.items, payload.fromLang, 'church event', 'events');
@@ -281,7 +296,7 @@ export default function CoordinatorEventsManager({ open, isLight, onClose }: Coo
         setMessage({ type: 'error', text: res.error || (isHt ? 'Échec de la traduction.' : 'Translation failed.') });
         return;
       }
-      const updated = applyTranslatedFields(fields, res.translations, payload.fromLang);
+      const updated = applyTranslatedFields(prepared.fields, res.translations, payload.fromLang);
       const byId = Object.fromEntries(updated.map((f) => [f.id, f]));
       setForm((prev) => ({
         ...prev,

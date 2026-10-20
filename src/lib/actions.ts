@@ -18,7 +18,8 @@ import { serializeEventImages } from './event-images';
 import { buildMinistrySignupSpreadsheet } from './ministry-signup-spreadsheet';
 import { buildAdminSpreadsheet } from './admin-spreadsheet';
 import { AdminExportSlug, isAdminExportSlug, isAdminSectionSlug } from './admin-sections';
-import { MINISTRY_SIGNUP_FIELDS, MINISTRY_SIGNUP_SLUGS, MinistrySignupSlug } from './ministry-signup-fields';
+import { getMinistrySignupFields } from './ministry-signup-fields';
+import { isCoreMinistrySlug, isValidMinistrySlug, normalizeMinistrySlugInput } from './ministries-nav';
 import {
   formatEventRegistrationResponses,
   getEventRegistrationFields,
@@ -28,7 +29,14 @@ import {
 } from './event-registration-fields';
 import { formatRegistrationPaymentStatus, isEventPaymentRequired } from './event-payment';
 import { mergeSettingsPreservingRestricted } from './admin-permissions';
-import { canManageDailyDevotional, canManageEventsContent, canManagePastorsBlog, canManageServiceSchedules } from './coordinator-session';
+import {
+  canManageDailyDevotional,
+  canManageEventsContent,
+  canManageLiveArchives,
+  canManagePastorsBlog,
+  canManageServiceSchedules,
+  canManageHomeTabs,
+} from './coordinator-session';
 import { cookies } from 'next/headers';
 import fs from 'fs';
 import path from 'path';
@@ -68,7 +76,7 @@ export async function getServiceSchedules(): Promise<ServiceSchedule[]> {
 
 export async function getMinistries(): Promise<Ministry[]> {
   try {
-    return await db.prepare('SELECT * FROM ministries').all() as Ministry[];
+    return await db.prepare('SELECT * FROM ministries ORDER BY sort_order ASC, slug ASC').all() as Ministry[];
   } catch (error) {
     console.error('Error fetching ministries:', error);
     return [];
@@ -94,10 +102,181 @@ export async function saveMinistry(
     await db.prepare(query).run(...params);
 
     revalidatePath('/');
+    revalidatePath('/ministries');
+    revalidatePath(`/ministries/${slug}`);
     revalidatePath('/admin/dashboard');
     return { success: true };
   } catch (error: any) {
     console.error(`Error saving ministry ${slug}:`, error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function renameMinistrySlug(
+  oldSlug: string,
+  newSlugRaw: string
+): Promise<{ success: boolean; error?: string; slug?: string }> {
+  const isAuthed = await checkAdminAuth();
+  if (!isAuthed) return { success: false, error: 'Unauthorized' };
+
+  const newSlug = normalizeMinistrySlugInput(newSlugRaw);
+  if (!isValidMinistrySlug(newSlug)) {
+    return { success: false, error: 'Invalid ministry URL slug.' };
+  }
+  if (oldSlug === newSlug) {
+    return { success: true, slug: newSlug };
+  }
+
+  try {
+    const existingOld = await db.prepare('SELECT slug FROM ministries WHERE slug = ?').get(oldSlug) as
+      | { slug: string }
+      | undefined;
+    if (!existingOld) {
+      return { success: false, error: 'Ministry not found.' };
+    }
+
+    const existingNew = await db.prepare('SELECT slug FROM ministries WHERE slug = ?').get(newSlug) as
+      | { slug: string }
+      | undefined;
+    if (existingNew) {
+      return { success: false, error: 'That ministry URL slug is already in use.' };
+    }
+
+    await db.prepare('UPDATE ministry_signups SET ministry_slug = ? WHERE ministry_slug = ?').run(newSlug, oldSlug);
+    await db.prepare('UPDATE ministries SET slug = ? WHERE slug = ?').run(newSlug, oldSlug);
+
+    revalidatePath('/');
+    revalidatePath('/ministries');
+    revalidatePath(`/ministries/${oldSlug}`);
+    revalidatePath(`/ministries/${newSlug}`);
+    revalidatePath('/admin/dashboard');
+    return { success: true, slug: newSlug };
+  } catch (error: any) {
+    console.error(`Error renaming ministry ${oldSlug} -> ${newSlug}:`, error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function createMinistry(
+  slugRaw: string,
+  templateSlug?: string
+): Promise<{ success: boolean; error?: string; ministry?: Ministry }> {
+  const isAuthed = await checkAdminAuth();
+  if (!isAuthed) return { success: false, error: 'Unauthorized' };
+
+  const slug = normalizeMinistrySlugInput(slugRaw);
+  if (!isValidMinistrySlug(slug)) {
+    return { success: false, error: 'Invalid ministry URL slug.' };
+  }
+
+  try {
+    const duplicate = await db.prepare('SELECT slug FROM ministries WHERE slug = ?').get(slug) as
+      | { slug: string }
+      | undefined;
+    if (duplicate) {
+      return { success: false, error: 'That ministry URL slug is already in use.' };
+    }
+
+    const template =
+      (templateSlug
+        ? await db.prepare('SELECT * FROM ministries WHERE slug = ?').get(templateSlug)
+        : await db.prepare('SELECT * FROM ministries WHERE slug = ?').get('women')) as Ministry | undefined;
+
+    const orderRow = await db.prepare('SELECT COALESCE(MAX(sort_order), 0) AS max_order FROM ministries').get() as
+      | { max_order: number }
+      | undefined;
+    const sortOrder = Number(orderRow?.max_order ?? 0) + 10;
+
+    const titleEnglish = slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, ' ');
+    const ministry: Ministry = {
+      slug,
+      title_english: template?.title_english ? `${titleEnglish} Ministry` : titleEnglish,
+      title_kreyol: template?.title_kreyol ? `Ministère — ${titleEnglish}` : `Ministère ${titleEnglish}`,
+      description_english: template?.description_english || '',
+      description_kreyol: template?.description_kreyol || '',
+      image_url: template?.image_url || '',
+      bullets_english: template?.bullets_english || '',
+      bullets_kreyol: template?.bullets_kreyol || '',
+      contact_name: '',
+      contact_email: '',
+      contact_phone: '',
+      notification_emails: '',
+      google_sheet_id: '',
+      sort_order: sortOrder,
+      nav_label_english: titleEnglish,
+      nav_label_kreyol: titleEnglish,
+    };
+
+    await db.prepare(
+      `INSERT INTO ministries
+       (slug, title_kreyol, title_english, description_kreyol, description_english, image_url, bullets_kreyol, bullets_english,
+        contact_name, contact_email, contact_phone, notification_emails, google_sheet_id, sort_order, nav_label_english, nav_label_kreyol)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      ministry.slug,
+      ministry.title_kreyol,
+      ministry.title_english,
+      ministry.description_kreyol,
+      ministry.description_english,
+      ministry.image_url,
+      ministry.bullets_kreyol,
+      ministry.bullets_english,
+      ministry.contact_name || '',
+      ministry.contact_email || '',
+      ministry.contact_phone || '',
+      ministry.notification_emails || '',
+      ministry.google_sheet_id || '',
+      ministry.sort_order ?? 0,
+      ministry.nav_label_english || '',
+      ministry.nav_label_kreyol || ''
+    );
+
+    revalidatePath('/');
+    revalidatePath('/ministries');
+    revalidatePath(`/ministries/${slug}`);
+    revalidatePath('/admin/dashboard');
+    return { success: true, ministry };
+  } catch (error: any) {
+    console.error(`Error creating ministry ${slug}:`, error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteMinistry(slug: string): Promise<{ success: boolean; error?: string }> {
+  if (!(await isSuperAdminUser(await getLoggedInAdminEmail()))) {
+    return { success: false, error: 'Only super administrators can delete ministries.' };
+  }
+
+  const normalizedSlug = normalizeMinistrySlugInput(slug);
+  if (!isValidMinistrySlug(normalizedSlug)) {
+    return { success: false, error: 'Invalid ministry.' };
+  }
+
+  if (isCoreMinistrySlug(normalizedSlug)) {
+    return {
+      success: false,
+      error: 'Core ministries (Women, Men, Children, Youth, Missions) cannot be deleted.',
+    };
+  }
+
+  try {
+    const existing = await db.prepare('SELECT slug FROM ministries WHERE slug = ?').get(normalizedSlug) as
+      | { slug: string }
+      | undefined;
+    if (!existing) {
+      return { success: false, error: 'Ministry not found.' };
+    }
+
+    await db.prepare('DELETE FROM ministry_signups WHERE ministry_slug = ?').run(normalizedSlug);
+    await db.prepare('DELETE FROM ministries WHERE slug = ?').run(normalizedSlug);
+
+    revalidatePath('/');
+    revalidatePath('/ministries');
+    revalidatePath(`/ministries/${normalizedSlug}`);
+    revalidatePath('/admin/dashboard');
+    return { success: true };
+  } catch (error: any) {
+    console.error(`Error deleting ministry ${normalizedSlug}:`, error);
     return { success: false, error: error.message };
   }
 }
@@ -112,16 +291,19 @@ export async function submitMinistrySignup(
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    if (!MINISTRY_SIGNUP_SLUGS.includes(slug as MinistrySignupSlug)) {
+    const ministry = await db.prepare('SELECT slug FROM ministries WHERE slug = ?').get(slug) as
+      | { slug: string }
+      | undefined;
+    if (!ministry) {
       return { success: false, error: 'Invalid ministry.' };
     }
 
-    const ministrySlug = slug as MinistrySignupSlug;
+    const signupFields = getMinistrySignupFields(slug);
     if (!data.name.trim() || !data.email.trim()) {
       return { success: false, error: 'Name and email are required.' };
     }
 
-    for (const field of MINISTRY_SIGNUP_FIELDS[ministrySlug]) {
+    for (const field of signupFields) {
       if (field.required && !data.responses[field.key]?.trim()) {
         return { success: false, error: `Missing required field: ${field.label_en}` };
       }
@@ -132,7 +314,7 @@ export async function submitMinistrySignup(
       INSERT INTO ministry_signups (ministry_slug, name, email, phone, responses, created_at)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(
-      ministrySlug,
+      slug,
       data.name.trim(),
       data.email.toLowerCase().trim(),
       data.phone?.trim() || null,
@@ -140,11 +322,11 @@ export async function submitMinistrySignup(
       createdAt
     );
 
-    const ministry = await db.prepare('SELECT * FROM ministries WHERE slug = ?').get(ministrySlug) as Ministry | undefined;
-    const recipients = parseNotificationEmails(ministry?.notification_emails);
+    const ministryRow = await db.prepare('SELECT * FROM ministries WHERE slug = ?').get(slug) as Ministry | undefined;
+    const recipients = parseNotificationEmails(ministryRow?.notification_emails);
     if (recipients.length > 0) {
-      const ministryTitle = ministry?.title_english || ministrySlug;
-      const responseLines = MINISTRY_SIGNUP_FIELDS[ministrySlug]
+      const ministryTitle = ministryRow?.title_english || slug;
+      const responseLines = signupFields
         .map((field) => {
           const value = data.responses[field.key]?.trim();
           if (!value) return null;
@@ -212,18 +394,20 @@ export async function exportMinistrySignupsSpreadsheet(
   const isAuthed = await checkAdminAuth();
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
-  if (!MINISTRY_SIGNUP_SLUGS.includes(slug as MinistrySignupSlug)) {
+  const ministryExists = await db.prepare('SELECT slug FROM ministries WHERE slug = ?').get(slug) as
+    | { slug: string }
+    | undefined;
+  if (!ministryExists) {
     return { success: false, error: 'Invalid ministry.' };
   }
 
   try {
-    const ministrySlug = slug as MinistrySignupSlug;
-    const ministry = await db.prepare('SELECT * FROM ministries WHERE slug = ?').get(ministrySlug) as Ministry | undefined;
-    const signups = await db.prepare('SELECT * FROM ministry_signups WHERE ministry_slug = ? ORDER BY created_at ASC').all(ministrySlug) as MinistrySignup[];
+    const ministry = await db.prepare('SELECT * FROM ministries WHERE slug = ?').get(slug) as Ministry | undefined;
+    const signups = await db.prepare('SELECT * FROM ministry_signups WHERE ministry_slug = ? ORDER BY created_at ASC').all(slug) as MinistrySignup[];
     const settings = await getSettings();
     const buffer = await buildMinistrySignupSpreadsheet({
-      slug: ministrySlug,
-      ministryTitle: ministry?.title_english || ministrySlug,
+      slug,
+      ministryTitle: ministry?.title_english || slug,
       signups,
       logoUrl: settings.logo_url,
     });
@@ -231,7 +415,7 @@ export async function exportMinistrySignupsSpreadsheet(
     return {
       success: true,
       data: buffer.toString('base64'),
-      filename: `${ministrySlug}-signups.xlsx`,
+      filename: `${slug}-signups.xlsx`,
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     };
   } catch (error: any) {
@@ -1295,6 +1479,26 @@ export async function markAdminEntryFromSite(): Promise<void> {
 
 // ADMINISTRATIVE CRUD OPERATIONS
 
+export async function updateHomePageTabsSettings(settingsMap: Record<string, string>): Promise<{ success: boolean; error?: string }> {
+  const isAuthed = await canManageHomeTabs();
+  if (!isAuthed) return { success: false, error: 'Unauthorized' };
+
+  try {
+    const { pickHomePageTabsSettings } = await import('./home-page-tabs-settings');
+    const finalSettingsMap = pickHomePageTabsSettings(settingsMap);
+    const update = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
+    for (const [key, value] of Object.entries(finalSettingsMap)) {
+      await update.run(key, value);
+    }
+    revalidatePath('/');
+    revalidatePath('/admin/dashboard');
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating home page tabs settings:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function updateGlobalSettings(settingsMap: Record<string, string>): Promise<{ success: boolean; error?: string }> {
   const isAuthed = await checkAdminAuth();
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
@@ -1711,7 +1915,7 @@ export async function getSermons(): Promise<Sermon[]> {
 }
 
 export async function saveSermon(id: number | null, data: Partial<Sermon>): Promise<{ success: boolean; error?: string }> {
-  const isAuthed = await checkAdminAuth();
+  const isAuthed = await canManageLiveArchives();
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
@@ -1730,6 +1934,7 @@ export async function saveSermon(id: number | null, data: Partial<Sermon>): Prom
       await insert.run(data.title_kreyol, data.title_english, data.date || new Date().toISOString().split('T')[0], data.speaker, data.youtube_id, data.description_kreyol, data.description_english);
     }
     revalidatePath('/');
+    revalidatePath('/sermons');
     revalidatePath('/admin/dashboard');
     return { success: true };
   } catch (error: any) {
@@ -1739,12 +1944,13 @@ export async function saveSermon(id: number | null, data: Partial<Sermon>): Prom
 }
 
 export async function deleteSermon(id: number): Promise<{ success: boolean; error?: string }> {
-  const isAuthed = await checkAdminAuth();
+  const isAuthed = await canManageLiveArchives();
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 
   try {
     await db.prepare('DELETE FROM sermons WHERE id = ?').run(id);
     revalidatePath('/');
+    revalidatePath('/sermons');
     revalidatePath('/admin/dashboard');
     return { success: true };
   } catch (error: any) {
@@ -2018,8 +2224,40 @@ function extractBalancedJson(text: string): string {
   return '';
 }
 
+export async function updateLiveArchivesSettings(settingsMap: {
+  live_stream_active: string;
+  live_stream_url: string;
+  youtube_channel_url: string;
+  live_stream_event_id: string;
+  custom_live_event_thumbnail_url?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const isAuthed = await canManageLiveArchives();
+  if (!isAuthed) return { success: false, error: 'Unauthorized' };
+
+  try {
+    const update = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
+    const entries: Array<[string, string]> = [
+      ['live_stream_active', settingsMap.live_stream_active],
+      ['live_stream_url', settingsMap.live_stream_url],
+      ['youtube_channel_url', settingsMap.youtube_channel_url],
+      ['live_stream_event_id', settingsMap.live_stream_event_id],
+      ['custom_live_event_thumbnail_url', settingsMap.custom_live_event_thumbnail_url || ''],
+    ];
+    for (const [key, value] of entries) {
+      await update.run(key, value);
+    }
+    revalidatePath('/');
+    revalidatePath('/sermons');
+    revalidatePath('/admin/dashboard');
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating live archives settings:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function syncSermonsFromYoutube(channelUrl: string): Promise<{ success: boolean; count: number; error?: string }> {
-  const isAuthed = await checkAdminAuth();
+  const isAuthed = await canManageLiveArchives();
   if (!isAuthed) return { success: false, count: 0, error: 'Unauthorized' };
 
   if (!channelUrl) {
@@ -2299,7 +2537,11 @@ export async function syncSermonsFromYoutube(channelUrl: string): Promise<{ succ
       }
     }
 
+    const updateChannel = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
+    await updateChannel.run('youtube_channel_url', channelUrl.trim());
+
     revalidatePath('/');
+    revalidatePath('/sermons');
     revalidatePath('/admin/dashboard');
 
     return { success: true, count: importCount };
@@ -3731,7 +3973,7 @@ export async function translateAdminTextsAction(
   items: Array<{ id: string; text: string }>,
   fromLang: 'en' | 'fr_ht',
   contextLabel = 'church website content',
-  requiredAccess?: 'blog' | 'devotional' | 'events' | 'schedules'
+  requiredAccess?: 'blog' | 'devotional' | 'events' | 'schedules' | 'live_archives' | 'home_tabs'
 ): Promise<{ success: boolean; translations?: Record<string, string>; error?: string }> {
   let isAuthed = await checkAdminAuth();
   if (!isAuthed && requiredAccess === 'blog') {
@@ -3742,6 +3984,10 @@ export async function translateAdminTextsAction(
     isAuthed = await canManageEventsContent();
   } else if (!isAuthed && requiredAccess === 'schedules') {
     isAuthed = await canManageServiceSchedules();
+  } else if (!isAuthed && requiredAccess === 'live_archives') {
+    isAuthed = await canManageLiveArchives();
+  } else if (!isAuthed && requiredAccess === 'home_tabs') {
+    isAuthed = await canManageHomeTabs();
   }
   if (!isAuthed) return { success: false, error: 'Unauthorized' };
 

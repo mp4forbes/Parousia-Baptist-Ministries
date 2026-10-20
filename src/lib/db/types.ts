@@ -178,6 +178,9 @@ export interface Ministry {
   contact_phone?: string;
   notification_emails?: string;
   google_sheet_id?: string;
+  sort_order?: number;
+  nav_label_english?: string;
+  nav_label_kreyol?: string;
 }
 
 export interface MinistrySignup {

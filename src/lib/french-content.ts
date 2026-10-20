@@ -123,11 +123,18 @@ export const MINISTRY_FRENCH_DEFAULTS: Record<
       'Petit-déjeuner mensuel de formation : le premier samedi du mois\nSéminaires sur la responsabilité familiale, les finances et la masculinité biblique\nProjets de service et aide concrète à la communauté',
   },
   children: {
-    title: 'Ministère des enfants et des jeunes',
+    title: 'Ministère des enfants',
     description:
-      "Nous enseignons aux enfants et aux jeunes les voies du Seigneur dès leur plus jeune âge. Nos classes d'école du dimanche et nos programmes pour la jeunesse proposent des leçons bibliques adaptées, des temps de louange, de la musique et des jeux qui enracinent leur foi dans la Parole de Dieu.",
+      "Nous enseignons aux enfants les voies du Seigneur dès leur plus jeune âge. Nos classes d'école du dimanche proposent des leçons bibliques adaptées, des temps de louange, de la musique et des jeux qui enracinent leur foi dans la Parole de Dieu.",
     bullets:
       "Classes d'école du dimanche : chaque dimanche à 10 h 30\nChorale des enfants et formation instrumentale\nCamps bibliques d'été annuels",
+  },
+  youth: {
+    title: 'Ministère de la jeunesse',
+    description:
+      "Nous accompagnons les jeunes pour qu'ils grandissent dans la foi, la responsabilité et le service. Nos programmes offrent étude biblique, mentorat, louange et activités qui les préparent à suivre Christ au quotidien.",
+    bullets:
+      'Étude biblique pour la jeunesse : chaque semaine\nGroupes de discussion et mentorat\nProjets de service et événements spéciaux',
   },
   missions: {
     title: 'Missions et évangélisation',

@@ -6,15 +6,17 @@ import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 import CoordinatorAccessBanner from '@/components/CoordinatorAccessBanner';
 import CoordinatorLoginModal from '@/components/CoordinatorLoginModal';
+import type { Ministry } from '@/lib/db/types';
 import { HASH_REDIRECTS } from '@/lib/site-nav';
 import { getSiteTheme, siteThemeCssVars } from '@/lib/site-theme';
 
 interface SiteChromeProps {
   settings: Record<string, string>;
+  ministries: Ministry[];
   children: React.ReactNode;
 }
 
-export default function SiteChrome({ settings, children }: SiteChromeProps) {
+export default function SiteChrome({ settings, ministries, children }: SiteChromeProps) {
   const pathname = usePathname();
   const router = useRouter();
   const theme = getSiteTheme(settings);
@@ -33,7 +35,7 @@ export default function SiteChrome({ settings, children }: SiteChromeProps) {
   return (
     <div className={`flex flex-col min-h-screen ${theme.bgMain} font-sans selection:bg-amber-500 selection:text-slate-950`}>
       <style dangerouslySetInnerHTML={{ __html: siteThemeCssVars(theme) }} />
-      <SiteHeader settings={settings} />
+      <SiteHeader settings={settings} ministries={ministries} />
       <CoordinatorAccessBanner settings={settings} />
       <main className="flex-1">{children}</main>
       <SiteFooter settings={settings} />

@@ -10,6 +10,8 @@ export const ADMIN_SECTION_SLUGS = [
   'daily_devotional',
   'service_schedules',
   'photo_gallery',
+  'live_archives',
+  'home_page_tabs',
 ] as const;
 
 export type AdminSectionSlug = (typeof ADMIN_SECTION_SLUGS)[number];

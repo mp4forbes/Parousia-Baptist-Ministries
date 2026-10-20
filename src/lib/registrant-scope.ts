@@ -21,7 +21,7 @@ export interface RegistrantRow {
   values: Record<string, string>;
 }
 
-export type ContentCoordinatorKind = 'blog' | 'devotional' | 'events' | 'schedules';
+export type ContentCoordinatorKind = 'blog' | 'devotional' | 'events' | 'schedules' | 'liveArchives' | 'homeTabs';
 
 export interface RegistrantAccess {
   email: string | null;
@@ -39,6 +39,8 @@ export interface RegistrantAccess {
   events: boolean;
   schedules: boolean;
   gallery: boolean;
+  liveArchives: boolean;
+  homeTabs: boolean;
 }
 
 export const EMPTY_REGISTRANT_ACCESS: RegistrantAccess = {
@@ -57,6 +59,8 @@ export const EMPTY_REGISTRANT_ACCESS: RegistrantAccess = {
   events: false,
   schedules: false,
   gallery: false,
+  liveArchives: false,
+  homeTabs: false,
 };
 
 export function scopeIsAllowed(scope: RegistrantScope, access: RegistrantAccess | null): boolean {
@@ -102,12 +106,16 @@ export function contentCoordinatorIsAllowed(
       return access.events;
     case 'schedules':
       return access.schedules;
+    case 'liveArchives':
+      return access.liveArchives;
+    case 'homeTabs':
+      return access.homeTabs;
   }
 }
 
 export function hasAnyContentCoordinatorAccess(access: RegistrantAccess | null): boolean {
   if (!access?.email || access.needsPasswordSetup) return false;
-  return access.blog || access.devotional || access.events || access.schedules || access.gallery;
+  return access.blog || access.devotional || access.events || access.schedules || access.gallery || access.liveArchives || access.homeTabs;
 }
 
 export function hasAnyCoordinatorWorkbenchAccess(access: RegistrantAccess | null): boolean {

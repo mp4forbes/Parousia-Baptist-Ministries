@@ -109,6 +109,12 @@ export default function CoordinatorAccessBanner({ settings }: { settings: Record
             {access.schedules && (
               <CoordinatorContentManagerButton kind="schedules" isLight={theme.isLight} />
             )}
+            {access.homeTabs && (
+              <CoordinatorContentManagerButton kind="homeTabs" isLight={theme.isLight} />
+            )}
+            {access.liveArchives && (
+              <CoordinatorContentManagerButton kind="liveArchives" isLight={theme.isLight} />
+            )}
             {access.gallery && (
               <Link
                 href="/gallery?manage=1"

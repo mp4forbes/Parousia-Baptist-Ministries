@@ -161,7 +161,10 @@ CREATE TABLE IF NOT EXISTS ministries (
   contact_email TEXT DEFAULT '',
   contact_phone TEXT DEFAULT '',
   notification_emails TEXT DEFAULT '',
-  google_sheet_id TEXT DEFAULT ''
+  google_sheet_id TEXT DEFAULT '',
+  sort_order INTEGER DEFAULT 0,
+  nav_label_english TEXT DEFAULT '',
+  nav_label_kreyol TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS ministry_signups (
@@ -189,6 +192,9 @@ ALTER TABLE ministries ADD COLUMN IF NOT EXISTS contact_email TEXT DEFAULT '';
 ALTER TABLE ministries ADD COLUMN IF NOT EXISTS contact_phone TEXT DEFAULT '';
 ALTER TABLE ministries ADD COLUMN IF NOT EXISTS notification_emails TEXT DEFAULT '';
 ALTER TABLE ministries ADD COLUMN IF NOT EXISTS google_sheet_id TEXT DEFAULT '';
+ALTER TABLE ministries ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;
+ALTER TABLE ministries ADD COLUMN IF NOT EXISTS nav_label_english TEXT DEFAULT '';
+ALTER TABLE ministries ADD COLUMN IF NOT EXISTS nav_label_kreyol TEXT DEFAULT '';
 
 ALTER TABLE service_schedules ADD COLUMN IF NOT EXISTS image_url TEXT;
 ALTER TABLE service_schedules ADD COLUMN IF NOT EXISTS is_livestreamed INTEGER DEFAULT 0;
