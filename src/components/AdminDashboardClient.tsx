@@ -35,6 +35,7 @@ import {
   saveSermon,
   deleteSermon,
   backupWebsite,
+  bulkTranslateSermonArchivesAction,
   syncSermonsFromYoutube,
   addKnowledgeBaseItem,
   deleteKnowledgeBaseItem,
@@ -96,6 +97,7 @@ import {
   BilingualTextField,
   TranslateDirection,
   applyTranslatedFields,
+  bilingualItemsForApi,
   prepareBilingualTranslation,
   resolveTranslateSourceLang,
 } from '@/lib/admin-translate';
@@ -128,6 +130,7 @@ import {
   FileSpreadsheet,
   Link2,
   RefreshCw,
+  Languages,
   Eye,
   EyeOff,
   Wand2,
@@ -377,6 +380,7 @@ export default function AdminDashboardClient({
       : (settings.check_mailing_address || settings.church_address || '')
   );
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isBulkTranslatingSermons, setIsBulkTranslatingSermons] = useState(false);
   const [showAdminPass, setShowAdminPass] = useState(false);
 
   // Knowledge Base States
@@ -879,6 +883,38 @@ export default function AdminDashboardClient({
     }
   };
 
+  const handleBulkTranslateSermons = async () => {
+    const confirmMessage =
+      language === 'fr_ht'
+        ? 'Traduire automatiquement tous les titres (et descriptions si nécessaire) de l’anglais vers le français pour les vidéos archivées ? Cette opération peut prendre une minute.'
+        : 'Automatically translate all archive video titles (and descriptions where needed) from English to French? This may take a minute.';
+    if (!confirm(confirmMessage)) return;
+
+    setIsBulkTranslatingSermons(true);
+    triggerAlert(
+      language === 'fr_ht' ? 'Traduction des archives en cours...' : 'Translating all archive entries...',
+      'success'
+    );
+    try {
+      const result = await bulkTranslateSermonArchivesAction();
+      if (result.success) {
+        triggerAlert(
+          language === 'fr_ht'
+            ? `Traduction terminée : ${result.translated} vidéo(s) mise(s) à jour, ${result.skipped} déjà à jour.`
+            : `Translation complete: ${result.translated} video(s) updated, ${result.skipped} already up to date.`,
+          'success'
+        );
+        router.refresh();
+      } else {
+        triggerAlert(result.error || 'Translation failed', 'error');
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Translation failed', 'error');
+    } finally {
+      setIsBulkTranslatingSermons(false);
+    }
+  };
+
   const handleSyncYoutube = async () => {
     if (!ytChannelUrl) {
       triggerAlert(language === 'fr_ht' ? 'Veuillez d’abord saisir l’URL d’une chaîne.' : 'Please enter a channel URL first.', 'error');
@@ -1192,9 +1228,13 @@ export default function AdminDashboardClient({
     );
 
     try {
-      const res = await translateAdminTextsAction(payload.items, payload.fromLang, contextLabel);
+      const res = await translateAdminTextsAction(
+        bilingualItemsForApi(payload.items),
+        payload.fromLang,
+        contextLabel
+      );
       if (res.success && res.translations) {
-        onApply(applyTranslatedFields(prepared.fields, res.translations, payload.fromLang));
+        onApply(applyTranslatedFields(prepared.fields, res.translations, payload.fromLang, payload.items));
         triggerAlert(
           language === 'fr_ht' ? 'Traduction terminée avec succès !' : 'Translation completed successfully!',
           'success'
@@ -5594,7 +5634,7 @@ export default function AdminDashboardClient({
                   <button
                     type="button"
                     onClick={handleSyncYoutube}
-                    disabled={isSyncing}
+                    disabled={isSyncing || isBulkTranslatingSermons}
                     className="px-5 py-2 rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs transition-all h-[36px] flex items-center gap-1.5 cursor-pointer shadow whitespace-nowrap"
                   >
                     {isSyncing ? (
@@ -5606,6 +5646,29 @@ export default function AdminDashboardClient({
                       <>
                         <RefreshCw className="w-3.5 h-3.5" />
                         <span>Senkronize Videyo (Sync Streams)</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleBulkTranslateSermons}
+                    disabled={isSyncing || isBulkTranslatingSermons}
+                    className="px-5 py-2 rounded bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white font-bold text-xs transition-all h-[36px] flex items-center gap-1.5 cursor-pointer shadow whitespace-nowrap"
+                  >
+                    {isBulkTranslatingSermons ? (
+                      <>
+                        <Languages className="w-3.5 h-3.5 animate-pulse" />
+                        <span>{language === 'fr_ht' ? 'Traduction en cours…' : 'Translating all…'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Languages className="w-3.5 h-3.5" />
+                        <span>
+                          {language === 'fr_ht'
+                            ? 'Traduire toutes les archives (EN → FR)'
+                            : 'Translate all archives (EN → FR)'}
+                        </span>
                       </>
                     )}
                   </button>

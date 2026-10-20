@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import type { Pool } from 'pg';
 import { getSuperAdminEmails } from '../super-admin';
-import { HOME_FRENCH_DEFAULTS, MINISTRY_FRENCH_DEFAULTS, PASTOR_MESSAGE_FRENCH, FREE_GIFT_FRENCH_DEFAULTS, CANONICAL_BLOG_FRENCH, CANONICAL_EVENT_FRENCH, CANONICAL_HAITI_MISSION_FRENCH, CANONICAL_LOCAL_OUTREACH_FRENCH, KNOWN_PRAYER_CREOLE_TO_FRENCH, KNOWN_HAITI_MISSION_CREOLE_TO_FRENCH, KNOWN_EVENT_LOCATION_CREOLE_TO_FRENCH, resolveFrenchContent, frenchField, looksLikeHaitianCreole, sanitizeChurchLocation } from '../french-content';
+import { HOME_FRENCH_DEFAULTS, MINISTRY_FRENCH_DEFAULTS, PASTOR_MESSAGE_FRENCH, FREE_GIFT_FRENCH_DEFAULTS, CANONICAL_BLOG_FRENCH, CANONICAL_EVENT_FRENCH, CANONICAL_HAITI_MISSION_FRENCH, CANONICAL_LOCAL_OUTREACH_FRENCH, KNOWN_PRAYER_CREOLE_TO_FRENCH, KNOWN_HAITI_MISSION_CREOLE_TO_FRENCH, KNOWN_EVENT_LOCATION_CREOLE_TO_FRENCH, KNOWN_SERMON_DESCRIPTION_CREOLE_TO_FRENCH, SERMON_ARCHIVE_DESCRIPTION_ENGLISH, SERMON_ARCHIVE_DESCRIPTION_FRENCH, resolveFrenchContent, frenchField, looksLikeEnglishInFrenchField, looksLikeHaitianCreole, sanitizeChurchLocation } from '../french-content';
 import { FREE_GIFT_FILE_SETTING_KEYS, assetFileExists } from '../asset-storage';
 import { sanitizeTeamDepartmentsForFrench } from '../team-departments';
 import { DEFAULT_CHURCH_LOCATIONS } from '../church-locations';
@@ -314,7 +314,77 @@ async function migrateLegacyFrenchContent(pool: Pool): Promise<void> {
     console.warn('[DB MIGRATE] Skipped French cleanup for daily_devotionals:', error);
   }
 
+  await migrateSyncedSermonBilingualFields(pool);
   await migrateKnownLegacyCreoleRecords(pool);
+}
+
+async function migrateSyncedSermonBilingualFields(pool: Pool): Promise<void> {
+  try {
+    await pool.query(
+      `UPDATE sermons
+       SET title_english = REPLACE(title_english, 'YAugusth', 'Youth'),
+           title_kreyol = REPLACE(title_kreyol, 'YAugusth', 'Youth')
+       WHERE title_english LIKE '%YAugusth%' OR title_kreyol LIKE '%YAugusth%'`
+    );
+
+    for (const [creole, french] of Object.entries(KNOWN_SERMON_DESCRIPTION_CREOLE_TO_FRENCH)) {
+      await pool.query(
+        `UPDATE sermons
+         SET description_kreyol = $1,
+             description_english = $2
+         WHERE description_kreyol = $3 AND description_english = $3`,
+        [french, SERMON_ARCHIVE_DESCRIPTION_ENGLISH, creole]
+      );
+      await pool.query(
+        `UPDATE sermons
+         SET description_kreyol = $1
+         WHERE description_kreyol = $2`,
+        [french, creole]
+      );
+    }
+
+    await pool.query(
+      `UPDATE sermons
+       SET description_kreyol = $1,
+           description_english = $2
+       WHERE description_kreyol = description_english
+         AND (description_kreyol ILIKE '%youtube%' OR description_kreyol ILIKE '%dirèk%' OR description_kreyol ILIKE '%dirèk%')`,
+      [SERMON_ARCHIVE_DESCRIPTION_FRENCH, SERMON_ARCHIVE_DESCRIPTION_ENGLISH]
+    );
+
+    const sermonRows = await pool.query<{
+      id: number;
+      title_kreyol: string;
+      title_english: string;
+      description_kreyol: string;
+      description_english: string;
+    }>('SELECT id, title_kreyol, title_english, description_kreyol, description_english FROM sermons');
+
+    for (const row of sermonRows.rows) {
+      const titleFr = (row.title_kreyol || '').trim();
+      const titleEn = (row.title_english || '').trim();
+      if (
+        titleFr &&
+        titleEn &&
+        titleFr === titleEn &&
+        looksLikeEnglishInFrenchField(titleFr) &&
+        !looksLikeHaitianCreole(titleFr)
+      ) {
+        await pool.query('UPDATE sermons SET title_kreyol = $1 WHERE id = $2', ['', row.id]);
+      }
+
+      const descFr = (row.description_kreyol || '').trim();
+      const descEn = (row.description_english || '').trim();
+      if (descFr === descEn && (looksLikeHaitianCreole(descFr) || descFr in KNOWN_SERMON_DESCRIPTION_CREOLE_TO_FRENCH)) {
+        await pool.query(
+          'UPDATE sermons SET description_kreyol = $1, description_english = $2 WHERE id = $3',
+          [SERMON_ARCHIVE_DESCRIPTION_FRENCH, SERMON_ARCHIVE_DESCRIPTION_ENGLISH, row.id]
+        );
+      }
+    }
+  } catch (error) {
+    console.warn('[DB MIGRATE] Skipped synced sermon bilingual cleanup:', error);
+  }
 }
 
 async function migrateKnownLegacyCreoleRecords(pool: Pool): Promise<void> {

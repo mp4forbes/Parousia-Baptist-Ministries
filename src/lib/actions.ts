@@ -21,6 +21,12 @@ import { AdminExportSlug, isAdminExportSlug, isAdminSectionSlug } from './admin-
 import { getMinistrySignupFields } from './ministry-signup-fields';
 import { isCoreMinistrySlug, isValidMinistrySlug, normalizeMinistrySlugInput } from './ministries-nav';
 import {
+  bestSermonEnglishDescription,
+  bestSermonEnglishTitle,
+  sermonDescriptionNeedsFrenchTranslation,
+  sermonTitleNeedsFrenchTranslation,
+} from './sermon-bilingual';
+import {
   formatEventRegistrationResponses,
   getEventRegistrationFields,
   parseEventRegistrationResponses,
@@ -58,7 +64,14 @@ import {
   normalizeAdminEmail,
   validateAdminEmailForInvite,
 } from './admin-email';
-import { frenchField } from './french-content';
+import {
+  frenchField,
+  looksLikeEnglishInFrenchField,
+  looksLikeHaitianCreole,
+  KNOWN_SERMON_DESCRIPTION_CREOLE_TO_FRENCH,
+  SERMON_ARCHIVE_DESCRIPTION_ENGLISH,
+  SERMON_ARCHIVE_DESCRIPTION_FRENCH,
+} from './french-content';
 import { getGeminiGenerateContentUrl } from './gemini';
 import { buildDevotionalGeminiPrompt, DEVOTIONAL_PRESETS, findDevotionalPresetByRef, isGroupChatDevotionalFormat } from './devotional-presets';
 import { composeDevotionalBody, lessonStartsWithVerse } from './devotional-format';
@@ -1958,6 +1971,118 @@ export async function deleteSermon(id: number): Promise<{ success: boolean; erro
   }
 }
 
+const SERMON_BULK_TRANSLATE_CHUNK = 12;
+
+/** One-off helper: English → French for all archive rows that still need it (titles/descriptions). */
+export async function bulkTranslateSermonArchivesAction(): Promise<{
+  success: boolean;
+  translated: number;
+  skipped: number;
+  error?: string;
+}> {
+  const isAuthed = (await checkAdminAuth()) || (await canManageLiveArchives());
+  if (!isAuthed) {
+    return { success: false, translated: 0, skipped: 0, error: 'Unauthorized' };
+  }
+
+  try {
+    const sermons = await getSermons();
+    const pending: Array<{ sermon: Sermon; items: Array<{ id: string; text: string }> }> = [];
+
+    for (const sermon of sermons) {
+      const items: Array<{ id: string; text: string }> = [];
+      if (sermonTitleNeedsFrenchTranslation(sermon)) {
+        const englishTitle = bestSermonEnglishTitle(sermon);
+        if (englishTitle) {
+          items.push({ id: `title-${sermon.id}`, text: englishTitle });
+        }
+      }
+      if (sermonDescriptionNeedsFrenchTranslation(sermon)) {
+        const englishDescription = bestSermonEnglishDescription(sermon);
+        if (englishDescription) {
+          items.push({ id: `desc-${sermon.id}`, text: englishDescription });
+        }
+      }
+      if (items.length > 0) {
+        pending.push({ sermon, items });
+      }
+    }
+
+    const skipped = sermons.length - pending.length;
+    if (pending.length === 0) {
+      return { success: true, translated: 0, skipped };
+    }
+
+    const allItems = pending.flatMap((entry) => entry.items);
+    const translations: Record<string, string> = {};
+
+    for (let offset = 0; offset < allItems.length; offset += SERMON_BULK_TRANSLATE_CHUNK) {
+      const chunk = allItems.slice(offset, offset + SERMON_BULK_TRANSLATE_CHUNK);
+      const res = await translateAdminTextsAction(
+        chunk,
+        'en',
+        'sermon archive video title and description',
+        'live_archives'
+      );
+      if (!res.success || !res.translations) {
+        return {
+          success: false,
+          translated: 0,
+          skipped,
+          error: res.error || 'Translation failed',
+        };
+      }
+      Object.assign(translations, res.translations);
+    }
+
+    const update = db.prepare(`
+      UPDATE sermons
+      SET title_kreyol = ?, title_english = ?, description_kreyol = ?, description_english = ?
+      WHERE id = ?
+    `);
+
+    let translated = 0;
+    for (const { sermon } of pending) {
+      let titleKreyol = sermon.title_kreyol;
+      const titleEnglish = bestSermonEnglishTitle(sermon);
+      let descKreyol = sermon.description_kreyol;
+      const descEnglish = bestSermonEnglishDescription(sermon);
+
+      const titleTranslation = translations[`title-${sermon.id}`];
+      const descTranslation = translations[`desc-${sermon.id}`];
+
+      let changed = false;
+      if (titleTranslation) {
+        titleKreyol = titleTranslation;
+        changed = true;
+      }
+      if (titleEnglish && titleEnglish !== sermon.title_english) {
+        changed = true;
+      }
+      if (descTranslation) {
+        descKreyol = descTranslation;
+        changed = true;
+      }
+      if (descEnglish && descEnglish !== sermon.description_english) {
+        changed = true;
+      }
+
+      if (changed) {
+        await update.run(titleKreyol, titleEnglish, descKreyol, descEnglish, sermon.id);
+        translated++;
+      }
+    }
+
+    revalidatePath('/');
+    revalidatePath('/sermons');
+    revalidatePath('/admin/dashboard');
+    return { success: true, translated, skipped };
+  } catch (error: any) {
+    console.error('Error bulk-translating sermon archives:', error);
+    return { success: false, translated: 0, skipped: 0, error: error.message };
+  }
+}
+
 import { assetFileExists, FREE_GIFT_FILE_SETTING_KEYS } from './asset-storage';
 
 // REMOTELY MOUNTED FILE ASSETS & BACKUP OPERATIONS
@@ -2152,12 +2277,12 @@ function translateTitleToEnglish(title: string): string {
     [/Dimanch/gi, 'Sunday'],
     [/Janvye/gi, 'January'],
     [/Fevriye/gi, 'February'],
-    [/Mas/gi, 'March'],
-    [/Avril/gi, 'April'],
-    [/Me/gi, 'May'],
-    [/Jen/gi, 'June'],
-    [/Jiyè/gi, 'July'],
-    [/Out/gi, 'August'],
+    [/\bMas\b/gi, 'March'],
+    [/\bAvril\b/gi, 'April'],
+    [/\bMe\b/gi, 'May'],
+    [/\bJen\b/gi, 'June'],
+    [/\bJiyè\b/gi, 'July'],
+    [/\bOut\b/gi, 'August'],
     [/Septanm/gi, 'September'],
     [/Oktòb/gi, 'October'],
     [/Novanm/gi, 'November'],
@@ -2169,6 +2294,46 @@ function translateTitleToEnglish(title: string): string {
   }
   
   return english;
+}
+
+function sermonTitlesFromYoutube(rawTitle: string): { titleFrench: string; titleEnglish: string } {
+  const title = rawTitle.trim();
+  if (!title) {
+    return { titleFrench: '', titleEnglish: '' };
+  }
+  const titleEnglish = translateTitleToEnglish(title);
+  const titleLooksLegacy =
+    looksLikeHaitianCreole(title) || titleEnglish !== title;
+  if (titleLooksLegacy) {
+    return { titleFrench: title, titleEnglish };
+  }
+  return { titleFrench: '', titleEnglish: title };
+}
+
+function sermonDescriptionsFromYoutube(rawDescription?: string): { descriptionFrench: string; descriptionEnglish: string } {
+  const trimmed = rawDescription?.trim() || '';
+  if (!trimmed) {
+    return {
+      descriptionFrench: SERMON_ARCHIVE_DESCRIPTION_FRENCH,
+      descriptionEnglish: SERMON_ARCHIVE_DESCRIPTION_ENGLISH,
+    };
+  }
+  if (looksLikeHaitianCreole(trimmed) || trimmed in KNOWN_SERMON_DESCRIPTION_CREOLE_TO_FRENCH) {
+    return {
+      descriptionFrench: SERMON_ARCHIVE_DESCRIPTION_FRENCH,
+      descriptionEnglish: SERMON_ARCHIVE_DESCRIPTION_ENGLISH,
+    };
+  }
+  if (looksLikeEnglishInFrenchField(trimmed)) {
+    return {
+      descriptionFrench: SERMON_ARCHIVE_DESCRIPTION_FRENCH,
+      descriptionEnglish: trimmed,
+    };
+  }
+  return {
+    descriptionFrench: trimmed,
+    descriptionEnglish: SERMON_ARCHIVE_DESCRIPTION_ENGLISH,
+  };
 }
 
 // Unescape unicode entities and HTML entities from YouTube source HTML
@@ -2349,7 +2514,7 @@ export async function syncSermonsFromYoutube(channelUrl: string): Promise<{ succ
                     videoId,
                     title: unescapeHtmlAndUnicode(title),
                     publishedTime: unescapeHtmlAndUnicode(publishedTime),
-                    description: unescapeHtmlAndUnicode(description) || 'Sèvis an dirèk achive sou YouTube.'
+                    description: unescapeHtmlAndUnicode(description) || ''
                   });
                 }
               }
@@ -2497,40 +2662,69 @@ export async function syncSermonsFromYoutube(channelUrl: string): Promise<{ succ
 
     // Insert or update videos in the database
     let importCount = 0;
-    const checkExist = db.prepare('SELECT id FROM sermons WHERE youtube_id = ?');
+    const checkExist = db.prepare(
+      'SELECT id, title_kreyol, title_english, description_kreyol, description_english FROM sermons WHERE youtube_id = ?'
+    );
     const insertSermon = db.prepare(`
       INSERT INTO sermons (title_kreyol, title_english, date, speaker, youtube_id, description_kreyol, description_english)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     const updateSermon = db.prepare(`
       UPDATE sermons
-      SET speaker = ?, date = ?, title_kreyol = ?, title_english = ?
+      SET speaker = ?, date = ?, title_kreyol = ?, title_english = ?, description_kreyol = ?, description_english = ?
       WHERE youtube_id = ?
     `);
 
     for (const video of resultsWithExactDates) {
-      const exist = await checkExist.get(video.videoId);
+      const exist = await checkExist.get(video.videoId) as
+        | {
+            id: number;
+            title_kreyol: string;
+            title_english: string;
+            description_kreyol: string;
+            description_english: string;
+          }
+        | undefined;
       const parsedDate = (video as any).exactDate || parsePublishedTime(video.publishedTime || '');
-      const desc = video.description || 'Sèvis an dirèk achive sou YouTube.';
-      const englishTitle = translateTitleToEnglish(video.title);
+      const { titleFrench, titleEnglish } = sermonTitlesFromYoutube(video.title);
+      const { descriptionFrench, descriptionEnglish } = sermonDescriptionsFromYoutube(video.description);
 
       if (!exist) {
         await insertSermon.run(
-          video.title,
-          englishTitle,
+          titleFrench,
+          titleEnglish,
           parsedDate,
           pastorName,
           video.videoId,
-          desc,
-          desc
+          descriptionFrench,
+          descriptionEnglish
         );
         importCount++;
       } else {
+        const priorFrenchTitle = (exist.title_kreyol || '').trim();
+        const priorEnglishTitle = (exist.title_english || '').trim();
+        const titlesWereDuplicated =
+          !priorFrenchTitle || priorFrenchTitle === priorEnglishTitle;
+        const nextFrenchTitle = titlesWereDuplicated ? titleFrench : exist.title_kreyol;
+
+        const priorDescFr = (exist.description_kreyol || '').trim();
+        const priorDescEn = (exist.description_english || '').trim();
+        const descriptionsNeedRepair =
+          priorDescFr === priorDescEn ||
+          priorDescFr in KNOWN_SERMON_DESCRIPTION_CREOLE_TO_FRENCH ||
+          priorDescEn in KNOWN_SERMON_DESCRIPTION_CREOLE_TO_FRENCH ||
+          looksLikeHaitianCreole(priorDescFr) ||
+          looksLikeHaitianCreole(priorDescEn);
+        const nextDescFr = descriptionsNeedRepair ? descriptionFrench : exist.description_kreyol;
+        const nextDescEn = descriptionsNeedRepair ? descriptionEnglish : exist.description_english;
+
         await updateSermon.run(
           pastorName,
           parsedDate,
-          video.title,
-          englishTitle,
+          nextFrenchTitle,
+          titleEnglish,
+          nextDescFr,
+          nextDescEn,
           video.videoId
         );
         importCount++;

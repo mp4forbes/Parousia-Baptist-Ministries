@@ -18,6 +18,7 @@ import AdminBilingualTranslateBar from '@/components/AdminBilingualTranslateBar'
 import CoordinatorContentPanel from '@/components/CoordinatorContentPanel';
 import {
   applyTranslatedFields,
+  bilingualItemsForApi,
   prepareBilingualTranslation,
   type BilingualTextField,
   type TranslateDirection,
@@ -213,12 +214,22 @@ export default function CoordinatorDevotionalManager({ open, isLight, onClose }:
 
     setIsTranslating(true);
     try {
-      const res = await translateAdminTextsAction(payload.items, payload.fromLang, 'daily devotional', 'devotional');
+      const res = await translateAdminTextsAction(
+        bilingualItemsForApi(payload.items),
+        payload.fromLang,
+        'daily devotional',
+        'devotional'
+      );
       if (!res.success || !res.translations) {
         setMessage({ type: 'error', text: res.error || (isHt ? 'Échec de la traduction.' : 'Translation failed.') });
         return;
       }
-      const updated = applyTranslatedFields(prepared.fields, res.translations, payload.fromLang);
+      const updated = applyTranslatedFields(
+        prepared.fields,
+        res.translations,
+        payload.fromLang,
+        payload.items
+      );
       const byId = Object.fromEntries(updated.map((field) => [field.id, field]));
       setForm((prev) => ({
         ...prev,

@@ -18,6 +18,7 @@ import { translateAdminTextsAction, updateHomePageTabsSettings } from '@/lib/act
 import AdminBilingualTranslateBar from '@/components/AdminBilingualTranslateBar';
 import {
   applyTranslatedFields,
+  bilingualItemsForApi,
   prepareBilingualTranslation,
   type BilingualTextField,
   type TranslateDirection,
@@ -425,13 +426,13 @@ export default function HomePageTabsEditor({
 
     try {
       const res = await translateAdminTextsAction(
-        payload.items,
+        bilingualItemsForApi(payload.items),
         payload.fromLang,
         contextLabel,
         isCoordinator ? 'home_tabs' : undefined
       );
       if (res.success && res.translations) {
-        onApply(applyTranslatedFields(prepared.fields, res.translations, payload.fromLang));
+        onApply(applyTranslatedFields(prepared.fields, res.translations, payload.fromLang, payload.items));
         notify(
           language === 'fr_ht' ? 'Traduction terminée avec succès !' : 'Translation completed successfully!',
           'success'

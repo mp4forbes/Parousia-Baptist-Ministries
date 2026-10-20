@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Edit, RefreshCw, Save, Trash2, Video } from 'lucide-react';
+import { Edit, Languages, RefreshCw, Save, Trash2, Video } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { EventRecord, Sermon } from '@/lib/db';
 import {
@@ -10,6 +10,7 @@ import {
   getSettings,
   getSermons,
   saveSermon,
+  bulkTranslateSermonArchivesAction,
   syncSermonsFromYoutube,
   translateAdminTextsAction,
   updateLiveArchivesSettings,
@@ -18,6 +19,7 @@ import AdminBilingualTranslateBar from '@/components/AdminBilingualTranslateBar'
 import CoordinatorContentPanel from '@/components/CoordinatorContentPanel';
 import {
   applyTranslatedFields,
+  bilingualItemsForApi,
   prepareBilingualTranslation,
   type BilingualTextField,
   type TranslateDirection,
@@ -42,6 +44,7 @@ export default function CoordinatorLiveArchivesManager({
   const [events, setEvents] = useState<EventRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isBulkTranslating, setIsBulkTranslating] = useState(false);
   const [isSavingLive, setIsSavingLive] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [direction, setDirection] = useState<TranslateDirection>('auto');
@@ -132,6 +135,32 @@ export default function CoordinatorLiveArchivesManager({
       setMessage({ type: 'success', text: t.coordinatorSaved });
     } finally {
       setIsSavingLive(false);
+    }
+  };
+
+  const handleBulkTranslate = async () => {
+    const confirmMessage = isHt
+      ? 'Traduire automatiquement tous les titres (et descriptions si nécessaire) de l’anglais vers le français pour les vidéos archivées ? Cette opération peut prendre une minute.'
+      : 'Automatically translate all archive video titles (and descriptions where needed) from English to French? This may take a minute.';
+    if (!confirm(confirmMessage)) return;
+
+    setIsBulkTranslating(true);
+    setMessage(null);
+    try {
+      const result = await bulkTranslateSermonArchivesAction();
+      if (!result.success) {
+        setMessage({ type: 'error', text: result.error || t.coordinatorSaveError });
+        return;
+      }
+      setSermons(await getSermons());
+      setMessage({
+        type: 'success',
+        text: isHt
+          ? `Traduction terminée : ${result.translated} vidéo(s) mise(s) à jour, ${result.skipped} déjà à jour.`
+          : `Translation complete: ${result.translated} video(s) updated, ${result.skipped} already up to date.`,
+      });
+    } finally {
+      setIsBulkTranslating(false);
     }
   };
 
@@ -226,7 +255,7 @@ export default function CoordinatorLiveArchivesManager({
     setIsTranslating(true);
     try {
       const res = await translateAdminTextsAction(
-        payload.items,
+        bilingualItemsForApi(payload.items),
         payload.fromLang,
         'sermon archive entry',
         'live_archives'
@@ -235,7 +264,12 @@ export default function CoordinatorLiveArchivesManager({
         setMessage({ type: 'error', text: res.error || (isHt ? 'Échec de la traduction.' : 'Translation failed.') });
         return;
       }
-      const updated = applyTranslatedFields(prepared.fields, res.translations, payload.fromLang);
+      const updated = applyTranslatedFields(
+        prepared.fields,
+        res.translations,
+        payload.fromLang,
+        payload.items
+      );
       const byId = Object.fromEntries(updated.map((f) => [f.id, f]));
       if (byId.title) {
         setSermTitleHt(byId.title.kreyol);
@@ -337,15 +371,32 @@ export default function CoordinatorLiveArchivesManager({
               className={fieldClass}
               placeholder="https://www.youtube.com/@channel/streams"
             />
-            <button
-              type="button"
-              onClick={handleSync}
-              disabled={isSyncing}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-              {isHt ? 'Synchroniser les diffusions' : 'Sync streams'}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleSync}
+                disabled={isSyncing || isBulkTranslating}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                {isHt ? 'Synchroniser les diffusions' : 'Sync streams'}
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkTranslate}
+                disabled={isSyncing || isBulkTranslating}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+              >
+                <Languages className={`w-3.5 h-3.5 ${isBulkTranslating ? 'animate-pulse' : ''}`} />
+                {isBulkTranslating
+                  ? isHt
+                    ? 'Traduction en cours…'
+                    : 'Translating all…'
+                  : isHt
+                    ? 'Traduire toutes les archives (EN → FR)'
+                    : 'Translate all archives (EN → FR)'}
+              </button>
+            </div>
           </section>
 
           <section>

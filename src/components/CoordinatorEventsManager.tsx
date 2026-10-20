@@ -15,6 +15,7 @@ import { normalizeEventEndDate } from '@/lib/event-dates';
 import { parseEventImages, serializeEventImages } from '@/lib/event-images';
 import {
   applyTranslatedFields,
+  bilingualItemsForApi,
   prepareBilingualTranslation,
   type BilingualTextField,
   type TranslateDirection,
@@ -291,12 +292,22 @@ export default function CoordinatorEventsManager({ open, isLight, onClose }: Coo
     const payload = prepared.payload!;
     setIsTranslating(true);
     try {
-      const res = await translateAdminTextsAction(payload.items, payload.fromLang, 'church event', 'events');
+      const res = await translateAdminTextsAction(
+        bilingualItemsForApi(payload.items),
+        payload.fromLang,
+        'church event',
+        'events'
+      );
       if (!res.success || !res.translations) {
         setMessage({ type: 'error', text: res.error || (isHt ? 'Échec de la traduction.' : 'Translation failed.') });
         return;
       }
-      const updated = applyTranslatedFields(prepared.fields, res.translations, payload.fromLang);
+      const updated = applyTranslatedFields(
+        prepared.fields,
+        res.translations,
+        payload.fromLang,
+        payload.items
+      );
       const byId = Object.fromEntries(updated.map((f) => [f.id, f]));
       setForm((prev) => ({
         ...prev,

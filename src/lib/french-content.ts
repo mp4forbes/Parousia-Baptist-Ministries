@@ -46,6 +46,18 @@ export const FREE_GIFT_FRENCH_DEFAULTS = {
     'Indiquez votre nom, votre adresse courriel et votre numéro de téléphone pour télécharger notre livret de méditations, conçu pour vous aider à grandir chaque jour dans la Parole.',
 };
 
+/** Default archive blurb when YouTube sync has no description (French / English columns). */
+export const SERMON_ARCHIVE_DESCRIPTION_FRENCH =
+  'Culte en direct archivé sur YouTube.';
+export const SERMON_ARCHIVE_DESCRIPTION_ENGLISH =
+  'Live worship service archived on YouTube.';
+
+/** Legacy Creole placeholder written into both sermon description columns during YouTube sync. */
+export const KNOWN_SERMON_DESCRIPTION_CREOLE_TO_FRENCH: Record<string, string> = {
+  'Sèvis an dirèk achive sou YouTube.': SERMON_ARCHIVE_DESCRIPTION_FRENCH,
+  'Sèvis an Dirèk achive sou YouTube.': SERMON_ARCHIVE_DESCRIPTION_FRENCH,
+};
+
 /** Canonical French for legacy rows still stored in Creole (keyed by English title). */
 export const CANONICAL_BLOG_FRENCH: Record<string, { title: string; content: string }> = {
   'Steadfastness in the Storms of Life': {
@@ -257,6 +269,25 @@ export function looksLikeEnglishInFrenchField(text: string): boolean {
   return ENGLISH_HEADING_MARKERS.test(value);
 }
 
+/** Heuristic for YouTube-style English titles stored in French columns by mistake. */
+export function looksLikePlainEnglish(text: string): boolean {
+  const value = text.trim();
+  if (!value || looksLikeHaitianCreole(value)) return false;
+  if (looksLikeEnglishInFrenchField(value)) return true;
+  if (/[àâäéèêëïîôùûüçœæ]/i.test(value)) return false;
+  const englishHints =
+    /\b(the|and|on|of|for|service|worship|church|sunday|monday|tuesday|wednesday|thursday|friday|saturday|morning|youth|good|parousia|baptist|live|stream|archived|worship)\b/i;
+  return englishHints.test(value);
+}
+
+export function looksLikePlainFrench(text: string): boolean {
+  const value = text.trim();
+  if (!value) return false;
+  return /\b(culte|dimanche|église|jeunesse|archivé|notre|avec|dans|pour|pasteur|matin|soir|direct)\b/i.test(
+    value
+  );
+}
+
 export function resolveFrenchContent(
   stored: string | undefined | null,
   canonicalFrench: string,
@@ -300,7 +331,8 @@ export function pickLocalizedField(
   if (language === 'en') {
     return englishValue?.trim() || frenchValue?.trim() || '';
   }
-  return normalizeFrenchText(frenchField(frenchValue, englishValue, canonicalFrench));
+  const french = normalizeFrenchText(frenchField(frenchValue, englishValue, canonicalFrench));
+  return french.trim() || englishValue?.trim() || '';
 }
 
 export function frenchBlogFields(post: {
